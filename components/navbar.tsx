@@ -77,12 +77,12 @@ export const Navbar = () => {
             Unete al club
           </Button>
         {/* </Link> */}
-        <NavbarMenuToggle />
+        <NavbarMenuToggle className="text-white" />
       </NavbarContent>
 
       <NavbarMenu>
         {/* {searchInput} */}
-        <div className="mx-4 mt-2 flex flex-col gap-2">
+        {/* <div className="mx-4 mt-2 flex flex-col gap-2">
           {siteConfig.navMenuItems.map((item, index) => (
             <NavbarMenuItem key={`${item}-${index}`}>
               <Link
@@ -100,7 +100,7 @@ export const Navbar = () => {
               </Link>
             </NavbarMenuItem>
           ))}
-        </div>
+        </div> */}
       </NavbarMenu>
     </HeroUINavbar>
   );
