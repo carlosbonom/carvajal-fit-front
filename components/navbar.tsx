@@ -72,11 +72,11 @@ export const Navbar = () => {
       </NavbarContent>
 
       <NavbarContent className="sm:hidden basis-1 pl-4" justify="end">
-        <Link isExternal aria-label="Github" href={siteConfig.links.github}>
+        {/* <Link isExternal aria-label="Github" href={siteConfig.links.github}> */}
           <Button variant="solid" color="primary">
             Unete al club
           </Button>
-        </Link>
+        {/* </Link> */}
         <NavbarMenuToggle />
       </NavbarContent>
 

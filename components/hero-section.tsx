@@ -17,6 +17,8 @@ export function HeroSection() {
 
   const [duration, setDuration] = useState(0)
 
+  const [isDragging, setIsDragging] = useState(false)
+
   const videoRef = useRef<HTMLVideoElement>(null)
 
   const hasInteracted = useRef(false)
@@ -73,7 +75,7 @@ export function HeroSection() {
 
   const handleTimeUpdate = () => {
 
-    if (videoRef.current) {
+    if (videoRef.current && !isDragging) {
 
       setCurrentTime(videoRef.current.currentTime)
 
@@ -106,6 +108,22 @@ export function HeroSection() {
       setCurrentTime(newTime)
 
     }
+
+  }
+
+
+
+  const handleSeekStart = () => {
+
+    setIsDragging(true)
+
+  }
+
+
+
+  const handleSeekEnd = () => {
+
+    setIsDragging(false)
 
   }
 
@@ -329,13 +347,13 @@ export function HeroSection() {
 
               {/* Play/Pause Button - Centered */}
 
-              <div className="flex items-center justify-center flex-1">
+              <div className="flex items-center justify-center flex-1 pointer-events-none">
 
                 <button
 
                   onClick={togglePlay}
 
-                  className="p-3 rounded-full bg-[#00b2de] hover:bg-[#00b2de]/90 transition-colors shadow-lg"
+                  className="p-4 rounded-full bg-[#00b2de]/60 backdrop-blur-sm hover:bg-[#00b2de]/80 transition-all shadow-2xl hover:scale-110 pointer-events-auto"
 
                   aria-label={isPlaying ? "Pausar" : "Reproducir"}
 
@@ -343,11 +361,11 @@ export function HeroSection() {
 
                   {isPlaying ? (
 
-                    <Pause className="w-6 h-6 text-white" />
+                    <Pause className="w-8 h-8 text-white" />
 
                   ) : (
 
-                    <Play className="w-6 h-6 text-white ml-0.5" />
+                    <Play className="w-8 h-8 text-white ml-1" />
 
                   )}
 
@@ -359,7 +377,7 @@ export function HeroSection() {
 
               {/* Progress Slider - Bottom */}
 
-              <div className="w-full px-4 pb-4">
+              <div className="w-full px-4 pb-4 pointer-events-auto">
 
                 <input
 
@@ -369,9 +387,19 @@ export function HeroSection() {
 
                   max={duration || 0}
 
+                  step="0.1"
+
                   value={currentTime}
 
                   onChange={handleSeek}
+
+                  onMouseDown={handleSeekStart}
+
+                  onMouseUp={handleSeekEnd}
+
+                  onTouchStart={handleSeekStart}
+
+                  onTouchEnd={handleSeekEnd}
 
                   className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
 
