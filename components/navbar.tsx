@@ -64,7 +64,7 @@ export const Navbar = () => {
       >
         <NavbarItem className="hidden sm:flex gap-2">
           <Button variant="solid" color="primary">
-            Unete al club
+            Únete al club
           </Button>
         </NavbarItem>
         {/* <NavbarItem className="hidden lg:flex">{searchInput}</NavbarItem> */}
@@ -74,7 +74,7 @@ export const Navbar = () => {
       <NavbarContent className="sm:hidden basis-1 pl-4" justify="end">
         {/* <Link isExternal aria-label="Github" href={siteConfig.links.github}> */}
           <Button variant="solid" color="primary">
-            Unete al club
+            Únete al club
           </Button>
         {/* </Link> */}
         <NavbarMenuToggle className="text-white" />
