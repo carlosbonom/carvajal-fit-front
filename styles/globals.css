@@ -1,3 +1,49 @@
+@config "../tailwind.config.js";
+
 @import "tailwindcss";
 
-@config "../tailwind.config.js"
+body {
+  background-color: black;
+  /* background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px); */
+  /* background-size: 30px 30px; */
+}
+
+/* Custom slider styles */
+input[type="range"].slider {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+input[type="range"].slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #00b2de;
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+input[type="range"].slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #00b2de;
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+input[type="range"].slider::-webkit-slider-thumb:hover {
+  background: #00a0c8;
+  transform: scale(1.1);
+}
+
+input[type="range"].slider::-moz-range-thumb:hover {
+  background: #00a0c8;
+  transform: scale(1.1);
+}
