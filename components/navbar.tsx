@@ -80,7 +80,7 @@ export const Navbar = () => {
         <NavbarMenuToggle className="text-white" />
       </NavbarContent>
 
-      <NavbarMenu>
+      <NavbarMenu className="bg-transparent-900">
         {/* {searchInput} */}
         {/* <div className="mx-4 mt-2 flex flex-col gap-2">
           {siteConfig.navMenuItems.map((item, index) => (
