@@ -61,6 +61,7 @@ export const SuccessStories = () => {
     const userScrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const isUserInteractingRef = useRef(false);
     const lastScrollTimeRef = useRef(0);
+    const lastScrollPositionRef = useRef(0);
 
     useEffect(() => {
         const scrollContainer = scrollRef.current;
@@ -101,8 +102,34 @@ export const SuccessStories = () => {
             pauseAutoScroll();
         };
 
+        // Función para manejar el scroll infinito
+        const handleInfiniteScroll = () => {
+            const scrollWidth = scrollContainer.scrollWidth;
+            const scrollLeft = scrollContainer.scrollLeft;
+            const halfScrollWidth = scrollWidth / 2;
+
+            // Solo procesar si tenemos un scrollWidth válido
+            if (scrollWidth === 0 || halfScrollWidth === 0) return;
+
+            // Cuando llegamos al final del primer conjunto (mitad del scrollWidth total)
+            // Resetear al inicio del primer conjunto para crear el efecto infinito
+            if (scrollLeft >= halfScrollWidth) {
+                const overflow = scrollLeft - halfScrollWidth;
+                scrollContainer.scrollLeft = overflow;
+                scrollAmountRef.current = overflow;
+                lastScrollPositionRef.current = overflow;
+            }
+            // Actualizar la última posición para tracking
+            else {
+                lastScrollPositionRef.current = scrollLeft;
+            }
+        };
+
         // Detectar scroll manual - se activa cuando el usuario hace scroll
         const handleScroll = () => {
+            // Manejar scroll infinito
+            handleInfiniteScroll();
+
             // Si el usuario está interactuando, actualizar la posición y reiniciar el timeout
             if (isUserInteractingRef.current) {
                 scrollAmountRef.current = scrollContainer.scrollLeft;
@@ -192,8 +219,13 @@ export const SuccessStories = () => {
                 scrollAmountRef.current += scrollSpeed;
                 scrollContainer.scrollLeft = scrollAmountRef.current;
 
-                if (scrollAmountRef.current >= scrollContainer.scrollWidth / 2) {
-                    scrollAmountRef.current = 0;
+                // Manejar scroll infinito en auto-scroll (misma lógica que handleInfiniteScroll)
+                const halfScrollWidth = scrollContainer.scrollWidth / 2;
+                if (halfScrollWidth > 0 && scrollAmountRef.current >= halfScrollWidth) {
+                    const overflow = scrollAmountRef.current - halfScrollWidth;
+                    scrollAmountRef.current = overflow;
+                    scrollContainer.scrollLeft = overflow;
+                    lastScrollPositionRef.current = overflow;
                 }
             }
         };
@@ -209,9 +241,18 @@ export const SuccessStories = () => {
 
         const intervalId = setInterval(autoScroll, 20);
 
-        // Inicializar scrollAmount con la posición actual
-        scrollAmountRef.current = scrollContainer.scrollLeft;
-        lastScrollTimeRef.current = Date.now();
+        // Inicializar scrollAmount - esperar a que el DOM se renderice para obtener scrollWidth
+        const initScroll = () => {
+            // Esperar un frame para que el contenido se renderice
+            requestAnimationFrame(() => {
+                scrollAmountRef.current = 0;
+                scrollContainer.scrollLeft = 0;
+                lastScrollPositionRef.current = 0;
+                lastScrollTimeRef.current = Date.now();
+            });
+        };
+        
+        initScroll();
 
         return () => {
             clearInterval(intervalId);
@@ -238,8 +279,9 @@ export const SuccessStories = () => {
             <p className="text-lg md:text-lg lg:text-xl text-gray-400 text-center mt-4">Transformaciones reales de nuestros miembros del club</p>
             <section ref={scrollRef} className="flex gap-6 overflow-x-auto mt-12 scrollbar-hide select-none" style={{ scrollBehavior: "auto" }}>
                 
-                    {successStories.map((story, index) => (
-                        <div key={story.id} className="flex-shrink-0 w-[280px] md:w-[320px] group">
+                    {/* Duplicar el contenido para scroll infinito */}
+                    {[...successStories, ...successStories].map((story, index) => (
+                        <div key={`${story.id}-${index}`} className="flex-shrink-0 w-[280px] md:w-[320px] group">
                             <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-gray-800 border border-gray-700 shadow-lg">
                                 <img src={story.image || "/placeholder.svg"} alt={story.name} className="w-full h-full object-cover" />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
