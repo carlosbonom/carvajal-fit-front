@@ -14,11 +14,13 @@ export function Teachers() {
 
         <Card className="bg-[#0a0e12] border border-[#00b2de30] rounded-2xl shadow-lg max-w-4xl mx-auto p-3 text-white">
           <CardBody className="flex flex-col gap-3 sm:flex-row">
-            <div className="mb-8 max-w-4xl">
+            <div className="mb-8 md:w-4xl">
               <div className="aspect-square rounded-2xl overflow-hidden bg-muted ">
                 <img
                   src="https://placehold.co/300x300/gray/white?text=Imagen"
                   alt="Gabriel Carvajal"
+                  width={300}
+                  height={300}
                   className="w-full h-full object-cover"
                 />
               </div>
