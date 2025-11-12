@@ -10,7 +10,7 @@ export default function Home() {
     <>
       <HeroSection />
       <SuccessStories />
-      {/* <MembershipCard /> */}
+      <MembershipCard />
       <MembershipCardv2 />
       <Teachers />
       <Footer />
