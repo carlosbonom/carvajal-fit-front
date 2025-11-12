@@ -51,25 +51,13 @@ const successStories = [
     image: "https://placehold.co/280x320/gray/white?text=Imagen",
     description: "Transformación real de un miembro del club",
   },
-  {
-    id: 9,
-    name: "Ana Lopez",
-    image: "https://placehold.co/280x320/gray/white?text=Imagen",
-    description: "Transformación real de un miembro del club",
-  },
-  {
-    id: 10,
-    name: "Luis Garcia",
-    image: "https://placehold.co/280x320/gray/white?text=Imagen",
-    description: "Transformación real de un miembro del club",
-  },
 ];
 
 export const SuccessStories = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollAmountRef = useRef(0);
   const isPausedRef = useRef(false);
   const isUserInteractingRef = useRef(false);
-  const scrollAmountRef = useRef(0);
   const userScrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null
   );
@@ -92,9 +80,8 @@ export const SuccessStories = () => {
       isUserInteractingRef.current = true;
       scrollAmountRef.current = scrollContainer.scrollLeft;
 
-      if (userScrollTimeoutRef.current) {
+      if (userScrollTimeoutRef.current)
         clearTimeout(userScrollTimeoutRef.current);
-      }
 
       userScrollTimeoutRef.current = setTimeout(() => {
         resumeAutoScroll();
@@ -107,11 +94,18 @@ export const SuccessStories = () => {
 
     const handleInfiniteScroll = () => {
       const scrollWidth = scrollContainer.scrollWidth;
-      const halfScrollWidth = scrollWidth / 2;
+      const singleWidth = scrollWidth / 3;
+      const scrollLeft = scrollContainer.scrollLeft;
 
-      if (scrollContainer.scrollLeft >= halfScrollWidth - 1) {
-        scrollContainer.scrollLeft = 1; // desplazamiento mínimo para suavizar
-        scrollAmountRef.current = 1;
+      // Si el usuario llega demasiado al inicio
+      if (scrollLeft < singleWidth * 0.5) {
+        scrollContainer.scrollLeft += singleWidth;
+        scrollAmountRef.current += singleWidth;
+      }
+      // Si el usuario llega demasiado al final
+      else if (scrollLeft > singleWidth * 1.5) {
+        scrollContainer.scrollLeft -= singleWidth;
+        scrollAmountRef.current -= singleWidth;
       }
     };
 
@@ -120,9 +114,8 @@ export const SuccessStories = () => {
 
       if (isUserInteractingRef.current) {
         scrollAmountRef.current = scrollContainer.scrollLeft;
-        if (userScrollTimeoutRef.current) {
+        if (userScrollTimeoutRef.current)
           clearTimeout(userScrollTimeoutRef.current);
-        }
         userScrollTimeoutRef.current = setTimeout(() => {
           resumeAutoScroll();
         }, PAUSE_DURATION);
@@ -183,12 +176,7 @@ export const SuccessStories = () => {
       if (!isPausedRef.current && !isUserInteractingRef.current) {
         scrollAmountRef.current += scrollSpeed;
         scrollContainer.scrollLeft = scrollAmountRef.current;
-
-        const halfScrollWidth = scrollContainer.scrollWidth / 2;
-        if (scrollAmountRef.current >= halfScrollWidth - 1) {
-          scrollContainer.scrollLeft = 1;
-          scrollAmountRef.current = 1;
-        }
+        handleInfiniteScroll();
       }
     };
 
@@ -206,16 +194,17 @@ export const SuccessStories = () => {
     scrollContainer.addEventListener("mouseleave", handleMouseLeave);
     scrollContainer.addEventListener("mouseenter", handleMouseEnter);
 
+    // Centrar el scroll en el segundo bloque (para scroll infinito en ambas direcciones)
     requestAnimationFrame(() => {
-      scrollAmountRef.current = 0;
-      scrollContainer.scrollLeft = 0;
+      const middle = scrollContainer.scrollWidth / 3;
+      scrollContainer.scrollLeft = middle;
+      scrollAmountRef.current = middle;
     });
 
     return () => {
       clearInterval(intervalId);
-      if (userScrollTimeoutRef.current) {
+      if (userScrollTimeoutRef.current)
         clearTimeout(userScrollTimeoutRef.current);
-      }
       scrollContainer.removeEventListener("scroll", handleScroll);
       scrollContainer.removeEventListener("wheel", handleWheel);
       scrollContainer.removeEventListener("touchstart", handleTouchStart);
@@ -233,7 +222,7 @@ export const SuccessStories = () => {
       <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-center">
         Casos de éxito
       </h2>
-      <p className="text-medium md:text-lg lg:text-xl text-gray-400 text-center mt-4">
+      <p className="text-sm md:text-lg lg:text-xl text-gray-400 text-center mt-4">
         Transformaciones reales de nuestros miembros del club
       </p>
 
@@ -246,27 +235,29 @@ export const SuccessStories = () => {
           backfaceVisibility: "hidden",
         }}
       >
-        {[...successStories, ...successStories].map((story, index) => (
-          <div
-            key={`${story.id}-${index}`}
-            className="flex-shrink-0 w-[280px] md:w-[320px] group"
-          >
-            <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-gray-800 border border-gray-700 shadow-lg">
-              <img
-                src={story.image || "/placeholder.svg"}
-                alt={story.name}
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-              <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
-                <h3 className="text-xl font-bold mb-1">{story.name}</h3>
-                <p className="text-primary font-semibold">
-                  {story.description}
-                </p>
+        {[...successStories, ...successStories, ...successStories].map(
+          (story, index) => (
+            <div
+              key={`${story.id}-${index}`}
+              className="flex-shrink-0 w-[280px] md:w-[320px] group"
+            >
+              <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-gray-800 border border-gray-700 shadow-lg">
+                <img
+                  src={story.image || "/placeholder.svg"}
+                  alt={story.name}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
+                  <h3 className="text-xl font-bold mb-1">{story.name}</h3>
+                  <p className="text-primary font-semibold">
+                    {story.description}
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          )
+        )}
       </section>
     </div>
   );
