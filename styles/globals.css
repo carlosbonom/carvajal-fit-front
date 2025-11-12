@@ -3,11 +3,11 @@
 @import "tailwindcss";
 
 body {
-  background-color: black;
-  /* background-image: 
+  background-color: #0b0b0b; 
+  background-image: 
     linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px); */
-  /* background-size: 30px 30px; */
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px); 
+  background-size: 30px 30px;
 }
 
 /* Custom slider styles */
@@ -46,4 +46,14 @@ input[type="range"].slider::-webkit-slider-thumb:hover {
 input[type="range"].slider::-moz-range-thumb:hover {
   background: #00a0c8;
   transform: scale(1.1);
+}
+
+/* Hide scrollbar but keep functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
 }
