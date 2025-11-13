@@ -71,8 +71,8 @@ export default function Home() {
         <SuccessStories />
       </AnimatedSection>
 
-      <AnimatedSection id="el-club" delay={0.1}>
         <MembershipCard />
+      <AnimatedSection id="el-club" delay={0.1}>
         <MembershipCardv2 />
       </AnimatedSection>
 
