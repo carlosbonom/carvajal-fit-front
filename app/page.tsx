@@ -71,10 +71,10 @@ export default function Home() {
         <SuccessStories />
       </AnimatedSection>
 
+      <section id="el-club">
         <MembershipCard />
-      <AnimatedSection id="el-club" delay={0.1}>
         <MembershipCardv2 />
-      </AnimatedSection>
+      </section>
 
       <AnimatedSection id="coaches" delay={0.1}>
         <Teachers />
