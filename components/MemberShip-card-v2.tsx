@@ -12,8 +12,10 @@ import {
 import { Card } from "@heroui/card"
 import { Button } from "@heroui/button"
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 
 export function MembershipCardv2() {
+  const router = useRouter()
   const [isAnnual, setIsAnnual] = useState(false)
 
   const monthlyPrice = 49990
@@ -159,6 +161,7 @@ export function MembershipCardv2() {
                 size="lg"
                 className="w-full font-semibold text-white rounded-xl py-6"
                 style={{ backgroundColor: "#00b2de" }}
+                onClick={() => router.push('/signup')}
               >
                 Únete al Club Ahora
               </Button>

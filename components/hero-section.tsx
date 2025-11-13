@@ -4,10 +4,12 @@ import { useState, useRef, useEffect } from "react"
 import { Dumbbell, Play, Pause } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { useRouter } from "next/navigation"
 
 
 
 export function HeroSection() {
+  const router = useRouter()
 
   const [isHovered, setIsHovered] = useState(false)
 
@@ -266,7 +268,7 @@ export function HeroSection() {
               size="lg"
 
               className="bg-[#00b2de] hover:bg-[#00b2de]/90 text-white font-semibold text-lg px-8 py-6 rounded-lg"
-
+              onClick={() => router.push('/signup')}
             >
 
               Únete al Club

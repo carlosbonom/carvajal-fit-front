@@ -27,8 +27,10 @@ import {
   SearchIcon,
   Logo,
 } from "@/components/icons";
+import { useRouter } from "next/navigation";
 
 export const Navbar = () => {
+  const router = useRouter()
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const handleSmoothScroll = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
@@ -84,7 +86,7 @@ export const Navbar = () => {
             </NavbarItem>
           ))}
           </ul>
-          <Button variant="solid" color="primary">
+          <Button variant="solid" color="primary" onClick={() => router.push('/signup')}>
             Únete al club
           </Button>
         </NavbarItem>
@@ -94,7 +96,7 @@ export const Navbar = () => {
 
       <NavbarContent className="sm:hidden basis-1 pl-4" justify="end">
         {/* <Link isExternal aria-label="Github" href={siteConfig.links.github}> */}
-          <Button variant="solid" color="primary">
+          <Button variant="solid" color="primary" onClick={() => router.push('/signup')}>
             Únete al club
           </Button>
         {/* </Link> */}

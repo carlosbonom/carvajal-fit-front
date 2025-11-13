@@ -1,8 +1,10 @@
 import { Check } from "lucide-react"
 import {Card, CardBody, CardHeader} from "@heroui/card"
 import { Button } from "@heroui/button"
+import { useRouter } from "next/navigation"
 
 export function MembershipCard() {
+  const router = useRouter()
   const benefits = [
     {
       title: "Ruta de entrenamiento estructurada por fases",
@@ -123,6 +125,7 @@ export function MembershipCard() {
                 variant="solid"
                 color="primary"
                 className="w-full font-bold"
+                onClick={() => router.push('/signup')}
               >
                 Únete al Club Ahora
               </Button>
