@@ -45,11 +45,7 @@ export const siteConfig = {
     {
       label: "Faq",
       href: "/faq",
-    },
-    {
-      label: "Únete al club",
-      href: "/unete-al-club",
-    },
+    }
   ],
   links: {
     github: "https://github.com/heroui-inc/heroui",

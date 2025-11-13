@@ -80,21 +80,14 @@ export const Navbar = () => {
         <NavbarMenuToggle className="text-white" />
       </NavbarContent>
 
-      <NavbarMenu className="bg-transparent-900">
-        {/* {searchInput} */}
-        <div className="mx-4 mt-2 flex flex-col gap-2">
+      <NavbarMenu className="bg-black/90 backdrop-blur-xl pt-6">
+        <div className="flex flex-col items-center gap-6 py-6">
           {siteConfig.navMenuItems.map((item, index) => (
-            <NavbarMenuItem key={`${item}-${index}`}>
+            <NavbarMenuItem key={`${item.label}-${index}`}>
               <Link
-                color={
-                  index === 2
-                    ? "primary"
-                    : index === siteConfig.navMenuItems.length - 1
-                      ? "danger"
-                      : "foreground"
-                }
-                href="#"
-                size="lg"
+                as={NextLink}
+                href={item.href}
+                className="text-white text-2xl font-semibold hover:text-primary transition-colors"
               >
                 {item.label}
               </Link>
