@@ -5,58 +5,50 @@ export const siteConfig = {
   description: "Tu salud, nuestro compromiso.",
   navItems: [
     {
-      label: "Home",
+      label: "Inicio",
       href: "/",
     },
     {
-      label: "Docs",
-      href: "/docs",
+      label: "El Club",
+      href: "/el-club",
     },
     {
-      label: "Pricing",
+      label: "Planes",
       href: "/pricing",
     },
     {
-      label: "Blog",
+      label: "Coaches",
       href: "/blog",
     },
     {
-      label: "About",
-      href: "/about",
+      label: "Faq",
+      href: "/faq",
     },
   ],
   navMenuItems: [
     {
-      label: "Profile",
+      label: "Inicio",
       href: "/profile",
     },
     {
-      label: "Dashboard",
+      label: "El Club",
       href: "/dashboard",
     },
     {
-      label: "Projects",
-      href: "/projects",
+      label: "Planes",
+      href: "/planes",
     },
     {
-      label: "Team",
+      label: "Coaches",
       href: "/team",
     },
     {
-      label: "Calendar",
-      href: "/calendar",
+      label: "Faq",
+      href: "/faq",
     },
     {
-      label: "Settings",
-      href: "/settings",
-    },
-    {
-      label: "Help & Feedback",
-      href: "/help-feedback",
-    },
-    {
-      label: "Logout",
-      href: "/logout",
+      label: "Únete al club",
+      href: "/unete-al-club",
     },
   ],
   links: {

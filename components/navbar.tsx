@@ -40,29 +40,29 @@ export const Navbar = () => {
             <Logo size={55} />
           </NextLink>
         </NavbarBrand>
-        {/* <ul className="hidden lg:flex gap-4 justify-start ml-2">
-          {siteConfig.navItems.map((item) => (
-            <NavbarItem key={item.href}>
-              <NextLink
-                className={clsx(
-                  linkStyles({ color: "foreground" }),
-                  "data-[active=true]:text-primary data-[active=true]:font-medium",
-                )}
-                color="foreground"
-                href={item.href}
-              >
-                {item.label}
-              </NextLink>
-            </NavbarItem>
-          ))}
-        </ul> */}
       </NavbarContent>
 
       <NavbarContent
         className="hidden sm:flex basis-1/5 sm:basis-full"
         justify="end"
       >
-        <NavbarItem className="hidden sm:flex gap-2">
+        <NavbarItem className="hidden sm:flex items-center justify-center gap-4">
+        <ul className="hidden lg:flex gap-4 justify-start ml-2">
+          {siteConfig.navItems.map((item) => (
+            <NavbarItem key={item.href}>
+              <NextLink
+                className={' text-white ' + clsx(
+                  linkStyles({ color: "foreground" }),
+                  "data-[active=true]:text-primary data-[active=true]:font-medium",
+                )}
+                // color="primary"
+                href={item.href}
+              >
+                {item.label}
+              </NextLink>
+            </NavbarItem>
+          ))}
+          </ul>
           <Button variant="solid" color="primary">
             Únete al club
           </Button>
@@ -82,7 +82,7 @@ export const Navbar = () => {
 
       <NavbarMenu className="bg-transparent-900">
         {/* {searchInput} */}
-        {/* <div className="mx-4 mt-2 flex flex-col gap-2">
+        <div className="mx-4 mt-2 flex flex-col gap-2">
           {siteConfig.navMenuItems.map((item, index) => (
             <NavbarMenuItem key={`${item}-${index}`}>
               <Link
@@ -100,7 +100,7 @@ export const Navbar = () => {
               </Link>
             </NavbarMenuItem>
           ))}
-        </div> */}
+        </div>
       </NavbarMenu>
     </HeroUINavbar>
   );
