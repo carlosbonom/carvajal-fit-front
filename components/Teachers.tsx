@@ -1,73 +1,89 @@
-import { Card, CardBody } from "@heroui/card";
+"use client"
 
+import { Card, CardBody } from "@heroui/card"
+import { motion } from "framer-motion"
 
 export function Teachers() {
   return (
-    <section id="profesores" className="py-16 md:py-24 text-white">
+    <section id="profesores" className="py-16 md:py-24 text-white bg-transparent">
       <div className="container mx-auto px-4">
-        <div className="text-center mb-12 space-y-4">
-        <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-center">CONOCE A TUS COACHES</h2>
-            <p className="text-gray-400 text-sm md:text-base max-w-xl mx-auto">
-                Ellos te acompañarán en tu transformación
-            </p>
+        {/* Encabezado */}
+        <div className="text-center mb-12 space-y-3">
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-center">
+            Conoce a tus coaches
+          </h2>
+          <p className="text-sm md:text-lg lg:text-xl text-gray-400 text-center mt-4">
+            Ellos te acompañarán en tu transformación
+          </p>
         </div>
 
-        <Card className="bg-[#0a0e12] border border-[#00b2de30] rounded-2xl shadow-lg max-w-4xl mx-auto p-3 text-white">
-          <CardBody className="flex flex-col gap-3 sm:flex-row">
-            <div className="mb-8 md:w-4xl">
-              <div className="aspect-square rounded-2xl overflow-hidden bg-muted ">
-                <img
-                  src="https://placehold.co/300x300/gray/white?text=Imagen"
-                  alt="Gabriel Carvajal"
-                  width={300}
-                  height={300}
-                  className="w-full h-full object-cover"
-                />
+        {/* Card principal */}
+        <motion.div
+          initial={{ opacity: 0, y: 40 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          viewport={{ once: true }}
+        >
+          <Card className="bg-[#0a0e12] border border-[#00b2de30] rounded-2xl shadow-xl max-w-5xl mx-auto overflow-hidden">
+            <CardBody className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center p-6">
+              {/* Imagen */}
+              <div className="flex justify-center">
+                <div className="aspect-square w-64 md:w-80 rounded-2xl overflow-hidden shadow-lg border border-[#00b2de20]">
+                  <img
+                    src="https://placehold.co/400x400/gray/white?text=Gabriel+y+José"
+                    alt="Gabriel y José Carvajal"
+                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                  />
+                </div>
               </div>
-            </div>
 
-            <div className="space-y-6 text-center">
-              <h3 className="text-2xl font-bold">Gabriel y José Carvajal</h3>
+              {/* Texto */}
+              <div className="text-center md:text-left space-y-5">
+                <h3 className="text-2xl md:text-3xl font-bold text-white">
+                  Gabriel y José Carvajal
+                </h3>
 
-              <div className="space-y-4 text-muted-foreground leading-relaxed text-gray-400">
-                <p>
-                  Personal trainer profesionales con{" "}
-                  <span className="font-semibold text-white">11 años de experiencia</span> en el entrenamiento
-                  físico, grupal e individualizado.
-                </p>
+                <div className="space-y-3 text-gray-400 leading-relaxed">
+                  <p>
+                    Personal trainers profesionales con{" "}
+                    <span className="font-semibold text-white">
+                      más de 11 años de experiencia
+                    </span>{" "}
+                    en el entrenamiento físico, grupal e individualizado.
+                  </p>
 
-                <p>
-                  Han realizado entrenamientos a lo largo del mundo, especialmente{" "}
-                  <span className="font-semibold text-white">
-                    Miami, Orlando, Tampa, Ciudad de México, Monterrey, Buenos Aires
-                  </span>
-                  , etc.
-                </p>
+                  <p>
+                    Han entrenado a personas en{" "}
+                    <span className="font-semibold text-white">
+                      Miami, Orlando, Tampa, Ciudad de México, Monterrey, Buenos Aires
+                    </span>{" "}
+                    y más.
+                  </p>
 
-                <p>
-                  Se especializan en{" "}
-                  <span className="font-semibold text-white">
-                    pérdida de porcentaje de grasa, aumento de masa muscular y entrenamiento para mejorar la salud
-                  </span>
-                  , siempre con un enfoque saludable y sostenible en el tiempo.
-                </p>
+                  <p>
+                    Especialistas en{" "}
+                    <span className="font-semibold text-white">
+                      pérdida de grasa, aumento de masa muscular y mejora integral de la salud
+                    </span>
+                    , con un enfoque sostenible y realista.
+                  </p>
 
-                <p>
-                  No solo se quedan en la teoría,{" "}
-                  <span className="font-semibold text-white">
-                    les gusta poner en práctica todo lo que enseñan!!
-                  </span>{" "}
-                  En sus redes sociales los puedes ver a diario motivando y ejecutando los mismos sistemas de
-                  entrenamiento que proponen.
-                </p>
+                  <p>
+                    No solo enseñan:{" "}
+                    <span className="font-semibold text-white">
+                      viven lo que predican
+                    </span>
+                    . En sus redes los verás aplicando los mismos sistemas que comparten.
+                  </p>
 
-                <p className="text-lg font-bold text-accent pt-4 text-primary-500">
-                  Súmate!! No hay tiempo que perder para alcanzar tu mejor versión física y mental!!!
-                </p>
+                  <p className="text-lg font-semibold text-[#00b2de] pt-3">
+                    ¡Súmate! El momento para alcanzar tu mejor versión es ahora 💪
+                  </p>
+                </div>
               </div>
-            </div>
-          </CardBody>
-        </Card>
+            </CardBody>
+          </Card>
+        </motion.div>
       </div>
     </section>
   )
