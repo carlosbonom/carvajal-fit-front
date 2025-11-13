@@ -72,7 +72,7 @@ export default function Home() {
       </AnimatedSection>
 
       <AnimatedSection id="el-club" delay={0.1}>
-        {/* <MembershipCard /> */}
+        <MembershipCard />
         <MembershipCardv2 />
       </AnimatedSection>
 
