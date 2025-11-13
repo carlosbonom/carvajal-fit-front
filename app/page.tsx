@@ -84,9 +84,9 @@ export default function Home() {
         <Faq />
       </AnimatedSection>
 
-      <AnimatedSection delay={0.1}>
+      
         <Footer />
-      </AnimatedSection>
+      
     </>
   );
 }
