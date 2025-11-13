@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Navbar as HeroUINavbar,
   NavbarContent,
@@ -14,6 +16,7 @@ import { Input } from "@heroui/input";
 import { link as linkStyles } from "@heroui/theme";
 import NextLink from "next/link";
 import clsx from "clsx";
+import { useState } from "react";
 
 import { siteConfig } from "@/config/site";
 import {
@@ -26,6 +29,22 @@ import {
 } from "@/components/icons";
 
 export const Navbar = () => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  const handleSmoothScroll = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    e.preventDefault();
+    const targetId = href.replace('#', '');
+    const element = document.getElementById(targetId);
+    
+    if (element) {
+      element.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+      // Cerrar el menú móvil después de hacer clic
+      setIsMenuOpen(false);
+    }
+  };
   
 
   return (
@@ -33,6 +52,8 @@ export const Navbar = () => {
       maxWidth="xl" 
       position="sticky"
       className="bg-transparent backdrop-blur-md backdrop-saturate-150"
+      isMenuOpen={isMenuOpen}
+      onMenuOpenChange={setIsMenuOpen}
     >
       <NavbarContent className="basis-1/5 sm:basis-full" justify="start">
         <NavbarBrand as="li" className="gap-3 max-w-fit">
@@ -50,16 +71,16 @@ export const Navbar = () => {
         <ul className="hidden lg:flex gap-4 justify-start ml-2">
           {siteConfig.navItems.map((item) => (
             <NavbarItem key={item.href}>
-              <NextLink
-                className={' text-white ' + clsx(
+              <a
+                className={' text-white cursor-pointer ' + clsx(
                   linkStyles({ color: "foreground" }),
                   "data-[active=true]:text-primary data-[active=true]:font-medium",
                 )}
-                // color="primary"
                 href={item.href}
+                onClick={(e) => handleSmoothScroll(e, item.href)}
               >
                 {item.label}
-              </NextLink>
+              </a>
             </NavbarItem>
           ))}
           </ul>
@@ -84,13 +105,13 @@ export const Navbar = () => {
         <div className="flex flex-col items-center gap-6 py-6">
           {siteConfig.navMenuItems.map((item, index) => (
             <NavbarMenuItem key={`${item.label}-${index}`}>
-              <Link
-                as={NextLink}
+              <a
                 href={item.href}
-                className="text-white text-2xl font-semibold hover:text-primary transition-colors"
+                onClick={(e) => handleSmoothScroll(e, item.href)}
+                className="text-white text-2xl font-semibold hover:text-primary transition-colors cursor-pointer"
               >
                 {item.label}
-              </Link>
+              </a>
             </NavbarMenuItem>
           ))}
         </div>

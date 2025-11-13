@@ -6,52 +6,52 @@ export const siteConfig = {
   navItems: [
     {
       label: "Inicio",
-      href: "/",
+      href: "#inicio",
     },
     {
       label: "El Club",
-      href: "/el-club",
+      href: "#el-club",
     },
-    {
-      label: "Planes",
-      href: "/pricing",
-    },
+    // {
+    //   label: "Planes",
+    //   href: "#planes",
+    // },
     {
       label: "Coaches",
-      href: "/blog",
+      href: "#coaches",
     },
     {
       label: "Faq",
-      href: "/faq",
+      href: "#faq",
     },
   ],
   navMenuItems: [
     {
       label: "Inicio",
-      href: "/profile",
+      href: "#inicio",
     },
     {
       label: "El Club",
-      href: "/dashboard",
+      href: "#el-club",
     },
-    {
-      label: "Planes",
-      href: "/planes",
-    },
+    // {
+    //   label: "Planes",
+    //   href: "#planes",
+    // },
     {
       label: "Coaches",
-      href: "/team",
+      href: "#coaches",
     },
     {
       label: "Faq",
-      href: "/faq",
+      href: "#faq",
     }
   ],
-  links: {
-    github: "https://github.com/heroui-inc/heroui",
-    twitter: "https://twitter.com/hero_ui",
-    docs: "https://heroui.com",
-    discord: "https://discord.gg/9b6yyZKmH4",
-    sponsor: "https://patreon.com/jrgarciadev",
-  },
+  // links: {
+  //   github: "https://github.com/heroui-inc/heroui",
+  //   twitter: "https://twitter.com/hero_ui",
+  //   docs: "https://heroui.com",
+  //   discord: "https://discord.gg/9b6yyZKmH4",
+  //   sponsor: "https://patreon.com/jrgarciadev",
+  // },
 };
