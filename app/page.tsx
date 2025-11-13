@@ -1,3 +1,4 @@
+import { Faq } from "@/components/Faq";
 import { Footer } from "@/components/Footer";
 import { HeroSection } from "@/components/hero-section";
 import { MembershipCard } from "@/components/membership-card";
@@ -13,6 +14,7 @@ export default function Home() {
       <MembershipCard />
       <MembershipCardv2 />
       <Teachers />
+      <Faq />
       <Footer />
     </>
   );
