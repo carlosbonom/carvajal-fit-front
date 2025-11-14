@@ -311,13 +311,6 @@ export function PaymentCheckout() {
                     ? `Pagar con ${selectedPaymentMethod === "webpay" ? "Webpay" : "Mercado Pago"}`
                     : "Selecciona un método de pago"}
                 </Button>
-
-                {/* Garantía */}
-                <div className="text-center">
-                  <p className="text-xs text-gray-500">
-                    🔒 Garantía de devolución de 7 días
-                  </p>
-                </div>
               </div>
             </Card>
 

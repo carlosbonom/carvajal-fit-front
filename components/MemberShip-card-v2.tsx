@@ -161,7 +161,7 @@ export function MembershipCardv2() {
                 size="lg"
                 className="w-full font-semibold text-white rounded-xl py-6"
                 style={{ backgroundColor: "#00b2de" }}
-                onClick={() => router.push(`/checkout?plan=${isAnnual ? 'annual' : 'monthly'}`)}
+                onClick={() => router.push('/signup')}
               >
                 Únete al Club Ahora
               </Button>
