@@ -223,7 +223,7 @@ export const SuccessStories = () => {
         Casos de éxito
       </h2>
       <p className="text-sm md:text-lg lg:text-xl text-gray-400 text-center mt-4">
-        Transformaciones reales de nuestros miembros del club
+        Transformaciones reales del club
       </p>
 
       <section
@@ -239,7 +239,7 @@ export const SuccessStories = () => {
           (story, index) => (
             <div
               key={`${story.id}-${index}`}
-              className="flex-shrink-0 w-[280px] md:w-[320px] group"
+              className="flex-shrink-0 w-[200px] md:w-[230px] group"
             >
               <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-gray-800 border border-gray-700 shadow-lg">
                 <img
@@ -248,9 +248,9 @@ export const SuccessStories = () => {
                   className="w-full h-full object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
-                  <h3 className="text-xl font-bold mb-1">{story.name}</h3>
-                  <p className="text-primary font-semibold">
+                <div className="absolute bottom-0 left-0 right-0 p-2 md:p-6 text-white">
+                  <h3 className="text-sm md:text-base lg:text-lg font-bold mb-1">{story.name}</h3>
+                  <p className="text-primary text-xs md:text-sm lg:text-base font-semibold">
                     {story.description}
                   </p>
                 </div>

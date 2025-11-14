@@ -53,7 +53,7 @@ export const Navbar = () => {
     <HeroUINavbar 
       maxWidth="xl" 
       position="sticky"
-      className="bg-transparent backdrop-blur-md backdrop-saturate-150"
+      className="bg-black/90 backdrop-blur-xl backdrop-saturate-150"
       isMenuOpen={isMenuOpen}
       onMenuOpenChange={setIsMenuOpen}
     >
@@ -86,6 +86,9 @@ export const Navbar = () => {
             </NavbarItem>
           ))}
           </ul>
+          <Button variant="bordered" color="primary" onClick={() => router.push('/login')} className="border-[#00b2de] text-[#00b2de] hover:bg-[#00b2de]/10">
+            Iniciar sesión
+          </Button>
           <Button variant="solid" color="primary" onClick={() => router.push('/signup')}>
             Únete al club
           </Button>
@@ -96,8 +99,8 @@ export const Navbar = () => {
 
       <NavbarContent className="sm:hidden basis-1 pl-4" justify="end">
         {/* <Link isExternal aria-label="Github" href={siteConfig.links.github}> */}
-          <Button variant="solid" color="primary" onClick={() => router.push('/signup')}>
-            Únete al club
+          <Button variant="solid" color="primary" size="sm" onClick={() => router.push('/signup')}>
+            Únete
           </Button>
         {/* </Link> */}
         <NavbarMenuToggle className="text-white" />
@@ -116,6 +119,31 @@ export const Navbar = () => {
               </a>
             </NavbarMenuItem>
           ))}
+          <div className="flex flex-col gap-3 w-full px-6 mt-4">
+            <Button 
+              variant="bordered" 
+              color="primary" 
+              size="lg"
+              onClick={() => {
+                router.push('/login')
+                setIsMenuOpen(false)
+              }} 
+              className="border-[#00b2de] text-[#00b2de] hover:bg-[#00b2de]/10"
+            >
+              Iniciar sesión
+            </Button>
+            <Button 
+              variant="solid" 
+              color="primary" 
+              size="lg"
+              onClick={() => {
+                router.push('/signup')
+                setIsMenuOpen(false)
+              }}
+            >
+              Únete al club
+            </Button>
+          </div>
         </div>
       </NavbarMenu>
     </HeroUINavbar>

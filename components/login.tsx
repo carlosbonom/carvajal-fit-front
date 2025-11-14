@@ -8,21 +8,10 @@ import { motion } from "framer-motion"
 import Link from "next/link"
 import { useState } from "react"
 
-export default function Signup() {
-  const [name, setName] = useState("")
+export default function Login() {
   const [email, setEmail] = useState("")
-  const [phone, setPhone] = useState("")
-  const [errors, setErrors] = useState({ name: "", email: "", phone: "" })
-
-  const validateName = (value: string) => {
-    if (!value) {
-      return "El nombre completo es obligatorio"
-    }
-    if (value.length < 3) {
-      return "El nombre debe tener al menos 3 caracteres"
-    }
-    return ""
-  }
+  const [password, setPassword] = useState("")
+  const [errors, setErrors] = useState({ email: "", password: "" })
 
   const validateEmail = (value: string) => {
     if (!value) {
@@ -35,16 +24,12 @@ export default function Signup() {
     return ""
   }
 
-  const validatePhone = (value: string) => {
+  const validatePassword = (value: string) => {
     if (!value) {
-      return "El teléfono es obligatorio"
+      return "La contraseña es obligatoria"
     }
-    const phoneRegex = /^[\d\s\+\-\(\)]+$/
-    if (!phoneRegex.test(value)) {
-      return "Por favor ingresa un número de teléfono válido"
-    }
-    if (value.replace(/\D/g, '').length < 8) {
-      return "El teléfono debe tener al menos 8 dígitos"
+    if (value.length < 6) {
+      return "La contraseña debe tener al menos 6 caracteres"
     }
     return ""
   }
@@ -52,19 +37,17 @@ export default function Signup() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     
-    const nameError = validateName(name)
     const emailError = validateEmail(email)
-    const phoneError = validatePhone(phone)
+    const passwordError = validatePassword(password)
     
     setErrors({
-      name: nameError,
       email: emailError,
-      phone: phoneError
+      password: passwordError
     })
 
-    if (!nameError && !emailError && !phoneError) {
-      console.log("Formulario válido", { name, email, phone })
-      // Aquí irá la lógica de registro
+    if (!emailError && !passwordError) {
+      console.log("Formulario válido", { email, password })
+      // Aquí irá la lógica de login
     }
   }
 
@@ -92,38 +75,15 @@ export default function Signup() {
           {/* Encabezado */}
           <div className="space-y-3 text-center mb-8">
             <h2 className="text-xl md:text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-              Tu transformación comienza aquí
+              Bienvenido de vuelta
             </h2>
             <p className="text-gray-400 text-xs md:text-sm max-w-md mx-auto">
-              Ingresa tus datos para crear tu cuenta
+                Ingresa a tu cuenta del Club Carvajal Fit
             </p>
           </div>
 
           {/* Formulario */}
           <Form className="flex flex-col gap-5" onSubmit={handleSubmit}>
-            <Input
-              label="Nombre completo"
-              labelPlacement="outside"
-              type="text"
-              placeholder="Ingresa tu nombre completo"
-              variant="bordered"
-              radius="lg"
-              value={name}
-              onValueChange={(value) => {
-                setName(value)
-                if (errors.name) {
-                  setErrors({ ...errors, name: validateName(value) })
-                }
-              }}
-              isInvalid={!!errors.name}
-              errorMessage={errors.name}
-              classNames={{
-                input: "text-white",
-                inputWrapper: "border-[#00b2de]/30 hover:border-[#00b2de]/50 focus-within:border-[#00b2de] transition-colors bg-black/30",
-                label: "!text-white font-medium",
-                errorMessage: "text-red-400"
-              }}
-            />
             <Input
               label="Correo electrónico"
               labelPlacement="outside"
@@ -148,21 +108,21 @@ export default function Signup() {
               }}
             />
             <Input
-              label="Teléfono"
+              label="Contraseña"
               labelPlacement="outside"
-              type="text"
-              placeholder="+56 9 1234 5678"
+              type="password"
+              placeholder="Ingresa tu contraseña"
               variant="bordered"
               radius="lg"
-              value={phone}
+              value={password}
               onValueChange={(value) => {
-                setPhone(value)
-                if (errors.phone) {
-                  setErrors({ ...errors, phone: validatePhone(value) })
+                setPassword(value)
+                if (errors.password) {
+                  setErrors({ ...errors, password: validatePassword(value) })
                 }
               }}
-              isInvalid={!!errors.phone}
-              errorMessage={errors.phone}
+              isInvalid={!!errors.password}
+              errorMessage={errors.password}
               classNames={{
                 input: "text-white",
                 inputWrapper: "border-[#00b2de]/30 hover:border-[#00b2de]/50 focus-within:border-[#00b2de] transition-colors bg-black/30",
@@ -170,19 +130,16 @@ export default function Signup() {
                 errorMessage: "text-red-400"
               }}
             />
-            {/* <Input
-              label="Contraseña"
-              labelPlacement="outside"
-              type="password"
-              placeholder="Crea una contraseña segura"
-              variant="bordered"
-              radius="lg"
-              classNames={{
-                input: "text-white",
-                inputWrapper: "border-[#00b2de]/30 hover:border-[#00b2de]/50 focus-within:border-[#00b2de] transition-colors bg-black/30",
-                label: "!text-white font-medium"
-              }}
-            /> */}
+
+            {/* Link olvidaste contraseña */}
+            <div className="flex justify-end -mt-3">
+              <Link 
+                href="/recuperar-password" 
+                className="text-xs text-gray-400 hover:text-[#00b2de] transition-colors"
+              >
+                ¿Olvidaste tu contraseña?
+              </Link>
+            </div>
 
             <Button
               type="submit"
@@ -191,7 +148,7 @@ export default function Signup() {
               radius="lg"
               className="w-full font-bold text-base py-6 mt-4 transition-all hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(0,178,222,0.4)]"
             >
-              Crear cuenta y continuar
+              Iniciar sesión
             </Button>
           </Form>
 
@@ -207,22 +164,23 @@ export default function Signup() {
           </p>
         </motion.div>
 
-        {/* Link de login */}
+        {/* Link de registro */}
         <motion.p 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5, duration: 0.5 }}
           className="text-sm text-center text-gray-400 mt-2"
         >
-          ¿Ya tienes una cuenta?{" "}
+          ¿No tienes una cuenta?{" "}
           <Link 
-            href="/login" 
+            href="/signup" 
             className="text-[#00b2de] hover:text-[#00d4ff] hover:underline transition-colors font-medium"
           >
-            Inicia sesión
+            Regístrate
           </Link>
         </motion.p>
       </section>
     </div>
   )
 }
+
