@@ -7,7 +7,7 @@ export const ConditionalNavbar = () => {
   const pathname = usePathname();
   
   // Lista de rutas donde NO queremos mostrar el navbar
-  const hideNavbarRoutes = ["/signup", "/login"];
+  const hideNavbarRoutes = ["/signup", "/login", "/checkout"];
   
   // Si la ruta actual está en la lista, no mostramos el navbar
   if (hideNavbarRoutes.includes(pathname)) {
@@ -16,5 +16,7 @@ export const ConditionalNavbar = () => {
   
   return <Navbar />;
 };
+
+
 
 

@@ -7,8 +7,10 @@ import { Button } from "@heroui/button"
 import { motion } from "framer-motion"
 import Link from "next/link"
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 
 export default function Signup() {
+  const router = useRouter()
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [phone, setPhone] = useState("")
@@ -63,8 +65,10 @@ export default function Signup() {
     })
 
     if (!nameError && !emailError && !phoneError) {
-      console.log("Formulario válido", { name, email, phone })
-      // Aquí irá la lógica de registro
+      // Guardar datos del usuario en sessionStorage para usarlos en checkout
+      sessionStorage.setItem('signupData', JSON.stringify({ name, email, phone }))
+      // Redirigir a la página de checkout
+      router.push('/checkout')
     }
   }
 
@@ -77,7 +81,8 @@ export default function Signup() {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
-          className="mb-2"
+          className="mb-2 cursor-pointer"
+          onClick={() => router.push("/")}
         >
           <Logo size={80} />
         </motion.div>
@@ -191,7 +196,7 @@ export default function Signup() {
               radius="lg"
               className="w-full font-bold text-base py-6 mt-4 transition-all hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(0,178,222,0.4)]"
             >
-              Crear cuenta y continuar
+                Únirse al Club
             </Button>
           </Form>
 

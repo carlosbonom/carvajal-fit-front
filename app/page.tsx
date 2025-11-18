@@ -72,7 +72,7 @@ export default function Home() {
       </AnimatedSection>
 
       <section id="el-club">
-        <MembershipCard />
+        {/* <MembershipCard /> */}
         <MembershipCardv2 />
       </section>
 

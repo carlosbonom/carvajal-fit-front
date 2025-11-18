@@ -7,12 +7,13 @@ import { Button } from "@heroui/button"
 import { motion } from "framer-motion"
 import Link from "next/link"
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 
 export default function Login() {
+  const router = useRouter()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [errors, setErrors] = useState({ email: "", password: "" })
-
   const validateEmail = (value: string) => {
     if (!value) {
       return "El correo electrónico es obligatorio"
@@ -60,7 +61,8 @@ export default function Login() {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
-          className="mb-2"
+          className="mb-2 cursor-pointer"
+          onClick={() => router.push("/")}
         >
           <Logo size={80} />
         </motion.div>
