@@ -1,0 +1,154 @@
+{
+	"info": {
+		"_postman_id": "carvajal-fit-api",
+		"name": "Carvajal Fit API",
+		"description": "Colección de APIs para Carvajal Fit",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Register User",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"email\": \"usuario@ejemplo.com\",\n  \"password\": \"password123\",\n  \"display_name\": \"Juan Pérez\",\n  \"name\": \"Juan Carlos Pérez González\",\n  \"prefix\": \"Sr.\",\n  \"phone\": \"+56 9 1234 5678\",\n  \"avatar_url\": \"https://i.pravatar.cc/150?img=1\",\n  \"role\": \"user\",\n  \"status\": \"active\",\n  \"timezone\": \"America/Santiago\",\n  \"locale\": \"es-CL\",\n  \"currency\": \"CLP\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/api/register",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"register"
+					]
+				},
+				"description": "Registra un nuevo usuario con todos los campos del perfil"
+			},
+			"response": []
+		},
+		{
+			"name": "Register User - Basic",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"email\": \"test@ejemplo.com\",\n  \"password\": \"test123\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/api/register",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"register"
+					]
+				},
+				"description": "Registro básico solo con email y contraseña"
+			},
+			"response": []
+		},
+		{
+			"name": "Register User - Admin",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"email\": \"admin@ejemplo.com\",\n  \"password\": \"admin123\",\n  \"display_name\": \"Administrador\",\n  \"name\": \"Administrador del Sistema\",\n  \"prefix\": \"Sr.\",\n  \"phone\": \"+56 9 9876 5432\",\n  \"role\": \"admin\",\n  \"status\": \"active\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/api/register",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"register"
+					]
+				},
+				"description": "Registro de usuario con rol de administrador"
+			},
+			"response": []
+		},
+		{
+			"name": "Register User - Vendor",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"email\": \"vendedor@ejemplo.com\",\n  \"password\": \"vendor123\",\n  \"display_name\": \"Vendedor Principal\",\n  \"name\": \"María González\",\n  \"phone\": \"+56 9 5555 1234\",\n  \"role\": \"vendor\",\n  \"status\": \"active\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/api/register",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"register"
+					]
+				},
+				"description": "Registro de usuario con rol de vendedor"
+			},
+			"response": []
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:3000",
+			"type": "string"
+		}
+	]
+}
+

@@ -8,12 +8,18 @@ import { motion } from "framer-motion"
 import Link from "next/link"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { createClient } from "@/lib/supabase/client"
 
 export default function Login() {
+  console.log('🟡 [LOGIN] Componente Login renderizado')
   const router = useRouter()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [errors, setErrors] = useState({ email: "", password: "" })
+  const [isLoading, setIsLoading] = useState(false)
+  const [submitError, setSubmitError] = useState("")
+  
+  console.log('🟡 [LOGIN] Estado actual:', { email, isLoading, submitError })
   const validateEmail = (value: string) => {
     if (!value) {
       return "El correo electrónico es obligatorio"
@@ -35,8 +41,10 @@ export default function Login() {
     return ""
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    console.log('🔵 [LOGIN] Formulario enviado')
+    setSubmitError("")
     
     const emailError = validateEmail(email)
     const passwordError = validatePassword(password)
@@ -47,8 +55,84 @@ export default function Login() {
     })
 
     if (!emailError && !passwordError) {
-      console.log("Formulario válido", { email, password })
-      // Aquí irá la lógica de login
+      console.log('🔵 [LOGIN] Validación pasada, iniciando login...')
+      setIsLoading(true)
+      try {
+        const supabase = createClient()
+        console.log('🔵 [LOGIN] Cliente Supabase creado')
+        
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        })
+
+        console.log('🔵 [LOGIN] Respuesta de signInWithPassword:', { 
+          hasUser: !!data?.user, 
+          userId: data?.user?.id,
+          error: error?.message 
+        })
+
+        if (error) {
+          console.error('🔴 [LOGIN] Error en login:', error)
+          setSubmitError(error.message || "Error al iniciar sesión. Verifica tus credenciales.")
+          setIsLoading(false)
+          return
+        }
+
+        if (data.user) {
+          console.log('🟢 [LOGIN] Usuario autenticado, ID:', data.user.id)
+          try {
+            console.log('🔵 [LOGIN] Obteniendo perfil del usuario...')
+            // Obtener el perfil del usuario directamente usando el ID del usuario
+            const { data: profileData, error: profileError } = await supabase
+              .from('profiles')
+              .select('role')
+              .eq('id', data.user.id)
+              .single()
+
+            console.log('🔵 [LOGIN] Respuesta del perfil:', { 
+              profileData, 
+              profileError: profileError?.message,
+              role: profileData?.role 
+            })
+
+            if (profileError) {
+              console.error('🔴 [LOGIN] Error obteniendo perfil:', profileError)
+            }
+
+            // Determinar la ruta de redirección según el rol
+            const redirectPath = (profileData?.role === 'admin' || profileData?.role === 'owner') 
+              ? '/admin' 
+              : '/club'
+
+            console.log('🟢 [LOGIN] Redirigiendo a:', redirectPath, 'Rol:', profileData?.role)
+            console.log('🟢 [LOGIN] window.location disponible:', typeof window !== 'undefined')
+
+            // Redirigir inmediatamente usando window.location
+            if (typeof window !== 'undefined') {
+              console.log('🟢 [LOGIN] Ejecutando window.location.replace...')
+              window.location.replace(redirectPath)
+              console.log('🟢 [LOGIN] window.location.replace ejecutado')
+            } else {
+              console.error('🔴 [LOGIN] window no está disponible')
+            }
+          } catch (err) {
+            console.error('🔴 [LOGIN] Error en redirección:', err)
+            // Redirigir a club por defecto en caso de error
+            if (typeof window !== 'undefined') {
+              window.location.replace('/club')
+            }
+          }
+        } else {
+          console.error('🔴 [LOGIN] No se recibió usuario en la respuesta')
+        }
+      } catch (error) {
+        console.error('🔴 [LOGIN] Error general:', error)
+        setSubmitError("Ocurrió un error inesperado. Por favor, intenta de nuevo.")
+        setIsLoading(false)
+      }
+    } else {
+      console.log('🔴 [LOGIN] Validación falló:', { emailError, passwordError })
     }
   }
 
@@ -85,7 +169,13 @@ export default function Login() {
           </div>
 
           {/* Formulario */}
-          <Form className="flex flex-col gap-5" onSubmit={handleSubmit}>
+          <Form 
+            className="flex flex-col gap-5" 
+            onSubmit={(e) => {
+              console.log('🟡 [LOGIN] Form onSubmit llamado')
+              handleSubmit(e)
+            }}
+          >
             <Input
               label="Correo electrónico"
               labelPlacement="outside"
@@ -143,14 +233,25 @@ export default function Login() {
               </Link>
             </div>
 
+            {submitError && (
+              <div className="text-red-400 text-sm text-center mt-2">
+                {submitError}
+              </div>
+            )}
+
             <Button
               type="submit"
               color="primary"
               variant="solid"
               radius="lg"
               className="w-full font-bold text-base py-6 mt-4 transition-all hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(0,178,222,0.4)]"
+              isLoading={isLoading}
+              isDisabled={isLoading}
+              onClick={() => {
+                console.log('🟡 [LOGIN] Botón clickeado')
+              }}
             >
-              Iniciar sesión
+              {isLoading ? "Iniciando sesión..." : "Iniciar sesión"}
             </Button>
           </Form>
 

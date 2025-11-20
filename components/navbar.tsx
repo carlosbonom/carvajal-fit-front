@@ -28,10 +28,23 @@ import {
   Logo,
 } from "@/components/icons";
 import { useRouter } from "next/navigation";
+import { useUser } from "@/lib/hooks/use-user";
+import { useProfile } from "@/lib/hooks/use-profile";
+import { createClient } from "@/lib/supabase/client";
 
 export const Navbar = () => {
   const router = useRouter()
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { user, loading: userLoading } = useUser();
+  const { profile, loading: profileLoading } = useProfile();
+  const loading = userLoading || profileLoading;
+
+  const handleLogout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/");
+    router.refresh();
+  };
 
   const handleSmoothScroll = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     e.preventDefault();
@@ -86,12 +99,30 @@ export const Navbar = () => {
             </NavbarItem>
           ))}
           </ul>
-          <Button variant="bordered" color="primary" onClick={() => router.push('/login')} className="border-[#00b2de] text-[#00b2de] hover:bg-[#00b2de]/10">
-            Iniciar sesión
-          </Button>
-          <Button variant="solid" color="primary" onClick={() => router.push('/signup')}>
-            Únete al club
-          </Button>
+         {loading ? (
+            <div className="w-24 h-10" />
+         ) : user && profile ? (
+          <>
+         <Button 
+            onPress={() => router.push((profile?.role === 'admin' || profile?.role === 'owner') ? '/admin' : '/club')}
+            variant="solid" 
+            color="primary" 
+
+          >
+           {(profile?.role === 'admin' || profile?.role === 'owner') ? 'Ir a admin' : 'Ir al club'}
+          </Button> 
+          </>
+         ) : (
+            <>
+              <Button variant="bordered" color="primary" onPress={() => router.push('/login')} className="border-[#00b2de] text-[#00b2de] hover:bg-[#00b2de]/10">
+                Iniciar sesión
+              </Button>
+              <Button variant="solid" color="primary" onPress={() => router.push('/signup')}>
+                Únete al club
+              </Button>
+            </>
+         )} 
+          
         </NavbarItem>
         {/* <NavbarItem className="hidden lg:flex">{searchInput}</NavbarItem> */}
   {/*  */}
@@ -120,29 +151,53 @@ export const Navbar = () => {
             </NavbarMenuItem>
           ))}
           <div className="flex flex-col gap-3 w-full px-6 mt-4">
-            <Button 
-              variant="bordered" 
-              color="primary" 
-              size="lg"
-              onClick={() => {
-                router.push('/login')
-                setIsMenuOpen(false)
-              }} 
-              className="border-[#00b2de] text-[#00b2de] hover:bg-[#00b2de]/10"
-            >
-              Iniciar sesión
-            </Button>
-            <Button 
-              variant="solid" 
-              color="primary" 
-              size="lg"
-              onClick={() => {
-                router.push('/signup')
-                setIsMenuOpen(false)
-              }}
-            >
-              Únete al club
-            </Button>
+            {loading ? (
+              <div className="h-12" />
+            ) : user ? (
+              <>
+                <div className="text-white text-center mb-2">
+                  {profile?.display_name || profile?.name || user.email}
+                </div>
+                <Button 
+                  variant="bordered" 
+                  color="primary" 
+                  size="lg"
+                  onClick={() => {
+                    handleLogout()
+                    setIsMenuOpen(false)
+                  }} 
+                  className="border-[#00b2de] text-[#00b2de] hover:bg-[#00b2de]/10"
+                >
+                  Cerrar sesión
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button 
+                  variant="bordered" 
+                  color="primary" 
+                  size="lg"
+                  onClick={() => {
+                    router.push('/login')
+                    setIsMenuOpen(false)
+                  }} 
+                  className="border-[#00b2de] text-[#00b2de] hover:bg-[#00b2de]/10"
+                >
+                  Iniciar sesión
+                </Button>
+                <Button 
+                  variant="solid" 
+                  color="primary" 
+                  size="lg"
+                  onClick={() => {
+                    router.push('/signup')
+                    setIsMenuOpen(false)
+                  }}
+                >
+                  Únete al club
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </NavbarMenu>

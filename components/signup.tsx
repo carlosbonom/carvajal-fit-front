@@ -8,13 +8,17 @@ import { motion } from "framer-motion"
 import Link from "next/link"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { createClient } from "@/lib/supabase/client"
 
 export default function Signup() {
   const router = useRouter()
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [phone, setPhone] = useState("")
-  const [errors, setErrors] = useState({ name: "", email: "", phone: "" })
+  const [password, setPassword] = useState("")
+  const [errors, setErrors] = useState({ name: "", email: "", phone: "", password: "" })
+  const [isLoading, setIsLoading] = useState(false)
+  const [submitError, setSubmitError] = useState("")
 
   const validateName = (value: string) => {
     if (!value) {
@@ -51,24 +55,70 @@ export default function Signup() {
     return ""
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const validatePassword = (value: string) => {
+    if (!value) {
+      return "La contraseña es obligatoria"
+    }
+    if (value.length < 6) {
+      return "La contraseña debe tener al menos 6 caracteres"
+    }
+    return ""
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setSubmitError("")
     
     const nameError = validateName(name)
     const emailError = validateEmail(email)
     const phoneError = validatePhone(phone)
+    const passwordError = validatePassword(password)
     
     setErrors({
       name: nameError,
       email: emailError,
-      phone: phoneError
+      phone: phoneError,
+      password: passwordError
     })
 
-    if (!nameError && !emailError && !phoneError) {
-      // Guardar datos del usuario en sessionStorage para usarlos en checkout
-      sessionStorage.setItem('signupData', JSON.stringify({ name, email, phone }))
-      // Redirigir a la página de checkout
-      router.push('/checkout')
+    if (!nameError && !emailError && !phoneError && !passwordError) {
+      setIsLoading(true)
+      try {
+        const supabase = createClient()
+        
+        // Registrar usuario en Supabase
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              full_name: name,
+              phone: phone,
+            },
+          },
+        })
+
+        if (authError) {
+          setSubmitError(authError.message || "Error al crear la cuenta. Por favor, intenta de nuevo.")
+          setIsLoading(false)
+          return
+        }
+
+        if (authData.user) {
+          // El trigger de la base de datos creará automáticamente el perfil
+          // Esperar un momento para asegurar que el trigger se ejecute
+          await new Promise(resolve => setTimeout(resolve, 500))
+          
+          // Guardar datos del usuario en sessionStorage para usarlos en checkout
+          sessionStorage.setItem('signupData', JSON.stringify({ name, email, phone }))
+          // Redirigir a la página de checkout
+          router.push('/checkout')
+          router.refresh()
+        }
+      } catch (error) {
+        setSubmitError("Ocurrió un error inesperado. Por favor, intenta de nuevo.")
+        setIsLoading(false)
+      }
     }
   }
 
@@ -175,19 +225,35 @@ export default function Signup() {
                 errorMessage: "text-red-400"
               }}
             />
-            {/* <Input
+            <Input
               label="Contraseña"
               labelPlacement="outside"
               type="password"
               placeholder="Crea una contraseña segura"
               variant="bordered"
               radius="lg"
+              value={password}
+              onValueChange={(value) => {
+                setPassword(value)
+                if (errors.password) {
+                  setErrors({ ...errors, password: validatePassword(value) })
+                }
+              }}
+              isInvalid={!!errors.password}
+              errorMessage={errors.password}
               classNames={{
                 input: "text-white",
                 inputWrapper: "border-[#00b2de]/30 hover:border-[#00b2de]/50 focus-within:border-[#00b2de] transition-colors bg-black/30",
-                label: "!text-white font-medium"
+                label: "!text-white font-medium",
+                errorMessage: "text-red-400"
               }}
-            /> */}
+            />
+
+            {submitError && (
+              <div className="text-red-400 text-sm text-center mt-2">
+                {submitError}
+              </div>
+            )}
 
             <Button
               type="submit"
@@ -195,8 +261,10 @@ export default function Signup() {
               variant="solid"
               radius="lg"
               className="w-full font-bold text-base py-6 mt-4 transition-all hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(0,178,222,0.4)]"
+              isLoading={isLoading}
+              isDisabled={isLoading}
             >
-                Únirse al Club
+              {isLoading ? "Creando cuenta..." : "Únirse al Club"}
             </Button>
           </Form>
 
