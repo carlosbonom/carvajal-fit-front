@@ -6,13 +6,17 @@ import { Input } from "@heroui/input"
 import { Button } from "@heroui/button"
 import { motion } from "framer-motion"
 import Link from "next/link"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
+import { useUser } from "@/lib/hooks/use-user"
+import { useProfile } from "@/lib/hooks/use-profile"
 
 export default function Login() {
   console.log('🟡 [LOGIN] Componente Login renderizado')
   const router = useRouter()
+  const { user, loading: userLoading } = useUser()
+  const { profile, loading: profileLoading } = useProfile()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [errors, setErrors] = useState({ email: "", password: "" })
@@ -20,6 +24,24 @@ export default function Login() {
   const [submitError, setSubmitError] = useState("")
   
   console.log('🟡 [LOGIN] Estado actual:', { email, isLoading, submitError })
+
+  // Redirigir si el usuario ya está logueado
+  useEffect(() => {
+    if (!userLoading && !profileLoading && user && profile) {
+      console.log('🟢 [LOGIN] Usuario ya autenticado, redirigiendo...', { 
+        userId: user.id, 
+        role: profile.role 
+      })
+      
+      // Determinar la ruta según el rol
+      const redirectPath = (profile.role === 'admin' || profile.role === 'owner') 
+        ? '/admin' 
+        : '/club'
+      
+      console.log('🟢 [LOGIN] Redirigiendo a:', redirectPath)
+      router.replace(redirectPath)
+    }
+  }, [user, profile, userLoading, profileLoading, router])
   const validateEmail = (value: string) => {
     if (!value) {
       return "El correo electrónico es obligatorio"
@@ -105,7 +127,7 @@ export default function Login() {
               ? '/admin' 
               : '/club'
 
-            console.log('🟢 [LOGIN] Redirigiendo a:', redirectPath, 'Rol:', profileData?.role)
+            
             console.log('🟢 [LOGIN] window.location disponible:', typeof window !== 'undefined')
 
             // Redirigir inmediatamente usando window.location
@@ -134,6 +156,34 @@ export default function Login() {
     } else {
       console.log('🔴 [LOGIN] Validación falló:', { emailError, passwordError })
     }
+  }
+
+  // Mostrar carga mientras se verifica la autenticación
+  if (userLoading || profileLoading) {
+    return (
+      <div className="min-h-screen w-full relative overflow-hidden flex items-center justify-center">
+        <div className="text-white">
+          <Logo size={80} />
+          <div className="mt-4 text-center">
+            <p className="text-gray-400">Verificando...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // No mostrar el formulario si ya está autenticado (mientras redirige)
+  if (user && profile) {
+    return (
+      <div className="min-h-screen w-full relative overflow-hidden flex items-center justify-center">
+        <div className="text-white">
+          <Logo size={80} />
+          <div className="mt-4 text-center">
+            <p className="text-gray-400">Redirigiendo...</p>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
