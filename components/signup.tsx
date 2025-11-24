@@ -7,11 +7,8 @@ import { Button } from "@heroui/button"
 import { motion } from "framer-motion"
 import Link from "next/link"
 import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
 
 export default function Signup() {
-  const router = useRouter()
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [phone, setPhone] = useState("")
@@ -81,44 +78,9 @@ export default function Signup() {
       password: passwordError
     })
 
-    if (!nameError && !emailError && !phoneError && !passwordError) {
-      setIsLoading(true)
-      try {
-        const supabase = createClient()
-        
-        // Registrar usuario en Supabase
-        const { data: authData, error: authError } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              full_name: name,
-              phone: phone,
-            },
-          },
-        })
-
-        if (authError) {
-          setSubmitError(authError.message || "Error al crear la cuenta. Por favor, intenta de nuevo.")
-          setIsLoading(false)
-          return
-        }
-
-        if (authData.user) {
-          // El trigger de la base de datos creará automáticamente el perfil
-          // Esperar un momento para asegurar que el trigger se ejecute
-          await new Promise(resolve => setTimeout(resolve, 500))
-          
-          // Guardar datos del usuario en sessionStorage para usarlos en checkout
-          sessionStorage.setItem('signupData', JSON.stringify({ name, email, phone }))
-          // Redirigir a la página de checkout
-          router.push('/checkout')
-          router.refresh()
-        }
-      } catch (error) {
-        setSubmitError("Ocurrió un error inesperado. Por favor, intenta de nuevo.")
-        setIsLoading(false)
-      }
+    if (!nameError && !emailError && !phoneError) {
+      console.log("Formulario válido", { name, email, phone })
+      // Aquí irá la lógica de registro
     }
   }
 
@@ -131,8 +93,7 @@ export default function Signup() {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
-          className="mb-2 cursor-pointer"
-          onClick={() => router.push("/")}
+          className="mb-2"
         >
           <Logo size={80} />
         </motion.div>
@@ -264,7 +225,7 @@ export default function Signup() {
               isLoading={isLoading}
               isDisabled={isLoading}
             >
-              {isLoading ? "Creando cuenta..." : "Únirse al Club"}
+              Crear cuenta y continuar
             </Button>
           </Form>
 
