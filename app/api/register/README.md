@@ -217,3 +217,4 @@ Content-Type: application/json
 - La contraseña se almacena de forma segura en Supabase Auth
 - Todos los campos opcionales tienen valores por defecto según la estructura de la tabla
 
+

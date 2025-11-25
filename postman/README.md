@@ -42,3 +42,4 @@ Registro de usuario con rol de vendedor.
 - Verifica que las variables de entorno de Supabase estén configuradas
 - Los emails deben ser únicos (no puedes registrar el mismo email dos veces)
 
+

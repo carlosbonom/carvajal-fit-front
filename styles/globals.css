@@ -57,3 +57,255 @@ input[type="range"].slider::-moz-range-thumb:hover {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;  /* Chrome, Safari and Opera */
 }
+
+/* Variables CSS personalizadas para react-phone-number-input */
+.phone-input-custom {
+  --PhoneInputCountrySelectArrow-color: white;
+  --PhoneInputCountrySelectArrow-opacity: 0.8;
+  --PhoneInput-color: white;
+  --PhoneInput-color--focus: #00b2de;
+}
+
+/* Estilos personalizados para react-phone-number-input */
+.phone-input-custom {
+  width: 100% !important;
+  display: flex;
+  align-items: center;
+  border: 1px solid rgba(0, 178, 222, 0.3);
+  border-radius: 12px;
+  background-color: rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease;
+  padding: 0;
+  min-height: 48px;
+  box-sizing: border-box;
+}
+
+.phone-input-custom:hover {
+  border-color: rgba(0, 178, 222, 0.5);
+}
+
+.phone-input-custom:focus-within {
+  border-color: #00b2de;
+  box-shadow: 0 0 0 1px #00b2de;
+}
+
+.phone-input-custom.phone-input-error {
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+.phone-input-custom.phone-input-error:hover {
+  border-color: rgba(239, 68, 68, 0.7);
+}
+
+.phone-input-custom.phone-input-error:focus-within {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 1px #ef4444;
+}
+
+.phone-input-custom .PhoneInputInput {
+  flex: 1;
+  width: 100%;
+  padding: 12px 16px;
+  border: none;
+  background-color: transparent;
+  color: white;
+  font-size: 14px;
+  outline: none;
+  min-width: 0;
+}
+
+.phone-input-custom .PhoneInputInput::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.phone-input-custom .PhoneInputCountry {
+  margin-left: 12px;
+  margin-right: 8px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  position: relative;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  transition: background-color 0.2s ease;
+}
+
+.phone-input-custom .PhoneInputCountry:hover {
+  background-color: rgba(0, 178, 222, 0.1);
+}
+
+.phone-input-custom .PhoneInputCountryIcon {
+  width: 24px;
+  height: 18px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+.phone-input-custom .PhoneInputCountrySelect {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 1;
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+.phone-input-custom .PhoneInputCountrySelectArrow {
+  opacity: 0.8;
+  border-color: white transparent transparent;
+  margin-left: 4px;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 4px 4px 0 4px;
+  pointer-events: none;
+}
+
+/* Estilos para el dropdown del selector de país */
+.PhoneInputCountryIcon--border {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Estilos globales para scrollbar personalizado */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 178, 222, 0.5) rgba(0, 0, 0, 0.3);
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(0, 178, 222, 0.5);
+  border-radius: 4px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 178, 222, 0.7);
+}
+
+/* Estilos para el dropdown del selector de países - Fondo oscuro global */
+select.PhoneInputCountrySelect,
+.PhoneInputCountrySelect,
+.phone-input-custom select,
+select {
+  background-color: #0a0e12 !important;
+  background: #0a0e12 !important;
+  background-image: none !important;
+  color: white !important;
+  border: 1px solid rgba(0, 178, 222, 0.3) !important;
+  border-radius: 12px !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  appearance: none !important;
+}
+
+select.PhoneInputCountrySelect:focus,
+.PhoneInputCountrySelect:focus {
+  outline: none !important;
+  border-color: #00b2de !important;
+  box-shadow: 0 0 0 1px #00b2de !important;
+  background-color: #0a0e12 !important;
+  background: #0a0e12 !important;
+}
+
+/* Estilos para las opciones del dropdown - MUY IMPORTANTE */
+/* Nota: Los navegadores tienen limitaciones para estilizar option, pero estos estilos ayudan */
+select.PhoneInputCountrySelect option,
+.PhoneInputCountrySelect option,
+select option,
+option {
+  background-color: #0a0e12 !important;
+  background: #0a0e12 !important;
+  background-image: none !important;
+  color: white !important;
+  padding: 10px 16px !important;
+}
+
+/* Estilos adicionales para mejorar visibilidad en diferentes navegadores */
+select.PhoneInputCountrySelect optgroup,
+optgroup {
+  background-color: #0a0e12 !important;
+  color: white !important;
+}
+
+/* Estilos específicos para diferentes navegadores */
+select.PhoneInputCountrySelect::-ms-expand {
+  display: none;
+}
+
+select.PhoneInputCountrySelect::-webkit-scrollbar {
+  width: 8px;
+}
+
+select.PhoneInputCountrySelect::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+select.PhoneInputCountrySelect::-webkit-scrollbar-thumb {
+  background: rgba(0, 178, 222, 0.5);
+  border-radius: 4px;
+}
+
+/* Estilos adicionales para dropdown personalizado si existe */
+.PhoneInputCountrySelectDropdown {
+  background-color: #0a0e12 !important;
+  border: 1px solid rgba(0, 178, 222, 0.3) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
+  backdrop-filter: blur(10px) !important;
+  max-height: 300px !important;
+  overflow-y: auto !important;
+  z-index: 9999 !important;
+}
+
+.PhoneInputCountrySelectDropdownItem,
+.PhoneInputCountrySelectDropdown--option {
+  background-color: #0a0e12 !important;
+  color: white !important;
+  padding: 10px 16px !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+.PhoneInputCountrySelectDropdownItem:hover,
+.PhoneInputCountrySelectDropdown--option:hover,
+.PhoneInputCountrySelectDropdownItem--highlight {
+  background-color: rgba(0, 178, 222, 0.15) !important;
+  color: white !important;
+}
+
+.PhoneInputCountrySelectDropdownItem--selected,
+.PhoneInputCountrySelectDropdown--option--selected {
+  background-color: rgba(0, 178, 222, 0.2) !important;
+  color: #00b2de !important;
+}
+
+/* Asegurar que cualquier elemento dentro del selector de país tenga fondo oscuro */
+.phone-input-custom * {
+  color: white !important;
+}
+
+.phone-input-custom option {
+  background-color: #0a0e12 !important;
+  color: white !important;
+}

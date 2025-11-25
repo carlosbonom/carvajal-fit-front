@@ -6,14 +6,89 @@ import { Input } from "@heroui/input"
 import { Button } from "@heroui/button"
 import { motion } from "framer-motion"
 import Link from "next/link"
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { login, getProfile } from "@/services/auth"
+import { saveTokens, getAccessToken, clearTokens } from "@/lib/auth-utils"
+import { useAppDispatch, useAppSelector } from "@/lib/store/hooks"
+import { setUser } from "@/lib/store/slices/userSlice"
+import toast from "react-hot-toast"
 
 export default function Login() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const dispatch = useAppDispatch()
+  const user = useAppSelector((state) => state.user.user)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [errors, setErrors] = useState({ email: "", password: "" })
+  const [isLoading, setIsLoading] = useState(false)
+  const [submitError, setSubmitError] = useState("")
+  const [isCheckingSession, setIsCheckingSession] = useState(true)
+
+  // Precargar email desde query params y mostrar toast si viene de signup
+  useEffect(() => {
+    const emailParam = searchParams.get('email')
+    if (emailParam) {
+      const decodedEmail = decodeURIComponent(emailParam)
+      setEmail(decodedEmail)
+      // Mostrar toast informando que el email ya está registrado
+      toast.error('Este email ya está registrado. Por favor, inicia sesión.', {
+        duration: 4000,
+      })
+      // Limpiar el query param de la URL después de un breve delay para que el toast se vea
+      setTimeout(() => {
+        router.replace('/login', { scroll: false })
+      }, 100)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Redirigir si el usuario ya está autenticado en Redux
+  useEffect(() => {
+    if (user) {
+      if (user.role === 'admin') {
+        router.push('/admin')
+      } else {
+        router.push('/club')
+      }
+    }
+  }, [user, router])
+
+  // Verificar si hay sesión iniciada al cargar el componente
+  useEffect(() => {
+    const checkSession = async () => {
+      const token = getAccessToken()
+      
+      // Si no hay token, permitir mostrar el formulario
+      if (!token) {
+        setIsCheckingSession(false)
+        return
+      }
+
+      // Si ya hay usuario en Redux, no hacer nada (el otro useEffect se encargará)
+      if (user) {
+        setIsCheckingSession(false)
+        return
+      }
+
+      // Si hay token pero no hay usuario en Redux, verificar el token
+      try {
+        const userProfile = await getProfile(token)
+        dispatch(setUser(userProfile))
+        // El otro useEffect se encargará de la redirección
+      } catch (error) {
+        // Si el token es inválido, limpiar tokens y permitir login
+        console.error('Error al verificar sesión:', error)
+        clearTokens()
+      } finally {
+        setIsCheckingSession(false)
+      }
+    }
+
+    checkSession()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const validateEmail = (value: string) => {
     if (!value) {
       return "El correo electrónico es obligatorio"
@@ -35,8 +110,9 @@ export default function Login() {
     return ""
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setSubmitError("")
     
     const emailError = validateEmail(email)
     const passwordError = validatePassword(password)
@@ -47,9 +123,59 @@ export default function Login() {
     })
 
     if (!emailError && !passwordError) {
-      console.log("Formulario válido", { email, password })
-      // Aquí irá la lógica de login
+      setIsLoading(true)
+      try {
+        const response = await login({ email, password })
+        // Guardar tokens en localStorage
+        saveTokens(response.accessToken, response.refreshToken)
+        
+        // Obtener el perfil del usuario con /auth/me
+        const userProfile = await getProfile(response.accessToken)
+        console.log(userProfile, 'userProfile')
+        
+        // Guardar el usuario en Redux
+        dispatch(setUser(userProfile))
+        
+        // Redirigir según el rol del usuario
+        if (userProfile.role === 'admin') {
+          console.log('test 1 - redirigiendo a admin')
+          router.push('/admin')
+        } else {
+          console.log('test 1 - redirigiendo a club')
+          router.push('/club')
+        }
+      } catch (error: any) {
+        console.error('Error en login:', error)
+        if (error.response) {
+          // Error de la API
+          const errorMessage = error.response.data?.message || 
+            (Array.isArray(error.response.data?.message) 
+              ? error.response.data.message.join(', ') 
+              : 'Error al iniciar sesión')
+          setSubmitError(errorMessage)
+        } else if (error.request) {
+          // Error de red
+          setSubmitError('Error de conexión. Por favor, verifica tu conexión a internet.')
+        } else {
+          // Otro error
+          setSubmitError('Ocurrió un error inesperado. Por favor, intenta de nuevo.')
+        }
+      } finally {
+        setIsLoading(false)
+      }
     }
+  }
+
+  // Mostrar loading mientras se verifica la sesión
+  if (isCheckingSession) {
+    return (
+      <div className="min-h-screen w-full relative overflow-hidden flex items-center justify-center">
+        <div className="text-white text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00b2de] mx-auto mb-4"></div>
+          <p className="text-gray-400">Verificando sesión...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -143,12 +269,20 @@ export default function Login() {
               </Link>
             </div>
 
+            {submitError && (
+              <div className="text-red-400 text-sm text-center mt-2">
+                {submitError}
+              </div>
+            )}
+
             <Button
               type="submit"
               color="primary"
               variant="solid"
               radius="lg"
               className="w-full font-bold text-base py-6 mt-4 transition-all hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(0,178,222,0.4)]"
+              isLoading={isLoading}
+              isDisabled={isLoading}
             >
               Iniciar sesión
             </Button>

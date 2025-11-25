@@ -13,10 +13,10 @@ import { Button } from "@heroui/button";
 import { Kbd } from "@heroui/kbd";
 import { Link } from "@heroui/link";
 import { Input } from "@heroui/input";
-import { link as linkStyles } from "@heroui/theme";
+import { link as linkStyles, user } from "@heroui/theme";
 import NextLink from "next/link";
 import clsx from "clsx";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 import { siteConfig } from "@/config/site";
 import {
@@ -28,22 +28,64 @@ import {
   Logo,
 } from "@/components/icons";
 import { useRouter } from "next/navigation";
-import { useUser } from "@/lib/hooks/use-user";
-import { useProfile } from "@/lib/hooks/use-profile";
-import { createClient } from "@/lib/supabase/client";
+import { clearUser, setUser } from "@/lib/store/slices/userSlice";
+import { clearTokens, getAccessToken } from "@/lib/auth-utils";
+import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
+import { logout, getProfile } from "@/services/auth";
+import { store } from "@/lib/store/store";
 
 export const Navbar = () => {
+  const dispatch = useAppDispatch()
   const router = useRouter()
+  const user = useAppSelector((state) => state.user.user)
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { user, loading: userLoading } = useUser();
-  const { profile, loading: profileLoading } = useProfile();
-  const loading = userLoading || profileLoading;
+
+  // Cargar usuario desde token si existe
+  useEffect(() => {
+    const loadUserFromToken = async () => {
+      // Verificar si ya hay usuario en Redux
+      const currentState = store.getState()
+      if (currentState.user.user) {
+        console.log('Usuario ya existe en Redux:', currentState.user.user)
+        return
+      }
+
+      const token = getAccessToken()
+      if (!token) {
+        console.log('No hay token en localStorage')
+        return
+      }
+
+      try {
+        console.log('Cargando usuario desde token...')
+        const userProfile = await getProfile(token)
+        console.log('Usuario cargado:', userProfile)
+        dispatch(setUser(userProfile))
+      } catch (error) {
+        // Si el token es inválido, limpiar tokens
+        console.error('Error al cargar usuario:', error)
+        clearTokens()
+      }
+    }
+
+    loadUserFromToken()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleLogout = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/");
-    router.refresh();
+    try {
+      const token = getAccessToken()
+      if (token) {
+        await logout(token)
+      }
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error)
+    } finally {
+      clearTokens()
+      dispatch(clearUser())
+      router.push('/')
+      router.refresh()
+    }
   };
 
   const handleSmoothScroll = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
@@ -58,6 +100,25 @@ export const Navbar = () => {
       });
       // Cerrar el menú móvil después de hacer clic
       setIsMenuOpen(false);
+    }
+  };
+
+  const handleGoToClub = () => {
+    if (!user) return;
+    
+    // Si es admin, ir al admin
+    if (user.role === 'admin') {
+      router.push('/admin')
+      return
+    }
+    
+    // Verificar si tiene subscription
+    if (!user.subscription) {
+      // Si no tiene subscription, redirigir al checkout
+      router.push('/checkout')
+    } else {
+      // Si tiene subscription, redirigir al club
+      router.push('/club')
     }
   };
   
@@ -99,41 +160,56 @@ export const Navbar = () => {
             </NavbarItem>
           ))}
           </ul>
-         {loading ? (
-            <div className="w-24 h-10" />
-         ) : user && profile ? (
-          <>
-         <Button 
-            onPress={() => router.push((profile?.role === 'admin' || profile?.role === 'owner') ? '/admin' : '/club')}
-            variant="solid" 
-            color="primary" 
-
-          >
-           {(profile?.role === 'admin' || profile?.role === 'owner') ? 'Ir a admin' : 'Ir al club'}
-          </Button> 
-          </>
-         ) : (
-            <>
-              <Button variant="bordered" color="primary" onPress={() => router.push('/login')} className="border-[#00b2de] text-[#00b2de] hover:bg-[#00b2de]/10">
+          {user ? (
+            <Button 
+              onClick={handleGoToClub}
+              variant="solid" 
+              color="primary"
+              size="sm"
+            >
+              {user.role === 'admin' ? 'Ir a admin' : 'Ir al club'}
+            </Button>
+          ) : (
+            <div className="flex items-center gap-3">
+              <Button 
+                variant="bordered" 
+                color="primary" 
+                size="sm"
+                onClick={() => router.push('/login')}
+                className="border-[#00b2de] text-[#00b2de] hover:bg-[#00b2de]/10"
+              >
                 Iniciar sesión
               </Button>
-              <Button variant="solid" color="primary" onPress={() => router.push('/signup')}>
+              <Button 
+                variant="solid" 
+                color="primary" 
+                size="sm"
+                onClick={() => router.push('/signup')}
+              >
                 Únete al club
               </Button>
-            </>
-         )} 
-          
+            </div>
+          )}
         </NavbarItem>
         {/* <NavbarItem className="hidden lg:flex">{searchInput}</NavbarItem> */}
   {/*  */}
       </NavbarContent>
 
       <NavbarContent className="sm:hidden basis-1 pl-4" justify="end">
-        {/* <Link isExternal aria-label="Github" href={siteConfig.links.github}> */}
+        {user ? (
+          <Button 
+            variant="solid" 
+            color="primary" 
+            size="sm" 
+            onClick={handleGoToClub}
+          >
+            {user.role === 'admin' ? 'Admin' : 'Club'}
+          </Button>
+        ) : (
           <Button variant="solid" color="primary" size="sm" onClick={() => router.push('/signup')}>
             Únete
           </Button>
-        {/* </Link> */}
+        )}
         <NavbarMenuToggle className="text-white" />
       </NavbarContent>
 
@@ -151,26 +227,18 @@ export const Navbar = () => {
             </NavbarMenuItem>
           ))}
           <div className="flex flex-col gap-3 w-full px-6 mt-4">
-            {loading ? (
-              <div className="h-12" />
-            ) : user ? (
-              <>
-                <div className="text-white text-center mb-2">
-                  {profile?.display_name || profile?.name || user.email}
-                </div>
-                <Button 
-                  variant="bordered" 
-                  color="primary" 
-                  size="lg"
-                  onClick={() => {
-                    handleLogout()
-                    setIsMenuOpen(false)
-                  }} 
-                  className="border-[#00b2de] text-[#00b2de] hover:bg-[#00b2de]/10"
-                >
-                  Cerrar sesión
-                </Button>
-              </>
+            {user ? (
+              <Button 
+                variant="solid" 
+                color="primary" 
+                size="lg"
+                onClick={() => {
+                  handleGoToClub()
+                  setIsMenuOpen(false)
+                }}
+              >
+                {user.role === 'admin' ? 'Ir a admin' : 'Ir al club'}
+              </Button>
             ) : (
               <>
                 <Button 

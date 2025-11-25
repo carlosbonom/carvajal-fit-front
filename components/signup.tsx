@@ -6,16 +6,131 @@ import { Input } from "@heroui/input"
 import { Button } from "@heroui/button"
 import { motion } from "framer-motion"
 import Link from "next/link"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { register, getProfile } from "@/services/auth"
+import { saveTokens, getAccessToken } from "@/lib/auth-utils"
+import { useAppDispatch, useAppSelector } from "@/lib/store/hooks"
+import { setUser } from "@/lib/store/slices/userSlice"
+import { store } from "@/lib/store/store"
+import PhoneInput, { isValidPhoneNumber, parsePhoneNumber, getCountryCallingCode } from "react-phone-number-input"
+import type { Country } from "react-phone-number-input"
+import toast from "react-hot-toast"
+import "react-phone-number-input/style.css"
 
 export default function Signup() {
+  const router = useRouter()
+  const dispatch = useAppDispatch()
+  const user = useAppSelector((state) => state.user.user)
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [phone, setPhone] = useState("")
+  const [country, setCountry] = useState<Country>("CL")
   const [password, setPassword] = useState("")
   const [errors, setErrors] = useState({ name: "", email: "", phone: "", password: "" })
   const [isLoading, setIsLoading] = useState(false)
   const [submitError, setSubmitError] = useState("")
+  const [isCheckingUser, setIsCheckingUser] = useState(true)
+
+  // Verificar si hay un usuario logueado al cargar el componente
+  useEffect(() => {
+    const checkExistingUser = async () => {
+      // Verificar si ya hay usuario en Redux
+      let currentUser = store.getState().user.user
+      
+      // Si no hay usuario en Redux, intentar cargarlo desde el token
+      if (!currentUser) {
+        const token = getAccessToken()
+        if (token) {
+          try {
+            const userProfile = await getProfile(token)
+            dispatch(setUser(userProfile))
+            currentUser = userProfile
+          } catch (error) {
+            console.error('Error al cargar usuario:', error)
+          }
+        }
+      }
+
+      // Si hay usuario logueado, verificar su subscription
+      if (currentUser) {
+        if (!currentUser.subscription) {
+          // Si subscription es null, redirigir al checkout
+          router.push('/checkout')
+          return
+        } else {
+          // Si tiene subscription, redirigir al club (ya está registrado)
+          router.push('/club')
+          return
+        }
+      }
+
+      // Si no hay usuario, permitir ver el formulario
+      setIsCheckingUser(false)
+    }
+
+    checkExistingUser()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // También verificar cuando cambie el usuario en Redux
+  useEffect(() => {
+    if (user) {
+      if (!user.subscription) {
+        router.push('/checkout')
+      } else {
+        router.push('/club')
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user])
+  
+  // Función para parsear el número de teléfono y extraer countryCode y phone
+  const parsePhoneNumberData = (phoneValue: string, countryValue: Country) => {
+    if (!phoneValue) {
+      return { countryCode: "", phone: "" }
+    }
+    
+    try {
+      const phoneNumber = parsePhoneNumber(phoneValue, countryValue)
+      if (phoneNumber && phoneNumber.isValid()) {
+        const countryCode = phoneNumber.countryCallingCode
+        const nationalNumber = phoneNumber.nationalNumber
+        return {
+          countryCode: countryCode || "",
+          phone: nationalNumber || ""
+        }
+      }
+    } catch (error) {
+      console.error("Error parsing phone number:", error)
+    }
+    
+    // Fallback: si no se puede parsear, usar el país actual para obtener el código
+    try {
+      if (countryValue) {
+        const countryCode = getCountryCallingCode(countryValue)
+        // Intentar extraer el número sin el código de país
+        const phoneWithoutPlus = phoneValue.replace(/^\s*\+?\s*/, "")
+        const countryCodeString = countryCode.toString()
+        let phone = phoneWithoutPlus
+        
+        // Si el número comienza con el código de país, quitarlo
+        if (phoneWithoutPlus.startsWith(countryCodeString)) {
+          phone = phoneWithoutPlus.substring(countryCodeString.length).trim()
+        }
+        
+        return { 
+          countryCode: countryCodeString, 
+          phone: phone || phoneWithoutPlus 
+        }
+      }
+    } catch (error) {
+      console.error("Error in fallback parsing:", error)
+    }
+    
+    // Último fallback: devolver el número completo como phone
+    return { countryCode: "", phone: phoneValue.replace(/^\s*\+?\s*/, "") }
+  }
 
   const validateName = (value: string) => {
     if (!value) {
@@ -38,16 +153,12 @@ export default function Signup() {
     return ""
   }
 
-  const validatePhone = (value: string) => {
+  const validatePhone = (value: string | undefined) => {
     if (!value) {
       return "El teléfono es obligatorio"
     }
-    const phoneRegex = /^[\d\s\+\-\(\)]+$/
-    if (!phoneRegex.test(value)) {
+    if (!isValidPhoneNumber(value)) {
       return "Por favor ingresa un número de teléfono válido"
-    }
-    if (value.replace(/\D/g, '').length < 8) {
-      return "El teléfono debe tener al menos 8 dígitos"
     }
     return ""
   }
@@ -78,10 +189,85 @@ export default function Signup() {
       password: passwordError
     })
 
-    if (!nameError && !emailError && !phoneError) {
-      console.log("Formulario válido", { name, email, phone })
-      // Aquí irá la lógica de registro
+    if (!nameError && !emailError && !phoneError && !passwordError) {
+      setIsLoading(true)
+      try {
+        // Parsear el número de teléfono para separar countryCode y phone
+        const { countryCode: parsedCountryCode, phone: parsedPhone } = parsePhoneNumberData(phone, country)
+        
+        // Preparar datos para el registro
+        const registerData = {
+          email,
+          password,
+          name,
+          phone: parsedPhone,
+          countryCode: parsedCountryCode,
+          // Puedes agregar más campos opcionales aquí si los necesitas
+          // preferredCurrency: 'CLP',
+        }
+        
+        const response = await register(registerData)
+        // Guardar tokens en localStorage
+        saveTokens(response.accessToken, response.refreshToken)
+        
+        // Obtener el perfil del usuario con /auth/me
+        const userProfile = await getProfile(response.accessToken)
+        
+        // Guardar el usuario en Redux
+        dispatch(setUser(userProfile))
+        
+        // Redirigir según si tiene subscription o no
+        if (!userProfile.subscription) {
+          // Si no tiene subscription, redirigir al checkout
+          router.push('/checkout')
+        } else {
+          // Si tiene subscription, redirigir al club
+          router.push('/club')
+        }
+      } catch (error: any) {
+        console.error('Error en registro:', error)
+        if (error.response) {
+          // Error de la API
+          const errorMessage = error.response.data?.message || 
+            (Array.isArray(error.response.data?.message) 
+              ? error.response.data.message.join(', ') 
+              : 'Error al registrar usuario')
+          
+          // Verificar si el error es de email ya registrado
+          const isEmailRegisteredError = 
+            errorMessage.toLowerCase().includes('email') && 
+            (errorMessage.toLowerCase().includes('ya está registrado') ||
+             errorMessage.toLowerCase().includes('ya existe') ||
+             errorMessage.toLowerCase().includes('already registered') ||
+             errorMessage.toLowerCase().includes('already exists'))
+          
+          if (isEmailRegisteredError) {
+            // Redirigir al login con el email precargado (el toast se mostrará en login)
+            router.push(`/login?email=${encodeURIComponent(email)}`)
+            return
+          }
+          
+          setSubmitError(errorMessage)
+        } else if (error.request) {
+          // Error de red
+          setSubmitError('Error de conexión. Por favor, verifica tu conexión a internet.')
+        } else {
+          // Otro error
+          setSubmitError('Ocurrió un error inesperado. Por favor, intenta de nuevo.')
+        }
+      } finally {
+        setIsLoading(false)
+      }
     }
+  }
+
+  // Mostrar loading mientras se verifica el usuario
+  if (isCheckingUser) {
+    return (
+      <div className="min-h-screen w-full relative overflow-hidden flex items-center justify-center">
+        <div className="text-white">Cargando...</div>
+      </div>
+    )
   }
 
   return (
@@ -93,7 +279,8 @@ export default function Signup() {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
-          className="mb-2"
+          className="mb-2 cursor-pointer"
+          onClick={() => router.push("/")}
         >
           <Logo size={80} />
         </motion.div>
@@ -163,29 +350,52 @@ export default function Signup() {
                 errorMessage: "text-red-400"
               }}
             />
-            <Input
-              label="Teléfono"
-              labelPlacement="outside"
-              type="text"
-              placeholder="+56 9 1234 5678"
-              variant="bordered"
-              radius="lg"
-              value={phone}
-              onValueChange={(value) => {
-                setPhone(value)
-                if (errors.phone) {
-                  setErrors({ ...errors, phone: validatePhone(value) })
-                }
-              }}
-              isInvalid={!!errors.phone}
-              errorMessage={errors.phone}
-              classNames={{
-                input: "text-white",
-                inputWrapper: "border-[#00b2de]/30 hover:border-[#00b2de]/50 focus-within:border-[#00b2de] transition-colors bg-black/30",
-                label: "!text-white font-medium",
-                errorMessage: "text-red-400"
-              }}
-            />
+            <div className="flex flex-col gap-2 w-full">
+              <label className="text-white font-medium text-sm">Teléfono</label>
+              <div className="w-full">
+                <PhoneInput
+                  international
+                  country={country}
+                  defaultCountry="CL"
+                  value={phone}
+                  onChange={(value) => {
+                    setPhone(value || "")
+                    // Detectar automáticamente el país del número ingresado
+                    if (value) {
+                      try {
+                        const phoneNumber = parsePhoneNumber(value)
+                        if (phoneNumber && phoneNumber.country) {
+                          setCountry(phoneNumber.country)
+                        }
+                      } catch (error) {
+                        // Si no se puede detectar, mantener el país actual
+                      }
+                    }
+                    if (errors.phone) {
+                      setErrors({ ...errors, phone: validatePhone(value) })
+                    }
+                  }}
+                  onCountryChange={(countryValue) => {
+                    if (countryValue) {
+                      setCountry(countryValue)
+                    }
+                  }}
+                  onBlur={() => {
+                    if (phone) {
+                      setErrors({ ...errors, phone: validatePhone(phone) })
+                    }
+                  }}
+                  placeholder="+56 9 1234 5678"
+                  className={`phone-input-custom ${errors.phone ? 'phone-input-error' : ''}`}
+                  numberInputProps={{
+                    className: "text-white"
+                  }}
+                />
+              </div>
+              {errors.phone && (
+                <p className="text-red-400 text-xs mt-1">{errors.phone}</p>
+              )}
+            </div>
             <Input
               label="Contraseña"
               labelPlacement="outside"

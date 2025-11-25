@@ -1,12 +1,17 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@heroui/button";
 import { Logo } from "./icons";
 import { useRouter, usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { PanelLeftClose, LogOut, Settings, User as UserIcon } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { PanelLeftClose, ChevronRight, LogOut, Settings, User as UserIcon } from "lucide-react";
+import { clearUser } from "@/lib/store/slices/userSlice";
+import { clearTokens, getAccessToken } from "@/lib/auth-utils";
+import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
+import { logout } from "@/services/auth";
+
 
 // Iconos SVG simples para el sidebar
 const DashboardIcon = ({ className }: { className?: string }) => (
@@ -96,11 +101,47 @@ const menuSections: MenuSection[] = [
 ];
 
 export function AdminSidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen: (isOpen: boolean) => void }) {
+  const dispatch = useAppDispatch()
+  const user = useAppSelector((state) => state.user.user)
   const [isMobile, setIsMobile] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
+  const [mounted, setMounted] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
+  const avatarRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const pathname = usePathname();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Obtener inicial del nombre o email
+  const getUserInitial = () => {
+    if (user?.name) {
+      return user.name.charAt(0).toUpperCase()
+    }
+    if (user?.email) {
+      return user.email.charAt(0).toUpperCase()
+    }
+    return 'A'
+  }
+
+  // Obtener nombre para mostrar
+  const getUserName = () => {
+    return user?.name || user?.email || 'Admin'
+  }
+
+  // Obtener rol para mostrar
+  const getUserRole = () => {
+    if (!user?.role) return 'Administrador'
+    const roleMap: Record<string, string> = {
+      'admin': 'Administrador',
+      'customer': 'Cliente',
+      'support': 'Soporte'
+    }
+    return roleMap[user.role] || user.role.charAt(0).toUpperCase() + user.role.slice(1)
+  }
 
   // Detectar si es móvil
   useEffect(() => {
@@ -134,10 +175,19 @@ export function AdminSidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen
   }, [isProfileMenuOpen]);
 
   const handleLogout = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/");
-    router.refresh();
+    try {
+      const token = getAccessToken()
+      if (token) {
+        await logout(token)
+      }
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error)
+    } finally {
+      clearTokens()
+      dispatch(clearUser())
+      router.push("/")
+      router.refresh()
+    }
   };
 
   const toggleSidebar = () => {
@@ -181,7 +231,7 @@ export function AdminSidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen
         data-sidebar
         className={cn(
           "fixed left-0 top-0 h-full bg-white transition-all duration-300 ease-in-out",
-          "shadow-xl border-r border-gray-200",
+          "shadow-xl border-r border-gray-200 overflow-hidden",
           isMobile
             ? isOpen
               ? "w-full max-w-[280px] translate-x-0 z-50"
@@ -193,7 +243,7 @@ export function AdminSidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen
       >
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200 min-h-[73px]">
+          <div className="relative flex items-center justify-between p-4 border-b border-gray-200 min-h-[73px]">
             {/* En mobile siempre mostrar logo y título completo */}
             {isMobile ? (
               <>
@@ -211,17 +261,19 @@ export function AdminSidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen
               </>
             ) : (
               <>
-                {!isOpen && (
-                  <div className="flex items-center gap-2">
-                    <Logo size={40} />
-                    <span className="font-semibold text-md text-gray-900">CARVAJAL FIT</span>
-                  </div>
-                )}
-                {isOpen && (
-                  <div className="flex justify-center w-full">
-                    <Logo size={48} />
-                  </div>
-                )}
+                <div className={cn(
+                  "flex items-center gap-2 transition-all duration-300",
+                  isOpen ? "opacity-0 w-0 overflow-hidden" : "opacity-100 w-auto"
+                )}>
+                  <Logo size={40} />
+                  <span className="font-semibold text-md text-gray-900 whitespace-nowrap">CARVAJAL FIT</span>
+                </div>
+                <div className={cn(
+                  "flex justify-center w-full transition-all duration-300",
+                  isOpen ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none absolute"
+                )}>
+                  <Logo size={48} />
+                </div>
                 {!isOpen && (
                   <button
                     onClick={toggleSidebar}
@@ -295,7 +347,7 @@ export function AdminSidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen
           </nav>
 
           {/* Profile Section */}
-          <div className="p-4 border-t border-gray-200 relative" ref={profileMenuRef}>
+          <div className="p-4 border-t border-gray-200 relative z-10" ref={profileMenuRef}>
             {isMobile || !isOpen ? (
               <div className="relative">
                 <div
@@ -306,11 +358,14 @@ export function AdminSidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen
                   )}
                 >
                   <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                    <span className="text-primary font-semibold text-sm">A</span>
+                    <span className="text-primary font-semibold text-sm">{getUserInitial()}</span>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 truncate">Admin</p>
-                    <p className="text-xs text-gray-500 truncate">Administrador</p>
+                  <div className={cn(
+                    "flex-1 min-w-0 transition-all duration-300",
+                    !isMobile && isOpen ? "opacity-0 w-0 overflow-hidden" : "opacity-100 w-auto"
+                  )}>
+                    <p className="text-sm font-semibold text-gray-900 truncate whitespace-nowrap">{getUserName()}</p>
+                    <p className="text-xs text-gray-500 truncate whitespace-nowrap">{getUserRole()}</p>
                   </div>
                   {!isMobile && (
                     <button 
@@ -318,7 +373,10 @@ export function AdminSidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen
                         e.stopPropagation();
                         setIsProfileMenuOpen(!isProfileMenuOpen);
                       }}
-                      className="p-1 hover:bg-gray-200 rounded transition-colors flex-shrink-0"
+                      className={cn(
+                        "p-1 hover:bg-gray-200 rounded transition-all duration-300 flex-shrink-0",
+                        isOpen ? "opacity-0 w-0 overflow-hidden" : "opacity-100 w-auto"
+                      )}
                     >
                       <svg className="w-4 h-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
@@ -367,68 +425,135 @@ export function AdminSidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen
             ) : (
               <div className="relative">
                 <div
-                  onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+                  ref={avatarRef}
+                  onClick={(e) => {
+                    const menuWidth = 200; // Ancho del menú
+                    const menuHeight = 250; // Altura aproximada del menú
+                    const padding = 8; // Padding mínimo desde los bordes
+                    
+                    // Calcular posición ajustada para no salirse de la pantalla
+                    let left = e.clientX;
+                    let top = e.clientY;
+                    
+                    // Ajustar horizontalmente si se sale por la derecha
+                    if (left + menuWidth + padding > window.innerWidth) {
+                      left = window.innerWidth - menuWidth - padding;
+                    }
+                    // Ajustar horizontalmente si se sale por la izquierda
+                    if (left < padding) {
+                      left = padding;
+                    }
+                    
+                    // Ajustar verticalmente si se sale por abajo
+                    if (top + menuHeight / 2 + padding > window.innerHeight) {
+                      top = window.innerHeight - menuHeight / 2 - padding;
+                    }
+                    // Ajustar verticalmente si se sale por arriba
+                    if (top - menuHeight / 2 < padding) {
+                      top = menuHeight / 2 + padding;
+                    }
+                    
+                    setMenuPosition({
+                      top: top,
+                      left: left
+                    });
+                    setIsProfileMenuOpen(!isProfileMenuOpen);
+                  }}
                   className="flex justify-center cursor-pointer"
                 >
-                  <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center hover:bg-primary/30 transition-colors" title="Admin - Administrador">
-                    <span className="text-primary font-semibold text-sm">A</span>
+                  <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center hover:bg-primary/30 transition-colors" title={`${getUserName()} - ${getUserRole()}`}>
+                    <span className="text-primary font-semibold text-sm">{getUserInitial()}</span>
                   </div>
                 </div>
-                
-                {/* Dropdown Menu para colapsado */}
-                {isProfileMenuOpen && (
-                  <div className="absolute bottom-full left-full ml-2 mb-0 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-[60] min-w-[200px]">
-                    <div className="px-4 py-2 border-b border-gray-200">
-                      <p className="text-sm font-semibold text-gray-900">Admin</p>
-                      <p className="text-xs text-gray-500">Administrador</p>
-                    </div>
-                    <button
-                      onClick={() => {
-                        router.push("/admin/settings");
-                        setIsProfileMenuOpen(false);
-                      }}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                    >
-                      <UserIcon className="w-4 h-4 text-gray-600" />
-                      <span>Mi Perfil</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        router.push("/admin/settings");
-                        setIsProfileMenuOpen(false);
-                      }}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                    >
-                      <Settings className="w-4 h-4 text-gray-600" />
-                      <span>Configuración</span>
-                    </button>
-                    <div className="border-t border-gray-200 my-1"></div>
-                    <button
-                      onClick={() => {
-                        handleLogout();
-                        setIsProfileMenuOpen(false);
-                      }}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50 transition-colors"
-                    >
-                      <LogOut className="w-4 h-4 text-red-600" />
-                      <span>Cerrar sesión</span>
-                    </button>
-                  </div>
-                )}
               </div>
             )}
           </div>
         </div>
       </aside>
 
-      {/* Botón para expandir cuando está colapsado en desktop */}
-      {isOpen && !isMobile && (
+      {/* Dropdown Menu para colapsado - Renderizado con Portal fuera del sidebar */}
+      {isProfileMenuOpen && mounted && !isMobile && isOpen && createPortal(
+        <>
+          {/* Overlay para cerrar el menú */}
+          <div 
+            className="fixed inset-0 z-[90]" 
+            onClick={() => setIsProfileMenuOpen(false)}
+            style={{ pointerEvents: 'auto' }}
+          />
+          <div 
+            className="fixed bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-[9999] min-w-[200px] transition-opacity duration-200"
+            style={{
+              top: `${menuPosition.top}px`,
+              left: `${menuPosition.left}px`,
+              transform: 'translateY(-50%)',
+              pointerEvents: 'auto'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-4 py-2 border-b border-gray-200">
+              <p className="text-sm font-semibold text-gray-900">{getUserName()}</p>
+              <p className="text-xs text-gray-500">{getUserRole()}</p>
+            </div>
+            <button
+              onClick={() => {
+                router.push("/admin/settings");
+                setIsProfileMenuOpen(false);
+              }}
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+            >
+              <UserIcon className="w-4 h-4 text-gray-600" />
+              <span>Mi Perfil</span>
+            </button>
+            <button
+              onClick={() => {
+                router.push("/admin/settings");
+                setIsProfileMenuOpen(false);
+              }}
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+            >
+              <Settings className="w-4 h-4 text-gray-600" />
+              <span>Configuración</span>
+            </button>
+            <div className="border-t border-gray-200 my-1"></div>
+            <button
+              type="button"
+              onClick={async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Botón cerrar sesión clickeado');
+                setIsProfileMenuOpen(false);
+                // Pequeño delay para asegurar que el menú se cierre antes del logout
+                setTimeout(async () => {
+                  await handleLogout();
+                }, 100);
+              }}
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50 transition-colors cursor-pointer relative z-[10000]"
+            >
+              <LogOut className="w-4 h-4 text-red-600" />
+              <span>Cerrar sesión</span>
+            </button>
+          </div>
+        </>,
+        document.body
+      ) as React.ReactNode}
+
+      {/* Botón para colapsar/expandir sidebar en desktop */}
+      {!isMobile && (
         <button
           onClick={toggleSidebar}
-          className="fixed top-4 left-20 z-40 p-2 bg-white rounded-lg shadow-lg hover:bg-gray-100 transition-colors border border-gray-200"
-          aria-label="Expandir menú"
+          className={cn(
+            "fixed top-7.5 z-40 p-2 bg-white rounded-lg ",
+            "border border-gray-200 hover:border-gray-300 transition-colors",
+            "hover:bg-gray-50",
+            isOpen ? "left-20" : "left-4"
+          )}
+          aria-label={isOpen ? "Colapsar menú" : "Expandir menú"}
         >
-          <MenuIcon className="w-5 h-5 text-gray-700" />
+          {isOpen ? (
+            <PanelLeftClose className="w-4 h-4 text-gray-600" />
+          ) : (
+            <ChevronRight className="w-4 h-4 text-gray-600" />
+          )}
         </button>
       )}
       
