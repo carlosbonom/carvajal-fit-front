@@ -1,8 +1,9 @@
 "use client";
 
-import { useAppSelector } from "@/lib/store/hooks";
 import { Calendar, MessageCircle, Flame, ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
+
+import { useAppSelector } from "@/lib/store/hooks";
 
 export default function ClubPage() {
   const user = useAppSelector((state) => state.user.user);
@@ -61,10 +62,10 @@ export default function ClubPage() {
               <p className="text-white/60 text-sm">Comunidad WhatsApp</p>
             </div>
             <a
-              href={whatsappLink}
-              target="_blank"
-              rel="noopener noreferrer"
               className="text-[#00b2de] font-medium hover:text-[#00a0c8] transition-colors flex items-center gap-1"
+              href={whatsappLink}
+              rel="noopener noreferrer"
+              target="_blank"
             >
               Unirse <ArrowRight className="w-4 h-4" />
             </a>
@@ -85,9 +86,9 @@ export default function ClubPage() {
                     <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-white truncate">
                       Bajar Grasa
                     </h2>
-                    <button 
-                      onClick={() => router.push('/club/bajar-grasa')}
+                    <button
                       className="text-[#00b2de] font-semibold hover:text-[#00a0c8] transition-colors flex items-center gap-1 flex-shrink-0 text-sm sm:text-base"
+                      onClick={() => router.push("/club/bajar-grasa")}
                     >
                       Ver más <ArrowRight className="w-4 h-4" />
                     </button>
@@ -107,21 +108,31 @@ export default function ClubPage() {
               {videos.map((video) => (
                 <div
                   key={video.id}
-                  onClick={() => router.push(`/club/bajar-grasa?video=${video.id}`)}
                   className="flex-shrink-0 w-[85vw] max-w-[320px] bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-xl aspect-[4/3] flex items-center justify-center border border-white/10 active:border-[#00b2de]/30 transition-all duration-300 cursor-pointer group snap-start"
+                  onClick={() =>
+                    router.push(`/club/bajar-grasa?video=${video.id}`)
+                  }
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      router.push(`/club/bajar-grasa?video=${video.id}`);
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
                 >
                   <div className="text-center space-y-2 opacity-40 group-hover:opacity-60 transition-opacity">
                     <svg
                       className="w-16 h-16 mx-auto text-white/50"
                       fill="none"
-                      viewBox="0 0 24 24"
                       stroke="currentColor"
+                      viewBox="0 0 24 24"
                     >
                       <path
+                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         strokeWidth={1.5}
-                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
                       />
                     </svg>
                     <p className="text-white/50 text-sm">{video.title}</p>
@@ -135,21 +146,31 @@ export default function ClubPage() {
               {videos.map((video) => (
                 <div
                   key={video.id}
-                  onClick={() => router.push(`/club/bajar-grasa?video=${video.id}`)}
                   className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-xl aspect-[4/3] flex items-center justify-center border border-white/10 hover:border-[#00b2de]/30 transition-all duration-300 cursor-pointer group"
+                  onClick={() =>
+                    router.push(`/club/bajar-grasa?video=${video.id}`)
+                  }
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      router.push(`/club/bajar-grasa?video=${video.id}`);
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
                 >
                   <div className="text-center space-y-2 opacity-40 group-hover:opacity-60 transition-opacity">
                     <svg
                       className="w-16 h-16 mx-auto text-white/50"
                       fill="none"
-                      viewBox="0 0 24 24"
                       stroke="currentColor"
+                      viewBox="0 0 24 24"
                     >
                       <path
+                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         strokeWidth={1.5}
-                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
                       />
                     </svg>
                     <p className="text-white/50 text-sm">{video.title}</p>

@@ -10,11 +10,11 @@ export const Logo: React.FC<IconSvgProps> = ({
   ...props
 }) => (
   <img
-    src="https://melli.fydeli.com/carvajal-fit/carvajal-fit-logo.webp"
     alt="Carvajal Fit Logo"
-    width={size || width || 36}
-    height={size || height || 36}
     className={className}
+    height={size || height || 36}
+    src="https://melli.fydeli.com/carvajal-fit/carvajal-fit-logo.webp"
+    width={size || width || 36}
     {...(props as any)}
   />
 );

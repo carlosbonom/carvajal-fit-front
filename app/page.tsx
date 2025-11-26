@@ -2,6 +2,7 @@
 
 import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
+
 import { Faq } from "@/components/Faq";
 import { Footer } from "@/components/Footer";
 import { HeroSection } from "@/components/hero-section";
@@ -11,35 +12,39 @@ import { SuccessStories } from "@/components/Success-stories";
 import { Teachers } from "@/components/Teachers";
 
 // Componente wrapper para animaciones con scroll
-function AnimatedSection({ 
-  children, 
+function AnimatedSection({
+  children,
   id,
-  delay = 0 
-}: { 
-  children: React.ReactNode; 
+  delay = 0,
+}: {
+  children: React.ReactNode;
   id?: string;
   delay?: number;
 }) {
   const ref = useRef(null);
-  const isInView = useInView(ref, { 
+  const isInView = useInView(ref, {
     once: true, // La animación solo ocurre una vez
-    amount: 0.2  // Se activa cuando el 20% del elemento es visible
+    amount: 0.2, // Se activa cuando el 20% del elemento es visible
   });
 
   return (
     <motion.section
       ref={ref}
+      animate={
+        isInView
+          ? {
+              opacity: 1,
+              y: 0,
+              transition: {
+                duration: 0.7,
+                delay: delay,
+                ease: [0.25, 0.46, 0.45, 0.94], // Curva de animación suave
+              },
+            }
+          : {}
+      }
       id={id}
       initial={{ opacity: 0, y: 40 }}
-      animate={isInView ? { 
-        opacity: 1, 
-        y: 0,
-        transition: {
-          duration: 0.7,
-          delay: delay,
-          ease: [0.25, 0.46, 0.45, 0.94] // Curva de animación suave
-        }
-      } : {}}
     >
       {children}
     </motion.section>
@@ -50,9 +55,9 @@ function AnimatedSection({
 function HeroWrapper({ children }: { children: React.ReactNode }) {
   return (
     <motion.section
+      animate={{ opacity: 1 }}
       id="inicio"
       initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
     >
       {children}
@@ -76,17 +81,15 @@ export default function Home() {
         <MembershipCardv2 />
       </section>
 
-      <AnimatedSection id="coaches" delay={0.1}>
+      <AnimatedSection delay={0.1} id="coaches">
         <Teachers />
       </AnimatedSection>
 
-      <AnimatedSection id="faq" delay={0.1}>
+      <AnimatedSection delay={0.1} id="faq">
         <Faq />
       </AnimatedSection>
 
-      
-        <Footer />
-      
+      <Footer />
     </>
   );
 }

@@ -1,10 +1,10 @@
-import { Check } from "lucide-react"
-import {Card, CardBody, CardHeader} from "@heroui/card"
-import { Button } from "@heroui/button"
-import { useRouter } from "next/navigation"
+import { Check } from "lucide-react";
+import { Card, CardBody, CardHeader } from "@heroui/card";
+import { Button } from "@heroui/button";
+import { useRouter } from "next/navigation";
 
 export function MembershipCard() {
-  const router = useRouter()
+  const router = useRouter();
   const benefits = [
     {
       title: "Ruta de entrenamiento estructurada por fases",
@@ -20,7 +20,8 @@ export function MembershipCard() {
     },
     {
       title: "Zoom grupal en vivo todos los viernes conmigo",
-      description: "Espacio para resolver dudas, mantenerte enfocado y corregir el rumbo si es necesario.",
+      description:
+        "Espacio para resolver dudas, mantenerte enfocado y corregir el rumbo si es necesario.",
       value: "$50.000 mensual (50 USD)",
     },
     {
@@ -41,46 +42,59 @@ export function MembershipCard() {
         "Incluye planes de entrenamiento para quemar grasa, tonificar glúteos, abdomen y piernas, y entrenar en casa o gimnasio.",
       value: "más de $80.000 (80 USD)",
     },
-  ]
+  ];
 
   return (
-    <section id="club" className="py-16 md:py-24 bg-black">
+    <section className="py-16 md:py-24 bg-black" id="club">
       <div className="container mx-auto px-4">
         <Card className="max-w-4xl mx-auto border-2 border-accent/20 shadow-2xl bg-[#080c0f] text-white border-primary-800">
           <CardHeader className="flex flex-col text-center space-y-10 pb-10s text-white">
             <div className="space-y-2">
               <div className="text-5xl md:text-6xl font-bold ">$49.990</div>
-              <div className="text-xl text-muted-foreground  text-gray-600 font-semibold">MENSUALES</div>
+              <div className="text-xl text-muted-foreground  text-gray-600 font-semibold">
+                MENSUALES
+              </div>
             </div>
 
             <div className="space-y-4">
-              <h2 className="text-2xl md:text-3xl font-bold ">💥 CLUB CARVAJAL FIT</h2>
+              <h2 className="text-2xl md:text-3xl font-bold ">
+                💥 CLUB CARVAJAL FIT
+              </h2>
               <p className="text-lg font-semibold ">
                 Transforma tu cuerpo. Mantén el foco. Evoluciona cada mes.
               </p>
               <p className="text-base text-muted-foreground italic leading-relaxed text-gray-600">
-                "Todos los que pertenecen al club tienen un gran físico y mentalidad, sino acá la obtienen"
+                &quot;Todos los que pertenecen al club tienen un gran físico y
+                mentalidad, sino acá la obtienen&quot;
               </p>
             </div>
 
             <div className="space-y-2 pt-4">
               <p className="text-sm text-muted-foreground text-gray-600">
-                ✅ Valor mensual: <span className="font-semibold  text-white">$49.990 CLP (50 USD)</span>
+                ✅ Valor mensual:{" "}
+                <span className="font-semibold  text-white">
+                  $49.990 CLP (50 USD)
+                </span>
               </p>
               <p className="text-sm text-muted-foreground text-gray-600">
                 Entrenar con un personal trainer te puede costar más de{" "}
                 <span className="font-semibold">$400.000 al mes (400 USD)</span>
               </p>
               <p className="text-sm text-muted-foreground text-gray-600">
-                Entrenar solo y sin guía te puede costar años de errores y frustración.
+                Entrenar solo y sin guía te puede costar años de errores y
+                frustración.
               </p>
-              <p className="text-sm font-semibold text-accent text-primary-500">Este Club te da una ruta clara y efectiva.</p>
+              <p className="text-sm font-semibold text-accent text-primary-500">
+                Este Club te da una ruta clara y efectiva.
+              </p>
             </div>
           </CardHeader>
 
           <CardBody className="space-y-8">
             <div>
-              <h3 className="text-2xl font-bold mb-6">🔥 ¿QUÉ INCLUYE TU SUSCRIPCIÓN?</h3>
+              <h3 className="text-2xl font-bold mb-6">
+                🔥 ¿QUÉ INCLUYE TU SUSCRIPCIÓN?
+              </h3>
 
               <div className="space-y-6">
                 {benefits.map((benefit, index) => (
@@ -92,8 +106,12 @@ export function MembershipCard() {
                     </div>
                     <div className="space-y-1">
                       <h4 className="font-semibold ">✅ {benefit.title}</h4>
-                      <p className="text-sm text-muted-foreground leading-relaxed text-gray-600">{benefit.description}</p>
-                      <p className="text-sm font-medium text-accent text-primary-500">Valor referencial: {benefit.value}</p>
+                      <p className="text-sm text-muted-foreground leading-relaxed text-gray-600">
+                        {benefit.description}
+                      </p>
+                      <p className="text-sm font-medium text-accent text-primary-500">
+                        Valor referencial: {benefit.value}
+                      </p>
                     </div>
                   </div>
                 ))}
@@ -105,12 +123,15 @@ export function MembershipCard() {
                 <p className="text-lg font-semibold">
                   💰 VALOR TOTAL ESTIMADO: sobre $650.000 CLP (700 USD)
                 </p>
-                <p className="text-2xl font-bold text-accent text-primary-500">🟢 Tu inversión real: solo $49.990 CLP al mes (50 USD)</p>
+                <p className="text-2xl font-bold text-accent text-primary-500">
+                  🟢 Tu inversión real: solo $49.990 CLP al mes (50 USD)
+                </p>
               </div>
 
               <div className="bg-muted/50 rounded-lg p-6 space-y-3 bg-gray-900">
                 <p className="text-base  font-medium leading-relaxed">
-                  Este Club no es un plan suelto. Es una guía completa, real y progresiva.
+                  Este Club no es un plan suelto. Es una guía completa, real y
+                  progresiva.
                 </p>
                 <p className="text-base text-muted-foreground leading-relaxed text-gray-600">
                   Ahorras tiempo, dinero, frustración y años de ensayo y error.
@@ -121,11 +142,11 @@ export function MembershipCard() {
               </div>
 
               <Button
+                className="w-full font-bold"
+                color="primary"
                 size="lg"
                 variant="solid"
-                color="primary"
-                className="w-full font-bold"
-                onClick={() => router.push('/signup')}
+                onClick={() => router.push("/signup")}
               >
                 Únete al Club Ahora
               </Button>
@@ -134,5 +155,5 @@ export function MembershipCard() {
         </Card>
       </div>
     </section>
-  )
+  );
 }

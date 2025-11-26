@@ -1,9 +1,6 @@
-import { type NextRequest } from 'next/server'
+import { type NextRequest } from "next/server";
 
-
-export async function middleware(request: NextRequest) {
- 
-}
+export async function middleware(request: NextRequest) {}
 
 export const config = {
   matcher: [
@@ -15,7 +12,6 @@ export const config = {
      * - api (API routes)
      * Feel free to modify this pattern to include more paths.
      */
-    '/((?!_next/static|_next/image|favicon.ico|api|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    "/((?!_next/static|_next/image|favicon.ico|api|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
-}
-
+};

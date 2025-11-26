@@ -1,9 +1,13 @@
-'use client'
+"use client";
 
-import { useTokenRefresh } from '@/hooks/useTokenRefresh'
+import { useTokenRefresh } from "@/hooks/useTokenRefresh";
 
-export function TokenRefreshProvider({ children }: { children: React.ReactNode }) {
-  useTokenRefresh()
-  return <>{children}</>
+export function TokenRefreshProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  useTokenRefresh();
+
+  return <>{children}</>;
 }
-

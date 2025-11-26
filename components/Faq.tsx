@@ -1,6 +1,6 @@
 "use client";
 import { Accordion, AccordionItem } from "@heroui/react";
-import { ChevronDown, ChevronLeft, Icon } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 const faqs = [
   {
     question: "¿Qué incluye la membresía mensual?",
@@ -42,19 +42,27 @@ const faqs = [
     answer:
       "Los primeros cambios visibles suelen aparecer entre las 4-6 semanas con constancia. Sin embargo, cada cuerpo es diferente y los resultados dependen de tu dedicación, alimentación y descanso.",
   },
-]
+];
 
 export function Faq() {
   return (
-    <section id="faq" className="text-white items-center justify-center pt-16 pb-16">
+    <section
+      className="text-white items-center justify-center pt-16 pb-16"
+      id="faq"
+    >
       <div className="container mx-auto px-4">
         <div className="text-center mb-12 space-y-4">
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-center">Preguntas Frecuentes</h2>
-          <p className="text-sm md:text-lg lg:text-xl text-gray-400 text-center mt-4">Resolvemos tus dudas sobre el Club Carvajal Fit</p>
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-center">
+            Preguntas Frecuentes
+          </h2>
+          <p className="text-sm md:text-lg lg:text-xl text-gray-400 text-center mt-4">
+            Resolvemos tus dudas sobre el Club Carvajal Fit
+          </p>
         </div>
 
-        <Accordion 
-         motionProps={{
+        <Accordion
+          className="max-w-3xl mx-auto text-left font-semibold text-foreground bg-[#080c0f] border border-[#00b2de30] rounded-2xl shadow-lg"
+          motionProps={{
             variants: {
               enter: {
                 y: 0,
@@ -92,14 +100,21 @@ export function Faq() {
               },
             },
           }}
-        variant="shadow" className="max-w-3xl mx-auto text-left font-semibold text-foreground bg-[#080c0f] border border-[#00b2de30] rounded-2xl shadow-lg">
-        {faqs.map((faq, index) => (
+          variant="shadow"
+        >
+          {faqs.map((faq, index) => (
             <AccordionItem
               key={index}
               aria-label={faq.question}
-              title={<p className="text-md md:text-lg  text-white font-semibold">{faq.question}</p>}
-              indicator={<ChevronLeft className="w-4 h-4 text-primary-500 transition-transform duration-300 group-data-[open=true]:rotate-180" />}
-            //   className="text-lg md:text-xl lg:text-2xl text-white font-semibold"
+              title={
+                <p className="text-md md:text-lg  text-white font-semibold">
+                  {faq.question}
+                </p>
+              }
+              indicator={
+                <ChevronLeft className="w-4 h-4 text-primary-500 transition-transform duration-300 group-data-[open=true]:rotate-180" />
+              }
+              //   className="text-lg md:text-xl lg:text-2xl text-white font-semibold"
             >
               <p className="text-xs md:text-sm lg:text-base text-gray-400">
                 {faq.answer}
@@ -109,5 +124,5 @@ export function Faq() {
         </Accordion>
       </div>
     </section>
-  )
+  );
 }

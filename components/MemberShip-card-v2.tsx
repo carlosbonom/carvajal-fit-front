@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import {
   Brain,
@@ -8,23 +8,23 @@ import {
   Check,
   GraduationCap,
   Calendar,
-} from "lucide-react"
-import { Card } from "@heroui/card"
-import { Button } from "@heroui/button"
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+} from "lucide-react";
+import { Card } from "@heroui/card";
+import { Button } from "@heroui/button";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export function MembershipCardv2() {
-  const router = useRouter()
-  const [isAnnual, setIsAnnual] = useState(false)
+  const router = useRouter();
+  const [isAnnual, setIsAnnual] = useState(false);
 
-  const monthlyPrice = 49990
-  const annualPrice = monthlyPrice * 12
-  const monthlyPriceUSD = 50
-  const annualPriceUSD = monthlyPriceUSD * 12
+  const monthlyPrice = 49990;
+  const annualPrice = monthlyPrice * 12;
+  const monthlyPriceUSD = 50;
+  const annualPriceUSD = monthlyPriceUSD * 12;
 
-  const displayPrice = isAnnual ? annualPrice : monthlyPrice
-  const displayPriceUSD = isAnnual ? annualPriceUSD : monthlyPriceUSD
+  const displayPrice = isAnnual ? annualPrice : monthlyPrice;
+  const displayPriceUSD = isAnnual ? annualPriceUSD : monthlyPriceUSD;
 
   const benefits = [
     "Ruta de entrenamiento estructurada por fases (definición, mantenimiento, volumen)",
@@ -33,7 +33,7 @@ export function MembershipCardv2() {
     "Grupo privado de WhatsApp con mensaje diario 5:00 AM",
     "Tabla Excel profesional de progreso con gráficos automáticos",
     "Acceso inmediato a todos los planes PDF disponibles",
-  ]
+  ];
 
   const features = [
     {
@@ -56,8 +56,7 @@ export function MembershipCardv2() {
     {
       icon: Video,
       title: "Zoom Semanal en Vivo",
-      description:
-        "Viernes 1 hora para resolver dudas y nuevos conocimientos",
+      description: "Viernes 1 hora para resolver dudas y nuevos conocimientos",
     },
     {
       icon: Brain,
@@ -69,15 +68,13 @@ export function MembershipCardv2() {
       title: "Resultados Sostenibles",
       description: "Sin efecto rebote, mantén tus logros",
     },
-  ]
+  ];
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row-reverse items-center justify-center bg-black py-16 px-6 gap-12">
       {/* --- Caja de Membresía --- */}
       <section className="w-full max-w-md">
-        <Card
-          className="bg-[#0a0e12] border border-[#00b2de30] rounded-2xl shadow-lg"
-        >
+        <Card className="bg-[#0a0e12] border border-[#00b2de30] rounded-2xl shadow-lg">
           <div className="p-8 space-y-8">
             {/* Switch Mensual / Anual */}
             <div className="flex items-center justify-center gap-3 pb-4 border-b border-[#00b2de20]">
@@ -89,18 +86,16 @@ export function MembershipCardv2() {
                 Mensual
               </span>
               <button
-                onClick={() => setIsAnnual(!isAnnual)}
                 className="relative w-12 h-6 rounded-full transition-colors duration-300"
                 style={{
                   backgroundColor: isAnnual ? "#00b2de" : "#374151",
                 }}
+                onClick={() => setIsAnnual(!isAnnual)}
               >
                 <span
                   className="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-300"
                   style={{
-                    transform: isAnnual
-                      ? "translateX(24px)"
-                      : "translateX(0)",
+                    transform: isAnnual ? "translateX(24px)" : "translateX(0)",
                   }}
                 />
               </button>
@@ -143,9 +138,7 @@ export function MembershipCardv2() {
                       <Check className="w-2.5 h-2.5 text-[#00b2de]" />
                     </div>
                   </div>
-                  <p className="text-gray-300 leading-relaxed">
-                    {benefit}
-                  </p>
+                  <p className="text-gray-300 leading-relaxed">{benefit}</p>
                 </div>
               ))}
             </div>
@@ -153,15 +146,14 @@ export function MembershipCardv2() {
             {/* CTA */}
             <div className="pt-4 space-y-3">
               <div className="text-center text-xs text-gray-500">
-                Personal trainer +$400.000/mes • Entrenar solo = años de
-                errores
+                Personal trainer +$400.000/mes • Entrenar solo = años de errores
               </div>
 
               <Button
-                size="lg"
                 className="w-full font-semibold text-white rounded-xl py-6"
+                size="lg"
                 style={{ backgroundColor: "#00b2de" }}
-                onClick={() => router.push('/signup')}
+                onClick={() => router.push("/signup")}
               >
                 Únete al Club Ahora
               </Button>
@@ -205,5 +197,5 @@ export function MembershipCardv2() {
         </div>
       </section>
     </div>
-  )
+  );
 }

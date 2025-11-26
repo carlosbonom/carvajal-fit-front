@@ -59,11 +59,12 @@ export const SuccessStories = () => {
   const isPausedRef = useRef(false);
   const isUserInteractingRef = useRef(false);
   const userScrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null
+    null,
   );
 
   useEffect(() => {
     const scrollContainer = scrollRef.current;
+
     if (!scrollContainer) return;
 
     const scrollSpeed = 1;
@@ -146,6 +147,7 @@ export const SuccessStories = () => {
       e.preventDefault();
       const x = e.clientX;
       const walk = (x - startX) * 2;
+
       scrollContainer.scrollLeft = scrollLeftStart - walk;
       handleUserInteraction();
     };
@@ -197,6 +199,7 @@ export const SuccessStories = () => {
     // Centrar el scroll en el segundo bloque (para scroll infinito en ambas direcciones)
     requestAnimationFrame(() => {
       const middle = scrollContainer.scrollWidth / 3;
+
       scrollContainer.scrollLeft = middle;
       scrollAmountRef.current = middle;
     });
@@ -243,20 +246,22 @@ export const SuccessStories = () => {
             >
               <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-gray-800 border border-gray-700 shadow-lg">
                 <img
-                  src={story.image || "/placeholder.svg"}
                   alt={story.name}
                   className="w-full h-full object-cover"
+                  src={story.image || "/placeholder.svg"}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                 <div className="absolute bottom-0 left-0 right-0 p-2 md:p-6 text-white">
-                  <h3 className="text-sm md:text-base lg:text-lg font-bold mb-1">{story.name}</h3>
+                  <h3 className="text-sm md:text-base lg:text-lg font-bold mb-1">
+                    {story.name}
+                  </h3>
                   <p className="text-primary text-xs md:text-sm lg:text-base font-semibold">
                     {story.description}
                   </p>
                 </div>
               </div>
             </div>
-          )
+          ),
         )}
       </section>
     </div>

@@ -1,6 +1,5 @@
 import "@/styles/globals.css";
 import { Metadata, Viewport } from "next";
-import { Link } from "@heroui/link";
 import clsx from "clsx";
 
 import { Providers } from "./providers";
@@ -21,9 +20,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "white" },
-  ],
+  themeColor: [{ media: "(prefers-color-scheme: light)", color: "white" }],
 };
 
 export default function RootLayout({
@@ -34,18 +31,17 @@ export default function RootLayout({
   return (
     <html suppressHydrationWarning lang="en">
       <head />
-      <body
-        className={clsx(
-          "font-sans antialiased",
-          fontSans.variable,
-        )}
-      >
-        <Providers themeProps={{ attribute: "class", defaultTheme: "light", forcedTheme: "light" }}>
+      <body className={clsx("font-sans antialiased", fontSans.variable)}>
+        <Providers
+          themeProps={{
+            attribute: "class",
+            defaultTheme: "light",
+            forcedTheme: "light",
+          }}
+        >
           <div className="relative flex flex-col">
             <ConditionalNavbar />
-            <main>
-              {children}
-            </main>
+            <main>{children}</main>
           </div>
         </Providers>
       </body>
