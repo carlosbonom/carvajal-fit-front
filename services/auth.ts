@@ -1,3 +1,5 @@
+import type { UserSubscription } from "./subscriptions";
+
 import { authAxios, refreshAxios } from "@/lib/axios-config";
 
 // Tipos para las respuestas de la API
@@ -19,7 +21,7 @@ export interface UserProfile {
   createdAt: string;
   updatedAt: string;
   lastLoginAt: string | null;
-  subscription: any | null;
+  subscription: UserSubscription | null;
 }
 
 export interface RegisterRequest {

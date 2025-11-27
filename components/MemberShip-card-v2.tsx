@@ -11,22 +11,72 @@ import {
 } from "lucide-react";
 import { Card } from "@heroui/card";
 import { Button } from "@heroui/button";
-import { useState } from "react";
+import { Skeleton } from "@heroui/skeleton";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+
+import { getPlans, type Plan, type Price } from "@/services/subscriptions";
 
 export function MembershipCardv2() {
   const router = useRouter();
   const [isAnnual, setIsAnnual] = useState(false);
+  const [plan, setPlan] = useState<Plan | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const monthlyPrice = 49990;
-  const annualPrice = monthlyPrice * 12;
-  const monthlyPriceUSD = 50;
-  const annualPriceUSD = monthlyPriceUSD * 12;
+  // Cargar planes del API
+  useEffect(() => {
+    const loadPlans = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await getPlans();
 
-  const displayPrice = isAnnual ? annualPrice : monthlyPrice;
+        // Obtener el primer plan (CLUB CARVAJAL FIT)
+        if (response.plans && response.plans.length > 0) {
+          setPlan(response.plans[0]);
+        }
+      } catch (err) {
+        setError("Error al cargar los planes");
+        console.error("Error al cargar planes:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadPlans();
+  }, []);
+
+  // Obtener precios según el ciclo de facturación
+  const getPriceByCycle = (
+    prices: Price[],
+    cycle: "month" | "year",
+    currency: "CLP" | "USD",
+  ): number | null => {
+    const price = prices.find(
+      (p) => p.billingCycle.intervalType === cycle && p.currency === currency,
+    );
+
+    return price ? price.amount : null;
+  };
+
+  const monthlyPriceCLP = plan?.prices
+    ? (getPriceByCycle(plan.prices, "month", "CLP") ?? 49990)
+    : 49990;
+  const annualPriceCLP = plan?.prices
+    ? (getPriceByCycle(plan.prices, "year", "CLP") ?? 599880)
+    : 599880;
+  const monthlyPriceUSD = plan?.prices
+    ? (getPriceByCycle(plan.prices, "month", "USD") ?? 50)
+    : 50;
+  const annualPriceUSD = plan?.prices
+    ? (getPriceByCycle(plan.prices, "year", "USD") ?? 600)
+    : 600;
+
+  const displayPrice = isAnnual ? annualPriceCLP : monthlyPriceCLP;
   const displayPriceUSD = isAnnual ? annualPriceUSD : monthlyPriceUSD;
 
-  const benefits = [
+  const benefits = plan?.features || [
     "Ruta de entrenamiento estructurada por fases (definición, mantenimiento, volumen)",
     "Guía completa de cardio optimizada",
     "Zoom grupal en vivo todos los viernes",
@@ -69,6 +119,92 @@ export function MembershipCardv2() {
       description: "Sin efecto rebote, mantén tus logros",
     },
   ];
+
+  // Componente Skeleton para el estado de carga
+  const MembershipSkeleton = () => (
+    <div className="min-h-screen flex flex-col lg:flex-row-reverse items-center justify-center bg-black py-16 px-6 gap-12">
+      {/* --- Caja de Membresía Skeleton --- */}
+      <section className="w-full max-w-md">
+        <Card className="bg-[#0a0e12] border border-[#00b2de30] rounded-2xl shadow-lg">
+          <div className="p-8 space-y-8">
+            {/* Switch Skeleton */}
+            <div className="flex items-center justify-center gap-3 pb-4 border-b border-[#00b2de20]">
+              <Skeleton className="h-4 w-16 rounded bg-white/5" />
+              <Skeleton className="h-6 w-12 rounded-full bg-white/5" />
+              <Skeleton className="h-4 w-16 rounded bg-white/5" />
+            </div>
+
+            {/* Precio Skeleton */}
+            <div className="text-center space-y-2">
+              <Skeleton className="h-12 w-32 mx-auto rounded bg-white/5" />
+              <Skeleton className="h-4 w-24 mx-auto rounded bg-white/5" />
+            </div>
+
+            {/* Título Skeleton */}
+            <div className="text-center space-y-2">
+              <Skeleton className="h-8 w-48 mx-auto rounded bg-white/5" />
+              <Skeleton className="h-4 w-full max-w-sm mx-auto rounded bg-white/5" />
+              <Skeleton className="h-4 w-3/4 mx-auto rounded bg-white/5" />
+            </div>
+
+            {/* Beneficios Skeleton */}
+            <div className="space-y-2.5">
+              {[...Array(6)].map((_, index) => (
+                <div key={index} className="flex gap-2.5">
+                  <Skeleton className="h-4 w-4 rounded-full flex-shrink-0 bg-white/5" />
+                  <Skeleton className="h-4 flex-1 rounded bg-white/5" />
+                </div>
+              ))}
+            </div>
+
+            {/* CTA Skeleton */}
+            <div className="pt-4 space-y-3">
+              <Skeleton className="h-3 w-full rounded bg-white/5" />
+              <Skeleton className="h-12 w-full rounded-xl bg-white/5" />
+            </div>
+          </div>
+        </Card>
+      </section>
+
+      {/* --- Sección de Features Skeleton --- */}
+      <section className="w-full max-w-3xl text-center">
+        <div className="mb-8 space-y-3">
+          <Skeleton className="h-8 w-64 mx-auto rounded bg-white/5" />
+          <Skeleton className="h-4 w-96 mx-auto rounded bg-white/5" />
+        </div>
+
+        <div className="grid sm:grid-cols-2 gap-4 md:gap-6">
+          {[...Array(6)].map((_, index) => (
+            <div
+              key={index}
+              className="border border-[#00b2de20] bg-[#0e141b]/70 rounded-xl p-5"
+            >
+              <div className="flex items-start gap-3">
+                <Skeleton className="w-10 h-10 rounded-lg flex-shrink-0 bg-white/5" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-3/4 rounded bg-white/5" />
+                  <Skeleton className="h-3 w-full rounded bg-white/5" />
+                  <Skeleton className="h-3 w-5/6 rounded bg-white/5" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+
+  if (loading) {
+    return <MembershipSkeleton />;
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-black">
+        <div className="text-red-400">{error}</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row-reverse items-center justify-center bg-black py-16 px-6 gap-12">
@@ -121,11 +257,11 @@ export function MembershipCardv2() {
             {/* Título */}
             <div className="text-center space-y-2">
               <h2 className="text-2xl font-bold text-white tracking-wide">
-                CLUB CARVAJAL FIT
+                {plan?.name || "CLUB CARVAJAL FIT"}
               </h2>
               <p className="text-sm text-gray-400 leading-relaxed max-w-sm mx-auto">
-                Transforma tu cuerpo con una ruta clara y efectiva. Sin errores,
-                sin tiempo perdido.
+                {plan?.description ||
+                  "Transforma tu cuerpo con una ruta clara y efectiva. Sin errores, sin tiempo perdido."}
               </p>
             </div>
 

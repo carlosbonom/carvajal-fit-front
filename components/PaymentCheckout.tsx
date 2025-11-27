@@ -1,31 +1,91 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { Button } from "@heroui/button";
+import { Skeleton } from "@heroui/skeleton";
 import { Check, ArrowLeft } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 
 import { Logo } from "./icons";
 
-export function PaymentCheckout() {
+import {
+  getPlans,
+  createSubscription,
+  type Plan,
+  type Price,
+} from "@/services/subscriptions";
+import { getProfile } from "@/services/auth";
+import { useAppSelector } from "@/lib/store/hooks";
+
+function PaymentCheckoutContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const planFromUrl = searchParams.get("plan");
 
   const [isAnnual, setIsAnnual] = useState(planFromUrl === "annual");
-  // Mercado Pago siempre seleccionado y no se puede cambiar
-  const selectedPaymentMethod = "mercadopago";
+  const [plan, setPlan] = useState<Plan | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [processing, setProcessing] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<
+    "mercadopago" | "paypal"
+  >("mercadopago");
+  const user = useAppSelector((state) => state.user.user);
 
-  const monthlyPrice = 49990;
-  const annualPrice = monthlyPrice * 12;
-  const monthlyPriceUSD = 50;
-  const annualPriceUSD = monthlyPriceUSD * 12;
+  // Cargar planes del API
+  useEffect(() => {
+    const loadPlans = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await getPlans();
 
-  const displayPrice = isAnnual ? annualPrice : monthlyPrice;
+        // Obtener el primer plan (CLUB CARVAJAL FIT)
+        if (response.plans && response.plans.length > 0) {
+          setPlan(response.plans[0]);
+        }
+      } catch (err) {
+        setError("Error al cargar los planes");
+        console.error("Error al cargar planes:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadPlans();
+  }, []);
+
+  // Obtener precios según el ciclo de facturación
+  const getPriceByCycle = (
+    prices: Price[],
+    cycle: "month" | "year",
+    currency: "CLP" | "USD",
+  ): number | null => {
+    const price = prices.find(
+      (p) => p.billingCycle.intervalType === cycle && p.currency === currency,
+    );
+
+    return price ? price.amount : null;
+  };
+
+  const monthlyPriceCLP = plan?.prices
+    ? (getPriceByCycle(plan.prices, "month", "CLP") ?? 49990)
+    : 49990;
+  const annualPriceCLP = plan?.prices
+    ? (getPriceByCycle(plan.prices, "year", "CLP") ?? 599880)
+    : 599880;
+  const monthlyPriceUSD = plan?.prices
+    ? (getPriceByCycle(plan.prices, "month", "USD") ?? 50)
+    : 50;
+  const annualPriceUSD = plan?.prices
+    ? (getPriceByCycle(plan.prices, "year", "USD") ?? 600)
+    : 600;
+
+  const displayPrice = isAnnual ? annualPriceCLP : monthlyPriceCLP;
   const displayPriceUSD = isAnnual ? annualPriceUSD : monthlyPriceUSD;
 
-  const benefits = [
+  const benefits = plan?.features || [
     "Ruta de entrenamiento estructurada por fases",
     "Guía completa de cardio optimizada",
     "Zoom grupal en vivo todos los viernes",
@@ -34,17 +94,173 @@ export function PaymentCheckout() {
     "Acceso inmediato a todos los planes PDF",
   ];
 
-  const handlePayment = () => {
-    console.log({
-      plan: isAnnual ? "annual" : "monthly",
-      price: displayPrice,
-      paymentMethod: selectedPaymentMethod,
-      subscription: true,
-    });
+  const handlePayment = async () => {
+    if (!plan) {
+      setError("No se ha cargado el plan. Por favor, recarga la página.");
 
-    // Aquí irá la lógica de pago con Mercado Pago suscripción
-    alert(`Procesando suscripción con Mercado Pago...`);
+      return;
+    }
+
+    try {
+      setProcessing(true);
+      setError(null);
+
+      // Si es Mercado Pago, redirigir directamente al checkout
+      if (selectedPaymentMethod === "mercadopago") {
+        window.location.href =
+          "https://www.mercadopago.cl/subscriptions/checkout/v2?preapproval_plan_id=8151fbc5cc024cbfb2fd2c5a539db98c";
+        return;
+      }
+
+      // Para PayPal, usar el flujo del backend
+      // Obtener el precio según el ciclo seleccionado
+      const selectedCycle = isAnnual ? "year" : "month";
+      const selectedPrice = plan.prices.find(
+        (p) =>
+          p.billingCycle.intervalType === selectedCycle && p.currency === "CLP",
+      );
+
+      if (!selectedPrice) {
+        throw new Error("No se encontró el precio para el ciclo seleccionado");
+      }
+
+      // Obtener datos del usuario si están disponibles
+      let userEmail = user?.email;
+      let userName = user?.name;
+
+      // Si no hay datos del usuario en Redux, intentar obtenerlos del perfil
+      if (!userEmail || !userName) {
+        try {
+          const profile = await getProfile();
+
+          userEmail = profile.email;
+          userName = profile.name || undefined;
+        } catch (err) {
+          console.warn("No se pudo obtener el perfil del usuario:", err);
+        }
+      }
+
+      // Crear la suscripción
+      const subscriptionData = {
+        planId: plan.id,
+        billingCycleId: selectedPrice.billingCycle.id,
+        currency: selectedPrice.currency,
+        paymentMethod: selectedPaymentMethod,
+        payerEmail: userEmail,
+        payerFirstName: userName?.split(" ")[0],
+        payerLastName: userName?.split(" ").slice(1).join(" "),
+        backUrl: `https://carvajalfit.fydeli.com/checkout/success`,
+      };
+
+      const response = await createSubscription(subscriptionData);
+
+      // Redirigir según el método de pago
+      if (response.url) {
+        // Redirigir a PayPal u otro método
+        window.location.href = response.url;
+      } else if (response.webpayToken) {
+        // Si hay token de WebPay, construir la URL
+        window.location.href =
+          response.url || `#webpay-${response.webpayToken}`;
+      } else {
+        throw new Error(
+          response.message || "No se recibió URL de redirección para el pago",
+        );
+      }
+    } catch (err: any) {
+      console.error("Error al procesar el pago:", err);
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          "Error al procesar el pago. Por favor, intenta nuevamente.",
+      );
+      setProcessing(false);
+    }
   };
+
+  // Componente Skeleton para el estado de carga
+  const PaymentSkeleton = () => (
+    <div className="min-h-screen w-full relative overflow-hidden">
+      <motion.button
+        animate={{ opacity: 1, x: 0 }}
+        className="absolute top-6 left-6 z-20 w-10 h-10 flex items-center justify-center rounded-full border border-[#00b2de]/30 bg-[#0a0e12]/80 backdrop-blur-sm"
+        initial={{ opacity: 0, x: -20 }}
+        transition={{ duration: 0.5 }}
+      >
+        <ArrowLeft className="w-5 h-5" />
+      </motion.button>
+
+      <section className="relative z-10 flex flex-col items-center justify-center min-h-screen w-full px-6 py-2 text-white">
+        <motion.div
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-2"
+          initial={{ opacity: 0, y: -20 }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+        >
+          <Logo size={80} />
+        </motion.div>
+
+        <motion.div
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-md md:max-w-lg border border-[#00b2de]/20 bg-[#0a0e12]/95 backdrop-blur-xl rounded-3xl p-8 md:p-10"
+          initial={{ opacity: 0, y: 40 }}
+          transition={{ delay: 0.2, duration: 0.7, ease: "easeOut" }}
+        >
+          <div className="space-y-3 text-center mb-8">
+            <Skeleton className="h-8 w-48 mx-auto rounded bg-white/5" />
+            <Skeleton className="h-4 w-64 mx-auto rounded bg-white/5" />
+          </div>
+
+          <div className="mb-6 space-y-6">
+            <div className="flex items-center justify-center gap-3 pb-4 border-b border-[#00b2de20]">
+              <Skeleton className="h-4 w-16 rounded bg-white/5" />
+              <Skeleton className="h-6 w-12 rounded-full bg-white/5" />
+              <Skeleton className="h-4 w-16 rounded bg-white/5" />
+            </div>
+
+            <div className="text-center space-y-2">
+              <Skeleton className="h-12 w-32 mx-auto rounded bg-white/5" />
+              <Skeleton className="h-4 w-24 mx-auto rounded bg-white/5" />
+              <Skeleton className="h-3 w-32 mx-auto rounded bg-white/5" />
+            </div>
+          </div>
+
+          <div className="mb-6">
+            <Skeleton className="h-4 w-32 mb-3 rounded bg-white/5" />
+            <div className="space-y-3">
+              <Skeleton className="h-16 w-full rounded-xl bg-white/5" />
+              <Skeleton className="h-16 w-full rounded-xl bg-white/5" />
+            </div>
+          </div>
+
+          <div className="mb-6 pt-4 border-t border-[#00b2de]/20">
+            <div className="space-y-1.5">
+              {[...Array(6)].map((_, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <Skeleton className="h-4 w-4 rounded-full bg-white/5" />
+                  <Skeleton className="h-3 flex-1 rounded bg-white/5" />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <Skeleton className="h-12 w-full rounded-lg bg-white/5" />
+        </motion.div>
+      </section>
+    </div>
+  );
+
+  if (loading) {
+    return <PaymentSkeleton />;
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-black">
+        <div className="text-red-400">{error}</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen w-full relative overflow-hidden">
@@ -142,19 +358,66 @@ export function PaymentCheckout() {
               Método de pago
             </h3>
 
-            {/* Mercado Pago - Siempre seleccionado */}
-            <div className="w-full p-2 rounded-xl border-2 border-[#00b2de] bg-[#00b2de]/10">
-              <div className="flex items-center gap-3">
-                <div className="w-5 h-5 rounded-full bg-[#00b2de] flex items-center justify-center">
-                  <Check className="w-3 h-3 text-white" />
+            <div className="space-y-3">
+              {/* Mercado Pago */}
+              <button
+                className={`w-full p-3 rounded-xl border-2 transition-all duration-300 ${
+                  selectedPaymentMethod === "mercadopago"
+                    ? "border-[#00b2de] bg-[#00b2de]/10"
+                    : "border-[#00b2de]/20 bg-transparent hover:border-[#00b2de]/40"
+                }`}
+                type="button"
+                onClick={() => setSelectedPaymentMethod("mercadopago")}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`w-5 h-5 rounded-full flex items-center justify-center transition-all ${
+                      selectedPaymentMethod === "mercadopago"
+                        ? "bg-[#00b2de]"
+                        : "bg-gray-600 border-2 border-gray-500"
+                    }`}
+                  >
+                    {selectedPaymentMethod === "mercadopago" && (
+                      <Check className="w-3 h-3 text-white" />
+                    )}
+                  </div>
+                  <img
+                    alt="Mercado Pago"
+                    className="h-12 object-contain"
+                    src="https://melli.fydeli.com/carvajal-fit/logos/mercado_pago_logo.png"
+                  />
                 </div>
-                <img
-                  alt="Mercado Pago"
-                  height={150}
-                  src="https://melli.fydeli.com/carvajal-fit/logos/mercado_pago_logo.png"
-                  width={150}
-                />
-              </div>
+              </button>
+
+              {/* PayPal */}
+              <button
+                className={`w-full p-3 rounded-xl border-2 transition-all duration-300 ${
+                  selectedPaymentMethod === "paypal"
+                    ? "border-[#00b2de] bg-[#00b2de]/10"
+                    : "border-[#00b2de]/20 bg-transparent hover:border-[#00b2de]/40"
+                }`}
+                type="button"
+                onClick={() => setSelectedPaymentMethod("paypal")}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`w-5 h-5 rounded-full flex items-center justify-center transition-all ${
+                      selectedPaymentMethod === "paypal"
+                        ? "bg-[#00b2de]"
+                        : "bg-gray-600 border-2 border-gray-500"
+                    }`}
+                  >
+                    {selectedPaymentMethod === "paypal" && (
+                      <Check className="w-3 h-3 text-white" />
+                    )}
+                  </div>
+                  <img
+                    alt="PayPal"
+                    className="h-10 object-contain"
+                    src="https://melli.fydeli.com/carvajal-fit/logos/PayPal-Logo-White-RGB.png"
+                  />
+                </div>
+              </button>
             </div>
           </div>
 
@@ -178,19 +441,47 @@ export function PaymentCheckout() {
             </div>
           </div>
 
+          {/* Mensaje de Error */}
+          {error && (
+            <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
+              {error}
+            </div>
+          )}
+
           {/* Botón de Pago */}
           <Button
-            className="w-full font-bold text-base py-6 mt-4 transition-all hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(0,178,222,0.4)]"
+            className="w-full font-bold text-base py-6 mt-4 transition-all hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(0,178,222,0.4)] disabled:opacity-50 disabled:cursor-not-allowed"
             color="primary"
+            disabled={processing || !plan}
             radius="lg"
             type="button"
             variant="solid"
             onClick={handlePayment}
           >
-            Suscribirse con Mercado Pago
+            {processing
+              ? "Procesando..."
+              : `Suscribirse con ${
+                  selectedPaymentMethod === "mercadopago"
+                    ? "Mercado Pago"
+                    : "PayPal"
+                }`}
           </Button>
         </motion.div>
       </section>
     </div>
+  );
+}
+
+export function PaymentCheckout() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-black">
+          <div className="text-white">Cargando...</div>
+        </div>
+      }
+    >
+      <PaymentCheckoutContent />
+    </Suspense>
   );
 }
