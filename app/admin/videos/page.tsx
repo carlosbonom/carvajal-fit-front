@@ -7,11 +7,15 @@ import { useRouter } from "next/navigation";
 import { AdminSidebar } from "@/components/admin-sidebar";
 import { getCourses, getCourseContent, type Course, type CourseContent } from "@/services/courses";
 
+type CourseContentWithName = CourseContent & {
+  courseName?: string;
+};
+
 export default function VideosPage() {
   const [isOpen, setIsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [courses, setCourses] = useState<Course[]>([]);
-  const [allContent, setAllContent] = useState<CourseContent[]>([]);
+  const [allContent, setAllContent] = useState<CourseContentWithName[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCourse, setSelectedCourse] = useState<string>("all");
   const router = useRouter();
