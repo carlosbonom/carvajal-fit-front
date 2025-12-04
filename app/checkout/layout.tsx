@@ -5,3 +5,6 @@ export default function CheckoutLayout({
 }) {
   return <section className="w-full">{children}</section>;
 }
+
+
+

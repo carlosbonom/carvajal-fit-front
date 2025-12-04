@@ -43,3 +43,6 @@ Registro de usuario con rol de vendedor.
 - Los emails deben ser únicos (no puedes registrar el mismo email dos veces)
 
 
+
+
+

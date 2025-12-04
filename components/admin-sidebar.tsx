@@ -170,6 +170,86 @@ const XIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
+const DollarSignIcon = ({ className }: { className?: string }) => (
+  <svg
+    className={className}
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+  >
+    <path
+      d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+    />
+  </svg>
+);
+
+const BookOpenIcon = ({ className }: { className?: string }) => (
+  <svg
+    className={className}
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+  >
+    <path
+      d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+    />
+  </svg>
+);
+
+const VideoIcon = ({ className }: { className?: string }) => (
+  <svg
+    className={className}
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+  >
+    <path
+      d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+    />
+  </svg>
+);
+
+const LockIcon = ({ className }: { className?: string }) => (
+  <svg
+    className={className}
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+  >
+    <path
+      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+    />
+  </svg>
+);
+
+const StoreIcon = ({ className }: { className?: string }) => (
+  <svg
+    className={className}
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+  >
+    <path
+      d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+    />
+  </svg>
+);
+
 interface MenuItem {
   label: string;
   icon: React.FC<{ className?: string }>;
@@ -186,26 +266,34 @@ const menuSections: MenuSection[] = [
   {
     items: [
       { label: "Dashboard", icon: DashboardIcon, path: "/admin" },
-      { label: "Calendario", icon: CalendarIcon, path: "/admin/calendar" },
-      { label: "Reportes", icon: BarChartIcon, path: "/admin/reports" },
+    ],
+  },
+  {
+    title: "El club",
+    items: [
+      { label: "Cursos", icon: BookOpenIcon, path: "/admin/courses" },
+      { label: "Videos", icon: VideoIcon, path: "/admin/videos" },
+      { label: "Desbloqueos", icon: LockIcon, path: "/admin/unlocks" },
       { label: "Miembros", icon: UsersIcon, path: "/admin/members" },
+    ],
+  },
+  {
+    title: "SUSCRIPCIONES",
+    items: [
+      { label: "Precios", icon: DollarSignIcon, path: "/admin/pricing" },
+      { label: "Reportes", icon: BarChartIcon, path: "/admin/reports" },
+    ],
+  },
+  {
+    title: "TIENDAS",
+    items: [
+      { label: "Market José", icon: StoreIcon, path: "/admin/market/jose" },
+      { label: "Market Gabriel", icon: StoreIcon, path: "/admin/market/gabriel" },
     ],
   },
   {
     title: "CONFIGURACIÓN",
     items: [
-      {
-        label: "Notificaciones",
-        icon: BellIcon,
-        path: "/admin/notifications",
-        badge: 6,
-      },
-      {
-        label: "Mensajes",
-        icon: MessageIcon,
-        path: "/admin/messages",
-        badge: 3,
-      },
       { label: "Ajustes", icon: SettingsIcon, path: "/admin/settings" },
     ],
   },
@@ -437,7 +525,7 @@ export function AdminSidebar({
 
           {/* Menu Items */}
           <nav className="flex-1 overflow-y-auto py-4 px-3 scrollbar-hide">
-            {/* {menuSections.map((section, sectionIndex) => (
+            {menuSections.map((section, sectionIndex) => (
               <div key={sectionIndex} className={cn(sectionIndex > 0 && "mt-8")}>
                 {section.title && (isMobile || !isOpen) && (
                   <h3 className="px-3 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -491,7 +579,7 @@ export function AdminSidebar({
                   })}
                 </ul>
               </div>
-            ))} */}
+            ))}
           </nav>
 
           {/* Profile Section */}

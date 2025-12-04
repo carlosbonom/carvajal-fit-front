@@ -218,3 +218,6 @@ Content-Type: application/json
 - Todos los campos opcionales tienen valores por defecto según la estructura de la tabla
 
 
+
+
+
