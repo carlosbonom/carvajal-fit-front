@@ -273,7 +273,7 @@ const menuSections: MenuSection[] = [
     items: [
       { label: "Cursos", icon: BookOpenIcon, path: "/admin/courses" },
       { label: "Videos", icon: VideoIcon, path: "/admin/videos" },
-      { label: "Desbloqueos", icon: LockIcon, path: "/admin/unlocks" },
+      // { label: "Desbloqueos", icon: LockIcon, path: "/admin/unlocks" },
       { label: "Miembros", icon: UsersIcon, path: "/admin/members" },
     ],
   },

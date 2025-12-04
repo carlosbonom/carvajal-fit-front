@@ -15,6 +15,14 @@ export const ConditionalNavbar = () => {
     "/admin",
     "/club",
     "/club/bajar-grasa",
+    "/admin/courses",
+    "/admin/videos",
+    "/admin/members",
+    "/admin/pricing",
+    "/admin/reports",
+    "/admin/market/jose",
+    "/admin/market/gabriel",
+    "/admin/settings",
   ];
 
   // Si la ruta actual está en la lista, no mostramos el navbar
