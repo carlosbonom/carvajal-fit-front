@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, FormEvent, ChangeEvent } from "react";
-import { X } from "lucide-react";
+import { useState, FormEvent, ChangeEvent, useRef } from "react";
+import { X, Upload, File as FileIcon, Image, Video, FileText, Music } from "lucide-react";
 import { addCourseContent, type AddCourseContentDto } from "@/services/courses";
+import { uploadFile } from "@/services/files";
 
 interface AddContentModalProps {
   isOpen: boolean;
@@ -10,6 +11,65 @@ interface AddContentModalProps {
   onSuccess: () => void;
   courseId: string;
 }
+
+// Función para detectar el tipo de contenido basado en el tipo de archivo
+const detectContentType = (file: File): AddCourseContentDto["contentType"] => {
+  const mimeType = file.type;
+  
+  if (mimeType.startsWith("video/")) {
+    return "video";
+  } else if (mimeType.startsWith("image/")) {
+    return "image";
+  } else if (mimeType === "application/pdf") {
+    return "pdf";
+  } else if (
+    mimeType.includes("document") ||
+    mimeType.includes("word") ||
+    mimeType.includes("text") ||
+    file.name.endsWith(".doc") ||
+    file.name.endsWith(".docx")
+  ) {
+    return "document";
+  } else if (mimeType.startsWith("audio/")) {
+    return "audio";
+  } else {
+    return "document"; // Por defecto
+  }
+};
+
+// Función para obtener el icono según el tipo de contenido
+const getContentIcon = (contentType: AddCourseContentDto["contentType"]) => {
+  switch (contentType) {
+    case "video":
+      return Video;
+    case "image":
+      return Image;
+    case "pdf":
+      return FileText;
+    case "document":
+      return FileText;
+    case "audio":
+      return Music;
+    default:
+      return FileIcon;
+  }
+};
+
+// Función para calcular unlockMonth basado en el valor y tipo
+const calculateUnlockMonth = (value: number, type: "month" | "week" | "day"): number => {
+  switch (type) {
+    case "month":
+      return value;
+    case "week":
+      // Convertir semanas a meses (aproximadamente 4.33 semanas por mes)
+      return Math.ceil(value / 4.33);
+    case "day":
+      // Convertir días a meses (aproximadamente 30 días por mes)
+      return Math.ceil(value / 30);
+    default:
+      return value;
+  }
+};
 
 export function AddContentModal({
   isOpen,
@@ -20,18 +80,22 @@ export function AddContentModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [filePreview, setFilePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
+  const thumbnailInputRef = useRef<HTMLInputElement>(null);
+  const [isAvailableImmediately, setIsAvailableImmediately] = useState(true);
+  const [unlockValue, setUnlockValue] = useState(1);
+  const [unlockType, setUnlockType] = useState<"month" | "week" | "day">("month");
   const [formData, setFormData] = useState<Omit<AddCourseContentDto, "file">>({
     title: "",
     slug: "",
     description: "",
     contentType: "video",
-    unlockMonth: 1,
+    unlockMonth: 0,
+    availabilityType: "none",
     thumbnailUrl: "",
-    durationSeconds: 0,
-    sortOrder: 1,
-    hasResources: false,
-    resourcesUrl: null,
-    isPreview: false,
   });
 
   // Generar slug automáticamente desde el título
@@ -60,8 +124,47 @@ export function AddContentModal({
         setError("El archivo no puede ser mayor a 100MB");
         return;
       }
+      
+      // Detectar tipo de contenido automáticamente
+      const detectedType = detectContentType(file);
+      
       setSelectedFile(file);
+      setFormData({
+        ...formData,
+        contentType: detectedType,
+      });
       setError(null);
+      
+      // Crear preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFilePreview(reader.result as string);
+      };
+      
+      if (file.type.startsWith("image/") || file.type.startsWith("video/")) {
+        reader.readAsDataURL(file);
+      } else {
+        setFilePreview(null);
+      }
+    }
+  };
+
+  const handleThumbnailChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validar que sea una imagen
+      if (!file.type.startsWith("image/")) {
+        setError("El archivo de miniatura debe ser una imagen");
+        return;
+      }
+      setThumbnailFile(file);
+      
+      // Crear preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setThumbnailPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -69,39 +172,47 @@ export function AddContentModal({
     e.preventDefault();
     setError(null);
 
-    if (!formData.title || !formData.slug) {
-      setError("El título y el slug son requeridos");
+    if (!formData.title) {
+      setError("El título es requerido");
       return;
     }
 
-    if (!selectedFile && !formData.contentUrl) {
-      setError("Debes proporcionar un archivo o una URL de contenido");
+    if (!selectedFile) {
+      setError("Debes seleccionar un archivo");
       return;
     }
 
     try {
       setLoading(true);
+      
+      // Subir miniatura primero si existe
+      let thumbnailUrl = formData.thumbnailUrl;
+      if (thumbnailFile) {
+        try {
+          const uploadResponse = await uploadFile(thumbnailFile, {
+            folder: "imagenes",
+            isPublic: true,
+          });
+          thumbnailUrl = uploadResponse.url;
+        } catch (error) {
+          throw new Error("Error al subir la miniatura: " + (error as Error).message);
+        }
+      }
+
+      // Asegurar que unlockMonth sea 0 y availabilityType sea "none" si está disponible de inmediato
+      const finalUnlockMonth = isAvailableImmediately ? 0 : formData.unlockMonth;
+      const finalAvailabilityType = isAvailableImmediately ? "none" : formData.availabilityType;
+
       await addCourseContent(courseId, {
         ...formData,
+        unlockMonth: finalUnlockMonth,
+        availabilityType: finalAvailabilityType,
+        thumbnailUrl,
         file: selectedFile || undefined,
       });
       onSuccess();
+      resetForm();
       onClose();
-      // Resetear formulario
-      setFormData({
-        title: "",
-        slug: "",
-        description: "",
-        contentType: "video",
-        unlockMonth: 1,
-        thumbnailUrl: "",
-        durationSeconds: 0,
-        sortOrder: 1,
-        hasResources: false,
-        resourcesUrl: null,
-        isPreview: false,
-      });
-      setSelectedFile(null);
     } catch (err: any) {
       setError(
         err.response?.data?.message ||
@@ -113,6 +224,37 @@ export function AddContentModal({
     }
   };
 
+  const resetForm = () => {
+    setFormData({
+      title: "",
+      slug: "",
+      description: "",
+      contentType: "video",
+      unlockMonth: 0,
+      availabilityType: "none",
+      thumbnailUrl: "",
+    });
+    setIsAvailableImmediately(true);
+    setUnlockValue(1);
+    setUnlockType("month");
+    setSelectedFile(null);
+    setFilePreview(null);
+    setThumbnailFile(null);
+    setThumbnailPreview(null);
+    setError(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+    if (thumbnailInputRef.current) {
+      thumbnailInputRef.current.value = "";
+    }
+  };
+
+  const handleClose = () => {
+    resetForm();
+    onClose();
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -121,7 +263,7 @@ export function AddContentModal({
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
           <h2 className="text-2xl font-bold text-gray-900">Agregar Contenido</h2>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
             disabled={loading}
           >
@@ -152,50 +294,6 @@ export function AddContentModal({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Slug <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={formData.slug}
-              onChange={(e) =>
-                setFormData({ ...formData, slug: e.target.value })
-              }
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-              required
-              disabled={loading}
-              pattern="[a-z0-9-]+"
-              title="Solo minúsculas, números y guiones"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Tipo de Contenido <span className="text-red-500">*</span>
-            </label>
-            <select
-              value={formData.contentType}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  contentType: e.target.value as AddCourseContentDto["contentType"],
-                })
-              }
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-              required
-              disabled={loading}
-            >
-              <option value="video">Video</option>
-              <option value="image">Imagen</option>
-              <option value="pdf">PDF</option>
-              <option value="document">Documento</option>
-              <option value="audio">Audio</option>
-              <option value="link">Enlace</option>
-              <option value="text">Texto</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
               Descripción
             </label>
             <textarea
@@ -211,166 +309,229 @@ export function AddContentModal({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Archivo (máximo 100MB) <span className="text-red-500">*</span>
+              Contenido <span className="text-red-500">*</span>
             </label>
-            <input
-              type="file"
-              onChange={handleFileChange}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-              disabled={loading}
-              accept="video/*,image/*,application/pdf,.doc,.docx,audio/*"
-            />
-            {selectedFile && (
-              <p className="mt-1 text-sm text-gray-600">
-                Archivo seleccionado: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
-              </p>
-            )}
-            <p className="mt-1 text-xs text-gray-500">
-              O proporciona una URL de contenido en el campo siguiente
-            </p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              URL de Contenido (alternativa al archivo)
-            </label>
-            <input
-              type="url"
-              value={formData.contentUrl || ""}
-              onChange={(e) =>
-                setFormData({ ...formData, contentUrl: e.target.value })
-              }
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-              disabled={loading}
-              placeholder="https://ejemplo.com/contenido.mp4"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Mes de Desbloqueo <span className="text-red-500">*</span>
+            <div className="space-y-2">
+              <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
+                {filePreview ? (
+                  <div className="relative w-full h-full">
+                    {formData.contentType === "image" ? (
+                      <img
+                        src={filePreview}
+                        alt="Preview"
+                        className="w-full h-full object-cover rounded-lg"
+                      />
+                    ) : formData.contentType === "video" ? (
+                      <video
+                        src={filePreview}
+                        className="w-full h-full object-cover rounded-lg"
+                        controls
+                      />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center">
+                        {(() => {
+                          const Icon = getContentIcon(formData.contentType);
+                          return <Icon className="w-12 h-12 text-gray-400 mb-2" />;
+                        })()}
+                        <p className="text-sm text-gray-600 font-medium">{selectedFile?.name}</p>
+                        <p className="text-xs text-gray-500">
+                          {(selectedFile ? selectedFile.size / 1024 / 1024 : 0).toFixed(2)} MB
+                        </p>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setSelectedFile(null);
+                        setFilePreview(null);
+                        setFormData({ ...formData, contentType: "video" });
+                        if (fileInputRef.current) {
+                          fileInputRef.current.value = "";
+                        }
+                      }}
+                      className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                    <Upload className="w-10 h-10 mb-3 text-gray-400" />
+                    <p className="mb-2 text-sm text-gray-500">
+                      <span className="font-semibold">Click para subir</span> o arrastra y suelta
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Video, Imagen, PDF, Documento, Audio (máx. 100MB)
+                    </p>
+                  </div>
+                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  accept="video/*,image/*,application/pdf,.doc,.docx,audio/*"
+                  onChange={handleFileChange}
+                  disabled={loading}
+                />
               </label>
-              <input
-                type="number"
-                value={formData.unlockMonth}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    unlockMonth: parseInt(e.target.value) || 1,
-                  })
-                }
-                min="1"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                required
-                disabled={loading}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Duración (segundos)
-              </label>
-              <input
-                type="number"
-                value={formData.durationSeconds}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    durationSeconds: parseInt(e.target.value) || 0,
-                  })
-                }
-                min="0"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                disabled={loading}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                URL de Miniatura
-              </label>
-              <input
-                type="url"
-                value={formData.thumbnailUrl}
-                onChange={(e) =>
-                  setFormData({ ...formData, thumbnailUrl: e.target.value })
-                }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                disabled={loading}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Orden
-              </label>
-              <input
-                type="number"
-                value={formData.sortOrder}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    sortOrder: parseInt(e.target.value) || 1,
-                  })
-                }
-                min="1"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                disabled={loading}
-              />
+              {selectedFile && (
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <span className="font-medium">Tipo detectado:</span>
+                  <span className="px-2 py-1 bg-primary/10 text-primary rounded text-xs font-medium capitalize">
+                    {formData.contentType === "video" && "Video"}
+                    {formData.contentType === "image" && "Imagen"}
+                    {formData.contentType === "pdf" && "PDF"}
+                    {formData.contentType === "document" && "Documento"}
+                    {formData.contentType === "audio" && "Audio"}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              URL de Recursos
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              Disponibilidad
             </label>
-            <input
-              type="url"
-              value={formData.resourcesUrl || ""}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  resourcesUrl: e.target.value || null,
-                })
-              }
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-              disabled={loading}
-            />
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div>
+                  <div className="text-sm font-medium text-gray-900">
+                    Disponible de inmediato
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    El contenido estará disponible desde el inicio de la suscripción
+                  </div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isAvailableImmediately}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setIsAvailableImmediately(checked);
+                      setFormData({
+                        ...formData,
+                        unlockMonth: checked ? 0 : calculateUnlockMonth(unlockValue, unlockType),
+                        availabilityType: checked ? "none" : unlockType,
+                      });
+                    }}
+                    className="sr-only peer"
+                    disabled={loading}
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                </label>
+              </div>
+
+              {!isAvailableImmediately && (
+                <div className="p-4 border border-gray-200 rounded-lg bg-white space-y-4">
+                  <div className="text-sm font-medium text-gray-900 mb-2">
+                    Desbloqueo programado
+                  </div>
+                  <p className="text-xs text-gray-500 mb-4">
+                    El contenido se desbloqueará después del tiempo especificado desde la suscripción del usuario
+                  </p>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        Valor <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        value={unlockValue}
+                        onChange={(e) => {
+                          const value = parseInt(e.target.value) || 1;
+                          setUnlockValue(value);
+                          setFormData({
+                            ...formData,
+                            unlockMonth: calculateUnlockMonth(value, unlockType),
+                            availabilityType: unlockType,
+                          });
+                        }}
+                        min="1"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+                        required={!isAvailableImmediately}
+                        disabled={loading}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        Tipo <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        value={unlockType}
+                        onChange={(e) => {
+                          const type = e.target.value as "month" | "week" | "day";
+                          setUnlockType(type);
+                          setFormData({
+                            ...formData,
+                            unlockMonth: calculateUnlockMonth(unlockValue, type),
+                            availabilityType: type,
+                          });
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+                        required={!isAvailableImmediately}
+                        disabled={loading}
+                      >
+                        <option value="month">Mes(es)</option>
+                        <option value="week">Semana(s)</option>
+                        <option value="day">Día(s)</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="hasResources"
-                checked={formData.hasResources}
-                onChange={(e) =>
-                  setFormData({ ...formData, hasResources: e.target.checked })
-                }
-                className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
-                disabled={loading}
-              />
-              <label htmlFor="hasResources" className="ml-2 text-sm text-gray-700">
-                Tiene recursos
-              </label>
-            </div>
-
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="isPreview"
-                checked={formData.isPreview}
-                onChange={(e) =>
-                  setFormData({ ...formData, isPreview: e.target.checked })
-                }
-                className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
-                disabled={loading}
-              />
-              <label htmlFor="isPreview" className="ml-2 text-sm text-gray-700">
-                Vista previa (disponible sin suscripción)
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Miniatura (Imagen)
+            </label>
+            <div className="space-y-2">
+              <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
+                {thumbnailPreview ? (
+                  <div className="relative w-full h-full">
+                    <img
+                      src={thumbnailPreview}
+                      alt="Preview miniatura"
+                      className="w-full h-full object-cover rounded-lg"
+                    />
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setThumbnailFile(null);
+                        setThumbnailPreview(null);
+                        if (thumbnailInputRef.current) {
+                          thumbnailInputRef.current.value = "";
+                        }
+                      }}
+                      className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                    <Image className="w-8 h-8 mb-2 text-gray-400" />
+                    <p className="mb-2 text-sm text-gray-500">
+                      <span className="font-semibold">Click para subir</span> o arrastra y suelta
+                    </p>
+                    <p className="text-xs text-gray-500">PNG, JPG, GIF, WEBP (cualquier imagen)</p>
+                  </div>
+                )}
+                <input
+                  ref={thumbnailInputRef}
+                  type="file"
+                  className="hidden"
+                  accept="image/*"
+                  onChange={handleThumbnailChange}
+                  disabled={loading}
+                />
               </label>
             </div>
           </div>
@@ -378,7 +539,7 @@ export function AddContentModal({
           <div className="flex gap-3 pt-4">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
               disabled={loading}
             >

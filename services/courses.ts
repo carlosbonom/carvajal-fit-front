@@ -1,4 +1,5 @@
 import { apiAxios } from "@/lib/axios-config";
+import { uploadFile } from "./files";
 
 // Tipos para crear curso
 export interface CreateCourseDto {
@@ -7,11 +8,13 @@ export interface CreateCourseDto {
   description?: string;
   thumbnailUrl?: string;
   trailerUrl?: string;
+  thumbnailFile?: File;
+  trailerFile?: File;
   level?: "beginner" | "intermediate" | "advanced";
   durationMinutes?: number;
   isPublished?: boolean;
   sortOrder?: number;
-  creatorId: string;
+  creatorId?: string;
 }
 
 export interface Creator {
@@ -41,15 +44,14 @@ export interface Course {
 // Tipos para agregar contenido al curso
 export interface AddCourseContentDto {
   title: string;
-  slug: string;
+  slug?: string; // Opcional
   description?: string;
   contentType: "video" | "image" | "pdf" | "document" | "audio" | "link" | "text";
   unlockMonth: number;
+  availabilityType: "none" | "month" | "day" | "week"; // Requerido
   thumbnailUrl?: string;
   durationSeconds?: number;
   sortOrder?: number;
-  hasResources?: boolean;
-  resourcesUrl?: string | null;
   isPreview?: boolean;
   // Opción A: Subir archivo
   file?: File;
@@ -68,8 +70,7 @@ export interface CourseContent {
   thumbnailUrl: string | null;
   durationSeconds: number | null;
   sortOrder: number | null;
-  hasResources: boolean;
-  resourcesUrl: string | null;
+  resources: string[];
   isPreview: boolean;
   course: {
     id: string;
@@ -109,7 +110,48 @@ export const getCourseContent = async (
 export const createCourse = async (
   data: CreateCourseDto,
 ): Promise<Course> => {
-  const response = await apiAxios.post<Course>("/courses", data);
+  let thumbnailUrl = data.thumbnailUrl;
+  let trailerUrl = data.trailerUrl;
+
+  // Subir archivos primero si existen
+  if (data.thumbnailFile) {
+    try {
+      const uploadResponse = await uploadFile(data.thumbnailFile, {
+        folder: "imagenes",
+        isPublic: true,
+      });
+      thumbnailUrl = uploadResponse.url;
+    } catch (error) {
+      throw new Error("Error al subir la miniatura: " + (error as Error).message);
+    }
+  }
+
+  if (data.trailerFile) {
+    try {
+      const uploadResponse = await uploadFile(data.trailerFile, {
+        folder: "videos",
+        isPublic: true,
+      });
+      trailerUrl = uploadResponse.url;
+    } catch (error) {
+      throw new Error("Error al subir el trailer: " + (error as Error).message);
+    }
+  }
+
+  // Crear el curso con las URLs obtenidas
+  const courseData: Omit<CreateCourseDto, "thumbnailFile" | "trailerFile"> = {
+    title: data.title,
+    slug: data.slug,
+    description: data.description,
+    thumbnailUrl,
+    trailerUrl,
+    level: data.level,
+    durationMinutes: data.durationMinutes,
+    isPublished: data.isPublished,
+    sortOrder: data.sortOrder,
+  };
+
+  const response = await apiAxios.post<Course>("/courses", courseData);
 
   return response.data;
 };
@@ -119,60 +161,52 @@ export const addCourseContent = async (
   courseId: string,
   data: AddCourseContentDto,
 ): Promise<CourseContent> => {
-  // Si hay un archivo, usar FormData para multipart/form-data
+  let contentUrl = data.contentUrl;
+
+  // Subir archivo primero si existe
   if (data.file) {
-    const formData = new FormData();
-    
-    // Agregar el archivo
-    formData.append("file", data.file);
-    
-    // Agregar los demás campos como strings
-    formData.append("title", data.title);
-    formData.append("slug", data.slug);
-    formData.append("contentType", data.contentType);
-    formData.append("unlockMonth", data.unlockMonth.toString());
-    
-    if (data.description) {
-      formData.append("description", data.description);
-    }
-    if (data.thumbnailUrl) {
-      formData.append("thumbnailUrl", data.thumbnailUrl);
-    }
-    if (data.durationSeconds !== undefined) {
-      formData.append("durationSeconds", data.durationSeconds.toString());
-    }
-    if (data.sortOrder !== undefined) {
-      formData.append("sortOrder", data.sortOrder.toString());
-    }
-    if (data.hasResources !== undefined) {
-      formData.append("hasResources", data.hasResources.toString());
-    }
-    if (data.resourcesUrl !== undefined && data.resourcesUrl !== null) {
-      formData.append("resourcesUrl", data.resourcesUrl);
-    }
-    if (data.isPreview !== undefined) {
-      formData.append("isPreview", data.isPreview.toString());
-    }
+    try {
+      // Determinar la carpeta según el tipo de contenido
+      let folder = "videos";
+      if (data.contentType === "image") {
+        folder = "imagenes";
+      } else if (data.contentType === "pdf" || data.contentType === "document") {
+        folder = "documentos";
+      } else if (data.contentType === "audio") {
+        folder = "audio";
+      }
 
-    const response = await apiAxios.post<CourseContent>(
-      `/courses/${courseId}/content`,
-      formData,
-      {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      },
-    );
-
-    return response.data;
-  } else {
-    // Si no hay archivo, usar JSON normal
-    const response = await apiAxios.post<CourseContent>(
-      `/courses/${courseId}/content`,
-      data,
-    );
-
-    return response.data;
+      const uploadResponse = await uploadFile(data.file, {
+        folder,
+        isPublic: true,
+      });
+      contentUrl = uploadResponse.url;
+    } catch (error) {
+      throw new Error("Error al subir el archivo: " + (error as Error).message);
+    }
   }
+
+  // Preparar los datos para enviar
+  const requestData: Omit<AddCourseContentDto, "file"> = {
+    title: data.title,
+    slug: data.slug,
+    description: data.description,
+    contentType: data.contentType,
+    unlockMonth: data.unlockMonth,
+    availabilityType: data.availabilityType,
+    contentUrl,
+    thumbnailUrl: data.thumbnailUrl,
+    durationSeconds: data.durationSeconds,
+    sortOrder: data.sortOrder,
+    isPreview: data.isPreview,
+  };
+
+  // Enviar como JSON
+  const response = await apiAxios.post<CourseContent>(
+    `/courses/${courseId}/content`,
+    requestData,
+  );
+
+  return response.data;
 };
 

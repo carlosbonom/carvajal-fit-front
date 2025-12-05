@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, FormEvent } from "react";
-import { X } from "lucide-react";
+import { useState, FormEvent, ChangeEvent, useRef } from "react";
+import { X, Image, Video } from "lucide-react";
 import { createCourse, type CreateCourseDto } from "@/services/courses";
 import { useAppSelector } from "@/lib/store/hooks";
 
@@ -19,16 +19,19 @@ export function CreateCourseModal({
   const user = useAppSelector((state) => state.user.user);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [trailerFile, setTrailerFile] = useState<File | null>(null);
+  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
+  const [trailerPreview, setTrailerPreview] = useState<string | null>(null);
+  const thumbnailInputRef = useRef<HTMLInputElement>(null);
+  const trailerInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState<CreateCourseDto>({
     title: "",
     slug: "",
     description: "",
     thumbnailUrl: "",
     trailerUrl: "",
-    level: "beginner",
-    durationMinutes: 0,
     isPublished: false,
-    sortOrder: 1,
     creatorId: user?.id || "",
   });
 
@@ -48,6 +51,74 @@ export function CreateCourseModal({
       title,
       slug: generateSlug(title),
     });
+  };
+
+  const handleThumbnailChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validar que sea una imagen
+      if (!file.type.startsWith("image/")) {
+        setError("El archivo de miniatura debe ser una imagen");
+        return;
+      }
+      setThumbnailFile(file);
+      setFormData({ ...formData, thumbnailFile: file });
+      
+      // Crear preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setThumbnailPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleTrailerChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validar que sea un video
+      if (!file.type.startsWith("video/")) {
+        setError("El archivo de trailer debe ser un video");
+        return;
+      }
+      setTrailerFile(file);
+      setFormData({ ...formData, trailerFile: file });
+      
+      // Crear preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setTrailerPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      title: "",
+      slug: "",
+      description: "",
+      thumbnailUrl: "",
+      trailerUrl: "",
+      isPublished: false,
+      creatorId: user?.id || "",
+    });
+    setThumbnailFile(null);
+    setTrailerFile(null);
+    setThumbnailPreview(null);
+    setTrailerPreview(null);
+    setError(null);
+    if (thumbnailInputRef.current) {
+      thumbnailInputRef.current.value = "";
+    }
+    if (trailerInputRef.current) {
+      trailerInputRef.current.value = "";
+    }
+  };
+
+  const handleClose = () => {
+    resetForm();
+    onClose();
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -71,20 +142,8 @@ export function CreateCourseModal({
         creatorId: user.id,
       });
       onSuccess();
+      resetForm();
       onClose();
-      // Resetear formulario
-      setFormData({
-        title: "",
-        slug: "",
-        description: "",
-        thumbnailUrl: "",
-        trailerUrl: "",
-        level: "beginner",
-        durationMinutes: 0,
-        isPublished: false,
-        sortOrder: 1,
-        creatorId: user.id,
-      });
     } catch (err: any) {
       setError(
         err.response?.data?.message ||
@@ -104,7 +163,7 @@ export function CreateCourseModal({
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
           <h2 className="text-2xl font-bold text-gray-900">Crear Nuevo Curso</h2>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
             disabled={loading}
           >
@@ -172,93 +231,102 @@ export function CreateCourseModal({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                URL de Miniatura
+                Miniatura (Imagen)
               </label>
-              <input
-                type="url"
-                value={formData.thumbnailUrl}
-                onChange={(e) =>
-                  setFormData({ ...formData, thumbnailUrl: e.target.value })
-                }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                disabled={loading}
-              />
+              <div className="space-y-2">
+                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
+                  {thumbnailPreview ? (
+                    <div className="relative w-full h-full">
+                      <img
+                        src={thumbnailPreview}
+                        alt="Preview miniatura"
+                        className="w-full h-full object-cover rounded-lg"
+                      />
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setThumbnailFile(null);
+                          setThumbnailPreview(null);
+                          setFormData({ ...formData, thumbnailFile: undefined });
+                          if (thumbnailInputRef.current) {
+                            thumbnailInputRef.current.value = "";
+                          }
+                        }}
+                        className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <Image className="w-8 h-8 mb-2 text-gray-400" />
+                      <p className="mb-2 text-sm text-gray-500">
+                        <span className="font-semibold">Click para subir</span> o arrastra y suelta
+                      </p>
+                      <p className="text-xs text-gray-500">PNG, JPG, GIF, WEBP (cualquier imagen)</p>
+                    </div>
+                  )}
+                  <input
+                    ref={thumbnailInputRef}
+                    type="file"
+                    className="hidden"
+                    accept="image/*"
+                    onChange={handleThumbnailChange}
+                    disabled={loading}
+                  />
+                </label>
+              </div>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                URL del Trailer
+                Trailer (Video)
               </label>
-              <input
-                type="url"
-                value={formData.trailerUrl}
-                onChange={(e) =>
-                  setFormData({ ...formData, trailerUrl: e.target.value })
-                }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                disabled={loading}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Nivel
-              </label>
-              <select
-                value={formData.level}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    level: e.target.value as "beginner" | "intermediate" | "advanced",
-                  })
-                }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                disabled={loading}
-              >
-                <option value="beginner">Principiante</option>
-                <option value="intermediate">Intermedio</option>
-                <option value="advanced">Avanzado</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Duración (minutos)
-              </label>
-              <input
-                type="number"
-                value={formData.durationMinutes}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    durationMinutes: parseInt(e.target.value) || 0,
-                  })
-                }
-                min="0"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                disabled={loading}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Orden
-              </label>
-              <input
-                type="number"
-                value={formData.sortOrder}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    sortOrder: parseInt(e.target.value) || 1,
-                  })
-                }
-                min="1"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                disabled={loading}
-              />
+              <div className="space-y-2">
+                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
+                  {trailerPreview ? (
+                    <div className="relative w-full h-full">
+                      <video
+                        src={trailerPreview}
+                        className="w-full h-full object-cover rounded-lg"
+                        controls
+                      />
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setTrailerFile(null);
+                          setTrailerPreview(null);
+                          setFormData({ ...formData, trailerFile: undefined });
+                          if (trailerInputRef.current) {
+                            trailerInputRef.current.value = "";
+                          }
+                        }}
+                        className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <Video className="w-8 h-8 mb-2 text-gray-400" />
+                      <p className="mb-2 text-sm text-gray-500">
+                        <span className="font-semibold">Click para subir</span> o arrastra y suelta
+                      </p>
+                      <p className="text-xs text-gray-500">MP4, AVI, MOV, WEBM (cualquier video)</p>
+                    </div>
+                  )}
+                  <input
+                    ref={trailerInputRef}
+                    type="file"
+                    className="hidden"
+                    accept="video/*"
+                    onChange={handleTrailerChange}
+                    disabled={loading}
+                  />
+                </label>
+              </div>
             </div>
           </div>
 
@@ -281,7 +349,7 @@ export function CreateCourseModal({
           <div className="flex gap-3 pt-4">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
               disabled={loading}
             >

@@ -230,10 +230,10 @@ export default function CourseVideosPage() {
                                     Vista Previa
                                   </span>
                                 )}
-                                {item.hasResources && (
+                                {item.resources && item.resources.length > 0 && (
                                   <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded-full w-fit">
                                     <FileText className="w-3 h-3" />
-                                    Recursos
+                                    Recursos ({item.resources.length})
                                   </span>
                                 )}
                               </div>

@@ -272,7 +272,7 @@ const menuSections: MenuSection[] = [
     title: "El club",
     items: [
       { label: "Cursos", icon: BookOpenIcon, path: "/admin/courses" },
-      { label: "Videos", icon: VideoIcon, path: "/admin/videos" },
+      // { label: "Videos", icon: VideoIcon, path: "/admin/videos" },
       // { label: "Desbloqueos", icon: LockIcon, path: "/admin/unlocks" },
       { label: "Miembros", icon: UsersIcon, path: "/admin/members" },
     ],
