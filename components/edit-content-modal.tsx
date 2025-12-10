@@ -1,19 +1,19 @@
 "use client";
 
-import { useState, FormEvent, ChangeEvent, useRef } from "react";
+import { useState, FormEvent, ChangeEvent, useRef, useEffect } from "react";
 import { X, Upload, File as FileIcon, Image, Video, FileText, Music } from "lucide-react";
-import { addCourseContent, type AddCourseContentDto } from "@/services/courses";
+import { updateCourseContent, type UpdateCourseContentDto, type CourseContent } from "@/services/courses";
 import { uploadFile } from "@/services/files";
 
-interface AddContentModalProps {
+interface EditContentModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  courseId: string;
+  content: CourseContent | null;
 }
 
 // Función para detectar el tipo de contenido basado en el tipo de archivo
-const detectContentType = (file: File): AddCourseContentDto["contentType"] => {
+const detectContentType = (file: File): UpdateCourseContentDto["contentType"] => {
   const mimeType = file.type;
   
   if (mimeType.startsWith("video/")) {
@@ -38,7 +38,7 @@ const detectContentType = (file: File): AddCourseContentDto["contentType"] => {
 };
 
 // Función para obtener el icono según el tipo de contenido
-const getContentIcon = (contentType: AddCourseContentDto["contentType"]) => {
+const getContentIcon = (contentType: string) => {
   switch (contentType) {
     case "video":
       return Video;
@@ -55,13 +55,12 @@ const getContentIcon = (contentType: AddCourseContentDto["contentType"]) => {
   }
 };
 
-
-export function AddContentModal({
+export function EditContentModal({
   isOpen,
   onClose,
   onSuccess,
-  courseId,
-}: AddContentModalProps) {
+  content,
+}: EditContentModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -73,7 +72,7 @@ export function AddContentModal({
   const [isAvailableImmediately, setIsAvailableImmediately] = useState(true);
   const [unlockValue, setUnlockValue] = useState(1);
   const [unlockType, setUnlockType] = useState<"immediate" | "day" | "week" | "month" | "year">("month");
-  const [formData, setFormData] = useState<Omit<AddCourseContentDto, "file">>({
+  const [formData, setFormData] = useState<Omit<UpdateCourseContentDto, "file">>({
     title: "",
     slug: "",
     description: "",
@@ -82,7 +81,42 @@ export function AddContentModal({
     unlockType: "immediate",
     availabilityType: "none",
     thumbnailUrl: "",
+    sortOrder: 0,
+    isPreview: false,
+    isActive: true,
   });
+
+  // Precargar datos cuando se abre el modal
+  useEffect(() => {
+    if (content && isOpen) {
+      const isImmediate = content.unlockType === "immediate" || content.unlockValue === 0;
+      setIsAvailableImmediately(isImmediate);
+      setUnlockValue(isImmediate ? 0 : content.unlockValue);
+      setUnlockType(content.unlockType);
+      setFormData({
+        title: content.title,
+        slug: content.slug,
+        description: content.description || "",
+        contentType: content.contentType,
+        unlockValue: content.unlockValue,
+        unlockType: content.unlockType,
+        availabilityType: content.availabilityType,
+        thumbnailUrl: content.thumbnailUrl || "",
+        contentUrl: content.contentUrl,
+        durationSeconds: content.durationSeconds || undefined,
+        sortOrder: content.sortOrder || 0,
+        isPreview: content.isPreview,
+        isActive: content.isActive,
+      });
+      // Precargar previews si existen
+      if (content.contentUrl) {
+        setFilePreview(content.contentUrl);
+      }
+      if (content.thumbnailUrl) {
+        setThumbnailPreview(content.thumbnailUrl);
+      }
+    }
+  }, [content, isOpen]);
 
   // Generar slug automáticamente desde el título
   const generateSlug = (title: string) => {
@@ -163,8 +197,8 @@ export function AddContentModal({
       return;
     }
 
-    if (!selectedFile) {
-      setError("Debes seleccionar un archivo");
+    if (!content) {
+      setError("No hay contenido para editar");
       return;
     }
 
@@ -190,14 +224,24 @@ export function AddContentModal({
       const finalUnlockType = isAvailableImmediately ? "immediate" : unlockType;
       const finalAvailabilityType = isAvailableImmediately ? "none" : formData.availabilityType;
 
-      await addCourseContent(courseId, {
-        ...formData,
+      // Preparar datos para actualizar
+      const updateData: UpdateCourseContentDto = {
+        title: formData.title,
+        slug: formData.slug,
+        description: formData.description,
+        contentType: formData.contentType,
         unlockValue: finalUnlockValue,
         unlockType: finalUnlockType,
         availabilityType: finalAvailabilityType,
         thumbnailUrl,
-        file: selectedFile,
-      });
+        durationSeconds: formData.durationSeconds,
+        sortOrder: formData.sortOrder,
+        isPreview: formData.isPreview,
+        isActive: formData.isActive,
+        file: selectedFile || undefined,
+      };
+
+      await updateCourseContent(content.id, updateData);
       onSuccess();
       resetForm();
       onClose();
@@ -205,7 +249,7 @@ export function AddContentModal({
       setError(
         err.response?.data?.message ||
           err.message ||
-          "Error al agregar contenido"
+          "Error al actualizar contenido"
       );
     } finally {
       setLoading(false);
@@ -222,6 +266,9 @@ export function AddContentModal({
       unlockType: "immediate",
       availabilityType: "none",
       thumbnailUrl: "",
+      sortOrder: 0,
+      isPreview: false,
+      isActive: true,
     });
     setIsAvailableImmediately(true);
     setUnlockValue(1);
@@ -244,13 +291,13 @@ export function AddContentModal({
     onClose();
   };
 
-  if (!isOpen) return null;
+  if (!isOpen || !content) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto m-4">
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-gray-900">Agregar Contenido</h2>
+          <h2 className="text-2xl font-bold text-gray-900">Editar Contenido</h2>
           <button
             onClick={handleClose}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -298,7 +345,7 @@ export function AddContentModal({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Contenido <span className="text-red-500">*</span>
+              Contenido
             </label>
             <div className="space-y-2">
               <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
@@ -319,13 +366,17 @@ export function AddContentModal({
                     ) : (
                       <div className="w-full h-full flex flex-col items-center justify-center">
                         {(() => {
-                          const Icon = getContentIcon(formData.contentType);
+                          const Icon = getContentIcon(formData.contentType || "document");
                           return <Icon className="w-12 h-12 text-gray-400 mb-2" />;
                         })()}
-                        <p className="text-sm text-gray-600 font-medium">{selectedFile?.name}</p>
-                        <p className="text-xs text-gray-500">
-                          {(selectedFile ? selectedFile.size / 1024 / 1024 : 0).toFixed(2)} MB
+                        <p className="text-sm text-gray-600 font-medium">
+                          {selectedFile?.name || "Archivo actual"}
                         </p>
+                        {selectedFile && (
+                          <p className="text-xs text-gray-500">
+                            {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                          </p>
+                        )}
                       </div>
                     )}
                     <button
@@ -333,8 +384,7 @@ export function AddContentModal({
                       onClick={(e) => {
                         e.preventDefault();
                         setSelectedFile(null);
-                        setFilePreview(null);
-                        setFormData({ ...formData, contentType: "video" });
+                        setFilePreview(content.contentUrl || null);
                         if (fileInputRef.current) {
                           fileInputRef.current.value = "";
                         }
@@ -496,7 +546,7 @@ export function AddContentModal({
                       onClick={(e) => {
                         e.preventDefault();
                         setThumbnailFile(null);
-                        setThumbnailPreview(null);
+                        setThumbnailPreview(content.thumbnailUrl || null);
                         if (thumbnailInputRef.current) {
                           thumbnailInputRef.current.value = "";
                         }
@@ -541,7 +591,7 @@ export function AddContentModal({
               className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={loading}
             >
-              {loading ? "Agregando..." : "Agregar Contenido"}
+              {loading ? "Actualizando..." : "Actualizar Contenido"}
             </button>
           </div>
         </form>
@@ -549,5 +599,4 @@ export function AddContentModal({
     </div>
   );
 }
-
 

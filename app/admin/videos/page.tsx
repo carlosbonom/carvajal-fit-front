@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Video, Plus, Edit, Trash2, Upload, Calendar, Lock, Unlock, Eye } from "lucide-react";
+import { Video, Plus, Edit, Trash2, Upload, Calendar, Lock, Unlock, Eye, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { AdminSidebar } from "@/components/admin-sidebar";
-import { getCourses, getCourseContent, type Course, type CourseContent } from "@/services/courses";
+import { EditContentModal } from "@/components/edit-content-modal";
+import { getCourses, getCourseContent, updateContentStatus, type Course, type CourseContent } from "@/services/courses";
 
 type CourseContentWithName = CourseContent & {
   courseName?: string;
@@ -18,6 +19,9 @@ export default function VideosPage() {
   const [allContent, setAllContent] = useState<CourseContentWithName[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCourse, setSelectedCourse] = useState<string>("all");
+  const [updatingContentId, setUpdatingContentId] = useState<string | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedContent, setSelectedContent] = useState<CourseContent | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -51,6 +55,24 @@ export default function VideosPage() {
     }
   };
 
+  const handleToggleActive = async (contentId: string, currentStatus: boolean) => {
+    setUpdatingContentId(contentId);
+    try {
+      const updatedContent = await updateContentStatus(contentId, !currentStatus);
+      setAllContent((prevContent) =>
+        prevContent.map((item) =>
+          item.id === contentId ? { ...updatedContent, courseName: item.courseName } : item
+        )
+      );
+    } catch (error) {
+      console.error("Error al actualizar el estado del contenido:", error);
+      // Recargar datos en caso de error
+      loadVideos();
+    } finally {
+      setUpdatingContentId(null);
+    }
+  };
+
   const filteredContent =
     selectedCourse === "all"
       ? allContent
@@ -66,6 +88,29 @@ export default function VideosPage() {
       return `${hours}:${minutes.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
     }
     return `${minutes}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  const formatUnlock = (unlockValue: number, unlockType: string) => {
+    if (unlockType === "immediate" || unlockValue === 0) {
+      return "Inmediato";
+    }
+    
+    const typeLabels: Record<string, string> = {
+      day: "día",
+      days: "días",
+      week: "semana",
+      weeks: "semanas",
+      month: "mes",
+      months: "meses",
+      year: "año",
+      years: "años",
+    };
+    
+    const label = unlockValue === 1 
+      ? typeLabels[unlockType] || unlockType
+      : typeLabels[`${unlockType}s`] || `${unlockType}s`;
+    
+    return `${unlockValue} ${label}`;
   };
 
   return (
@@ -130,10 +175,7 @@ export default function VideosPage() {
                         Tipo
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Mes de Desbloqueo
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Duración
+                        Desbloqueo
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Estado
@@ -172,25 +214,45 @@ export default function VideosPage() {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-2">
                             <Calendar className="w-4 h-4 text-gray-400" />
-                            <span className="text-sm text-gray-900">Mes {item.unlockMonth}</span>
+                            <span className="text-sm text-gray-900">
+                              {formatUnlock(item.unlockValue, item.unlockType)}
+                            </span>
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {formatDuration(item.durationSeconds)}
-                        </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex flex-col gap-1">
-                            {item.isPreview && (
-                              <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full w-fit">
-                                <Eye className="w-3 h-3" />
-                                Vista Previa
-                              </span>
-                            )}
-                            {item.resources && item.resources.length > 0 && (
-                              <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded-full w-fit">
-                                Recursos ({item.resources.length})
-                              </span>
-                            )}
+                          <div className="flex flex-col gap-2">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-gray-600">Activo:</span>
+                              {updatingContentId === item.id ? (
+                                <div className="relative inline-flex items-center justify-center w-11 h-6">
+                                  <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                                </div>
+                              ) : (
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={item.isActive}
+                                    onChange={() => handleToggleActive(item.id, item.isActive)}
+                                    className="sr-only peer"
+                                    disabled={updatingContentId === item.id}
+                                  />
+                                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                                </label>
+                              )}
+                            </div>
+                            <div className="flex flex-col gap-1">
+                              {item.isPreview && (
+                                <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full w-fit">
+                                  <Eye className="w-3 h-3" />
+                                  Vista Previa
+                                </span>
+                              )}
+                              {item.resources && item.resources.length > 0 && (
+                                <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded-full w-fit">
+                                  Recursos ({item.resources.length})
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -203,6 +265,10 @@ export default function VideosPage() {
                               <Eye className="w-4 h-4" />
                             </button>
                             <button
+                              onClick={() => {
+                                setSelectedContent(item);
+                                setIsEditModalOpen(true);
+                              }}
                               className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                               title="Editar contenido"
                             >
@@ -243,6 +309,18 @@ export default function VideosPage() {
           )}
         </div>
       </main>
+
+      <EditContentModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setSelectedContent(null);
+        }}
+        onSuccess={() => {
+          loadVideos();
+        }}
+        content={selectedContent}
+      />
     </>
   );
 }

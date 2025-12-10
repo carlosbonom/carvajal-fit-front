@@ -1,32 +1,150 @@
 "use client";
 
-import { Calendar, MessageCircle, Flame, ArrowRight } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Calendar, MessageCircle, Flame, ArrowRight, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-import { useAppSelector } from "@/lib/store/hooks";
+import { useAppSelector, useAppDispatch } from "@/lib/store/hooks";
+import { getSubscriptionCourses, type CourseWithSubscriptionContent } from "@/services/courses";
+import { getProfile } from "@/services/auth";
+import { setUser } from "@/lib/store/slices/userSlice";
+import { getAccessToken } from "@/lib/auth-utils";
+import { store } from "@/lib/store/store";
 
 export default function ClubPage() {
+  const dispatch = useAppDispatch();
   const user = useAppSelector((state) => state.user.user);
   const router = useRouter();
+  const [courses, setCourses] = useState<CourseWithSubscriptionContent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [userLoading, setUserLoading] = useState(true);
 
   // Obtener nombre del usuario
   const userName = user?.name || user?.email?.split("@")[0] || "Usuario";
 
-  // Datos de próxima clase (esto podría venir de una API)
-  const nextClass = {
-    date: "28 nov",
-    time: "19:00",
-  };
+  // Verificar si tiene suscripción activa o es admin
+  const hasActiveSubscription = user?.subscription?.status === "active";
+  const isAdmin = user?.role === "admin" || user?.role === "support";
+  const canAccessContent = hasActiveSubscription || isAdmin;
 
   // Link de WhatsApp (esto podría venir de configuración)
   const whatsappLink = "https://chat.whatsapp.com/your-link";
 
-  // Datos de los videos (esto podría venir de una API)
-  const videos = [
-    { id: "1", title: "Semana 1 - Introducción" },
-    { id: "2", title: "Semana 2 - Intensidad Media" },
-    { id: "3", title: "Semana 3 - Alta Intensidad" },
-  ];
+  // Cargar usuario desde token si no está en Redux
+  useEffect(() => {
+    const loadUserFromToken = async () => {
+      // Verificar si ya hay usuario en Redux
+      const currentState = store.getState();
+      
+      if (currentState.user.user) {
+        console.log("Usuario ya existe en Redux:", currentState.user.user);
+        setUserLoading(false);
+        return;
+      }
+
+      const token = getAccessToken();
+
+      if (!token) {
+        console.log("No hay token en localStorage");
+        setUserLoading(false);
+        return;
+      }
+
+      try {
+        console.log("Cargando usuario desde token...");
+        const userProfile = await getProfile(token);
+        console.log("Usuario cargado:", userProfile);
+        dispatch(setUser(userProfile));
+      } catch (error) {
+        console.error("Error al cargar usuario:", error);
+      } finally {
+        setUserLoading(false);
+      }
+    };
+
+    loadUserFromToken();
+  }, [dispatch]);
+
+  // Cargar cursos si tiene suscripción activa o es admin
+  useEffect(() => {
+    const loadCourses = async () => {
+      // Esperar a que el usuario esté cargado
+      if (userLoading) {
+        console.log("Esperando a que el usuario se cargue...");
+        return;
+      }
+
+      if (!user) {
+        console.log("No hay usuario disponible");
+        setLoading(false);
+        return;
+      }
+
+      // Verificar si tiene suscripción activa o es admin
+      const hasActiveSubscription = user?.subscription?.status === "active";
+      const isAdmin = user?.role === "admin" || user?.role === "support";
+      const canAccessContent = hasActiveSubscription || isAdmin;
+
+      console.log("Usuario:", user);
+      console.log("hasActiveSubscription:", hasActiveSubscription);
+      console.log("isAdmin:", isAdmin);
+      console.log("canAccessContent:", canAccessContent);
+
+      if (!canAccessContent) {
+        console.log("Usuario no tiene acceso al contenido");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+        console.log("Cargando cursos de suscripción...");
+        const coursesData = await getSubscriptionCourses();
+        console.log("Cursos cargados:", coursesData);
+        setCourses(coursesData);
+      } catch (err: any) {
+        console.error("Error al cargar cursos:", err);
+        if (err.response?.status === 403) {
+          setError("No tienes una suscripción activa");
+        } else if (err.response?.status === 401) {
+          setError("Sesión expirada. Por favor, inicia sesión nuevamente.");
+        } else {
+          setError("Error al cargar los cursos. Por favor, intenta nuevamente.");
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadCourses();
+  }, [user, userLoading]);
+
+  // Si no tiene suscripción activa y no es admin, mostrar botón de suscripción
+  if (!canAccessContent && !loading && !userLoading && user) {
+    return (
+      <div className="min-h-screen bg-[#0b0b0b] text-white p-4 md:p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="bg-[#1a1a1a] rounded-2xl p-6 md:p-8 space-y-6 text-center">
+            <h1 className="text-3xl md:text-4xl font-bold text-white mb-4">
+              Hola, {userName}
+            </h1>
+            <p className="text-white/70 text-lg mb-6">
+              Para acceder al contenido del club, necesitas una suscripción activa.
+            </p>
+            <button
+              onClick={() => router.push("/checkout")}
+              className="px-8 py-3 bg-[#00b2de] text-white font-semibold rounded-lg hover:bg-[#00a0c8] transition-colors inline-flex items-center gap-2"
+            >
+              Suscribirse ahora
+              <ArrowRight className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#0b0b0b] text-white p-4 md:p-8">
@@ -38,19 +156,6 @@ export default function ClubPage() {
             <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
               Hola, {userName}
             </h1>
-          </div>
-
-          {/* Próxima Clase */}
-          <div className="flex items-center gap-4">
-            <div className="flex-shrink-0">
-              <Calendar className="w-6 h-6 text-[#00b2de]" />
-            </div>
-            <div className="flex-1">
-              <p className="text-white/60 text-sm">Próxima clase</p>
-              <p className="text-white font-medium">
-                {nextClass.date} - {nextClass.time}
-              </p>
-            </div>
           </div>
 
           {/* Comunidad WhatsApp */}
@@ -72,114 +177,169 @@ export default function ClubPage() {
           </div>
         </div>
 
-        {/* Sección Inferior - Categorías de Rutinas */}
-        <div className="space-y-6">
-          {/* Header de Categoría */}
-          <div className="space-y-2 sm:space-y-0">
-            <div className="flex items-center justify-between gap-3 sm:gap-4">
-              <div className="flex items-center gap-2 sm:gap-3 md:gap-4 flex-1 min-w-0">
-                <div className="flex-shrink-0">
-                  <Flame className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 text-[#00b2de]" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-white truncate">
-                      Bajar Grasa
-                    </h2>
-                    <button
-                      className="text-[#00b2de] font-semibold hover:text-[#00a0c8] transition-colors flex items-center gap-1 flex-shrink-0 text-sm sm:text-base"
-                      onClick={() => router.push("/club/bajar-grasa")}
-                    >
-                      Ver más <ArrowRight className="w-4 h-4" />
-                    </button>
+        {/* Loading State */}
+        {(loading || userLoading) && (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-8 h-8 text-[#00b2de] animate-spin" />
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && !loading && (
+          <div className="bg-red-500/10 border border-red-500/50 rounded-xl p-6 text-center">
+            <p className="text-red-400">{error}</p>
+          </div>
+        )}
+
+        {/* Cursos */}
+        {!loading && !error && courses.length > 0 && (
+          <div className="space-y-8">
+            {courses.map((course) => (
+              <div key={course.id} className="space-y-6">
+                {/* Header del Curso */}
+                <div className="space-y-2 sm:space-y-0">
+                  <div className="flex items-center justify-between gap-3 sm:gap-4">
+                    <div className="flex items-center gap-2 sm:gap-3 md:gap-4 flex-1 min-w-0">
+                      <div className="flex-shrink-0">
+                        <Flame className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 text-[#00b2de]" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-white truncate">
+                          {course.title}
+                        </h2>
+                      </div>
+                    </div>
                   </div>
+                  {course.description && (
+                    <p className="text-white/70 text-sm sm:text-base leading-tight pl-8 sm:pl-11 md:pl-14">
+                      {course.description}
+                    </p>
+                  )}
                 </div>
+
+                {/* Contenido del Curso */}
+                {course.content && course.content.length > 0 && (
+                  <div className="relative">
+                    {/* Botón para ver el curso completo */}
+                    <div className="mb-4 flex justify-end">
+                      <button
+                        onClick={() => router.push(`/club/${course.slug}`)}
+                        className="px-6 py-2 bg-[#00b2de] text-white font-semibold rounded-lg hover:bg-[#00a0c8] transition-colors inline-flex items-center gap-2"
+                      >
+                        Ver curso completo
+                        <ArrowRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                    {/* Carrusel horizontal en mobile */}
+                    <div className="flex md:hidden gap-4 overflow-x-auto scrollbar-hide pb-2 -mx-4 px-4 snap-x snap-mandatory scroll-smooth">
+                      {course.content.slice(0, 3).map((contentItem) => (
+                        <div
+                          key={contentItem.id}
+                          className="flex-shrink-0 w-[85vw] max-w-[320px] bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-xl aspect-[4/3] flex items-center justify-center border border-white/10 active:border-[#00b2de]/30 transition-all duration-300 cursor-pointer group snap-start relative overflow-hidden"
+                          onClick={() =>
+                            router.push(`/club/${course.slug}`)
+                          }
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              router.push(`/club/${course.slug}`);
+                            }
+                          }}
+                          role="button"
+                          tabIndex={0}
+                        >
+                          {contentItem.thumbnailUrl ? (
+                            <img
+                              src={contentItem.thumbnailUrl}
+                              alt={contentItem.title}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="text-center space-y-2 opacity-40 group-hover:opacity-60 transition-opacity">
+                              <svg
+                                className="w-16 h-16 mx-auto text-white/50"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={1.5}
+                                />
+                              </svg>
+                              <p className="text-white/50 text-sm px-4">{contentItem.title}</p>
+                            </div>
+                          )}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/0 to-black/0 flex items-end p-4">
+                            <p className="text-white font-medium text-sm">{contentItem.title}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Grid en desktop */}
+                    <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                      {course.content.slice(0, 3).map((contentItem) => (
+                        <div
+                          key={contentItem.id}
+                          className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-xl aspect-[4/3] flex items-center justify-center border border-white/10 hover:border-[#00b2de]/30 transition-all duration-300 cursor-pointer group relative overflow-hidden"
+                          onClick={() =>
+                            router.push(`/club/${course.slug}`)
+                          }
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              router.push(`/club/${course.slug}`);
+                            }
+                          }}
+                          role="button"
+                          tabIndex={0}
+                        >
+                          {contentItem.thumbnailUrl ? (
+                            <img
+                              src={contentItem.thumbnailUrl}
+                              alt={contentItem.title}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="text-center space-y-2 opacity-40 group-hover:opacity-60 transition-opacity">
+                              <svg
+                                className="w-16 h-16 mx-auto text-white/50"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={1.5}
+                                />
+                              </svg>
+                              <p className="text-white/50 text-sm px-4">{contentItem.title}</p>
+                            </div>
+                          )}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/0 to-black/0 flex items-end p-4">
+                            <p className="text-white font-medium text-sm">{contentItem.title}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-            <p className="text-white/70 text-sm sm:text-base leading-tight pl-8 sm:pl-11 md:pl-14">
-              Rutinas de definición y quema de grasa
-            </p>
+            ))}
           </div>
+        )}
 
-          {/* Carrusel en Mobile / Grid en Desktop */}
-          <div className="relative">
-            {/* Carrusel horizontal en mobile */}
-            <div className="flex md:hidden gap-4 overflow-x-auto scrollbar-hide pb-2 -mx-4 px-4 snap-x snap-mandatory scroll-smooth">
-              {videos.map((video) => (
-                <div
-                  key={video.id}
-                  className="flex-shrink-0 w-[85vw] max-w-[320px] bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-xl aspect-[4/3] flex items-center justify-center border border-white/10 active:border-[#00b2de]/30 transition-all duration-300 cursor-pointer group snap-start"
-                  onClick={() =>
-                    router.push(`/club/bajar-grasa?video=${video.id}`)
-                  }
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      router.push(`/club/bajar-grasa?video=${video.id}`);
-                    }
-                  }}
-                  role="button"
-                  tabIndex={0}
-                >
-                  <div className="text-center space-y-2 opacity-40 group-hover:opacity-60 transition-opacity">
-                    <svg
-                      className="w-16 h-16 mx-auto text-white/50"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={1.5}
-                      />
-                    </svg>
-                    <p className="text-white/50 text-sm">{video.title}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Grid en desktop */}
-            <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-              {videos.map((video) => (
-                <div
-                  key={video.id}
-                  className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-xl aspect-[4/3] flex items-center justify-center border border-white/10 hover:border-[#00b2de]/30 transition-all duration-300 cursor-pointer group"
-                  onClick={() =>
-                    router.push(`/club/bajar-grasa?video=${video.id}`)
-                  }
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      router.push(`/club/bajar-grasa?video=${video.id}`);
-                    }
-                  }}
-                  role="button"
-                  tabIndex={0}
-                >
-                  <div className="text-center space-y-2 opacity-40 group-hover:opacity-60 transition-opacity">
-                    <svg
-                      className="w-16 h-16 mx-auto text-white/50"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={1.5}
-                      />
-                    </svg>
-                    <p className="text-white/50 text-sm">{video.title}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+        {/* Sin cursos */}
+        {!loading && !error && courses.length === 0 && (
+          <div className="bg-[#1a1a1a] rounded-2xl p-6 md:p-8 text-center">
+            <p className="text-white/70 text-lg">No hay cursos disponibles en este momento.</p>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
