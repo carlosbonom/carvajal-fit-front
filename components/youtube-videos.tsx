@@ -54,7 +54,7 @@ export const YouTubeVideos = () => {
     fetchVideos();
   }, []);
 
-  // Manejar tecla ESC para cerrar el modal
+  // Manejar tecla ESC para cerrar el modal y pausar/reanudar video del hero
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape" && selectedVideo) {
@@ -66,6 +66,16 @@ export const YouTubeVideos = () => {
       document.addEventListener("keydown", handleEscape);
       // Prevenir scroll del body cuando el modal está abierto
       document.body.style.overflow = "hidden";
+      
+      // Pausar el video del hero section si está reproduciéndose
+      // Buscar el video en la sección del hero
+      const heroSection = document.querySelector('section#inicio');
+      const heroVideo = heroSection?.querySelector('video') as HTMLVideoElement;
+      if (heroVideo && !heroVideo.paused) {
+        heroVideo.pause();
+      }
+    } else {
+      document.body.style.overflow = "unset";
     }
 
     return () => {
