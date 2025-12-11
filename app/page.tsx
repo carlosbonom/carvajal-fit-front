@@ -10,6 +10,7 @@ import { MembershipCard } from "@/components/membership-card";
 import { MembershipCardv2 } from "@/components/MemberShip-card-v2";
 import { SuccessStories } from "@/components/Success-stories";
 import { Teachers } from "@/components/Teachers";
+import { YouTubeVideos } from "@/components/youtube-videos";
 
 // Componente wrapper para animaciones con scroll
 function AnimatedSection({
@@ -80,6 +81,10 @@ export default function Home() {
         {/* <MembershipCard /> */}
         <MembershipCardv2 />
       </section>
+
+      <AnimatedSection delay={0.1} id="videos">
+        <YouTubeVideos />
+      </AnimatedSection>
 
       <AnimatedSection delay={0.1} id="coaches">
         <Teachers />
