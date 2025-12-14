@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Users, Search, Mail, Calendar, DollarSign, CheckCircle, XCircle, MoreVertical } from "lucide-react";
+import { Users, Search, Mail, Calendar, DollarSign, CheckCircle, XCircle, MoreVertical, Download } from "lucide-react";
+import * as XLSX from "xlsx";
 
 import { AdminSidebar } from "@/components/admin-sidebar";
+import { getMembers, type Member as ApiMember } from "@/services/subscriptions";
 
 interface Member {
   id: string;
@@ -26,61 +28,106 @@ export default function MembersPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [stats, setStats] = useState({
+    total: 0,
+    active: 0,
+    cancelled: 0,
+    monthlyRevenue: 0,
+  });
 
   useEffect(() => {
     setIsMobile(window.innerWidth < 768);
     loadMembers();
   }, []);
 
+  useEffect(() => {
+    // Recargar miembros cuando cambian los filtros
+    const timeoutId = setTimeout(() => {
+      loadMembers();
+    }, 300); // Debounce de 300ms para la búsqueda
+
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm, statusFilter]);
+
   const loadMembers = async () => {
     try {
       setLoading(true);
-      // Aquí harías la llamada a la API
-      // const response = await getMembers();
-      // setMembers(response.members);
       
-      // Datos de ejemplo
-      setMembers([
-        {
-          id: "1",
-          name: "Juan Pérez",
-          email: "juan@example.com",
-          subscriptionStatus: "active",
-          subscriptionStartDate: "2024-01-15",
-          subscriptionEndDate: "2024-02-15",
-          planName: "Plan Mensual",
-          billingCycle: "monthly",
-          totalPaid: 15000,
-          videosWatched: 8,
-          coursesCompleted: 0,
-        },
-        {
-          id: "2",
-          name: "María García",
-          email: "maria@example.com",
-          subscriptionStatus: "active",
-          subscriptionStartDate: "2024-01-01",
-          subscriptionEndDate: "2025-01-01",
-          planName: "Plan Anual",
-          billingCycle: "yearly",
-          totalPaid: 150000,
-          videosWatched: 24,
-          coursesCompleted: 1,
-        },
-        {
-          id: "3",
-          name: "Carlos López",
-          email: "carlos@example.com",
-          subscriptionStatus: "cancelled",
-          subscriptionStartDate: "2023-12-01",
-          subscriptionEndDate: "2024-01-01",
-          planName: "Plan Mensual",
-          billingCycle: "monthly",
-          totalPaid: 15000,
-          videosWatched: 4,
-          coursesCompleted: 0,
-        },
-      ]);
+      const params: { search?: string; status?: "active" | "cancelled" | "expired" | "paused" } = {};
+      
+      if (searchTerm) {
+        params.search = searchTerm;
+      }
+      
+      if (statusFilter !== "all") {
+        params.status = statusFilter as "active" | "cancelled" | "expired" | "paused";
+      }
+
+      const response = await getMembers(params);
+      
+      // Mapear los datos de la API a la estructura que espera el componente
+      const mappedMembers: Member[] = response.members.map((apiMember: ApiMember) => {
+        // Si no tiene suscripción, usar valores por defecto
+        if (!apiMember.subscription) {
+          return {
+            id: apiMember.id,
+            name: apiMember.name,
+            email: apiMember.email,
+            subscriptionStatus: "expired" as const,
+            subscriptionStartDate: "",
+            subscriptionEndDate: undefined,
+            planName: "Sin suscripción",
+            billingCycle: "monthly",
+            totalPaid: apiMember.totalPaid,
+            videosWatched: Math.round((apiMember.progress / 100) * 10),
+            coursesCompleted: apiMember.progress >= 100 ? 1 : 0,
+          };
+        }
+
+        // Calcular el ciclo de facturación basado en las fechas
+        const startDate = new Date(apiMember.subscription.currentPeriodStart);
+        const endDate = new Date(apiMember.subscription.currentPeriodEnd);
+        const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        let billingCycle = "monthly";
+        if (diffDays >= 360) {
+          billingCycle = "yearly";
+        } else if (diffDays >= 28 && diffDays <= 31) {
+          billingCycle = "monthly";
+        } else if (diffDays >= 6 && diffDays <= 7) {
+          billingCycle = "weekly";
+        } else if (diffDays === 1) {
+          billingCycle = "daily";
+        }
+
+        // Estimar videos vistos y cursos completados basado en el progreso
+        // Esto es una estimación, ajusta según tu lógica de negocio
+        const videosWatched = Math.round((apiMember.progress / 100) * 10);
+        const coursesCompleted = apiMember.progress >= 100 ? 1 : 0;
+
+        return {
+          id: apiMember.id,
+          name: apiMember.name,
+          email: apiMember.email,
+          subscriptionStatus: apiMember.subscription.status,
+          subscriptionStartDate: apiMember.subscription.startedAt,
+          subscriptionEndDate: apiMember.subscription.currentPeriodEnd,
+          planName: apiMember.subscription.planName,
+          billingCycle: billingCycle,
+          totalPaid: apiMember.totalPaid,
+          videosWatched: videosWatched,
+          coursesCompleted: coursesCompleted,
+        };
+      });
+
+      setMembers(mappedMembers);
+      setStats({
+        total: response.stats.total,
+        active: response.stats.active,
+        cancelled: response.stats.cancelled,
+        monthlyRevenue: response.stats.monthlyRevenue,
+      });
     } catch (error) {
       console.error("Error al cargar miembros:", error);
     } finally {
@@ -88,13 +135,65 @@ export default function MembersPage() {
     }
   };
 
-  const filteredMembers = members.filter((member) => {
-    const matchesSearch =
-      member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      member.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || member.subscriptionStatus === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  // Los datos ya vienen filtrados del servidor, no necesitamos filtrar localmente
+
+  const exportToExcel = () => {
+    // Preparar los datos para Excel
+    const excelData = members.map((member) => ({
+      "Nombre": member.name,
+      "Email": member.email,
+      "Plan": member.planName,
+      "Estado": member.subscriptionStatus === "active" ? "Activo" : 
+                member.subscriptionStatus === "cancelled" ? "Cancelado" :
+                member.subscriptionStatus === "expired" ? "Expirado" :
+                member.subscriptionStatus === "paused" ? "Pausado" : member.subscriptionStatus,
+      "Fecha Inicio": member.subscriptionStartDate 
+        ? new Date(member.subscriptionStartDate).toLocaleDateString("es-CL")
+        : "N/A",
+      "Fecha Fin": member.subscriptionEndDate
+        ? new Date(member.subscriptionEndDate).toLocaleDateString("es-CL")
+        : "N/A",
+      "Ciclo Facturación": member.billingCycle === "yearly" ? "Anual" :
+                          member.billingCycle === "monthly" ? "Mensual" :
+                          member.billingCycle === "weekly" ? "Semanal" :
+                          member.billingCycle === "daily" ? "Diario" : member.billingCycle,
+      "Total Pagado": member.totalPaid,
+      "Videos Vistos": member.videosWatched,
+      "Cursos Completados": member.coursesCompleted,
+    }));
+
+    // Crear un libro de trabajo
+    const wb = XLSX.utils.book_new();
+    
+    // Crear una hoja de trabajo con los datos
+    const ws = XLSX.utils.json_to_sheet(excelData);
+    
+    // Ajustar el ancho de las columnas
+    const colWidths = [
+      { wch: 25 }, // Nombre
+      { wch: 30 }, // Email
+      { wch: 25 }, // Plan
+      { wch: 15 }, // Estado
+      { wch: 15 }, // Fecha Inicio
+      { wch: 15 }, // Fecha Fin
+      { wch: 18 }, // Ciclo Facturación
+      { wch: 15 }, // Total Pagado
+      { wch: 15 }, // Videos Vistos
+      { wch: 20 }, // Cursos Completados
+    ];
+    ws["!cols"] = colWidths;
+    
+    // Agregar la hoja al libro
+    XLSX.utils.book_append_sheet(wb, ws, "Miembros");
+    
+    // Generar el nombre del archivo con la fecha actual
+    const date = new Date();
+    const dateStr = date.toISOString().split("T")[0];
+    const fileName = `miembros_${dateStr}.xlsx`;
+    
+    // Descargar el archivo
+    XLSX.writeFile(wb, fileName);
+  };
 
   const getStatusBadge = (status: string) => {
     const styles = {
@@ -127,14 +226,6 @@ export default function MembersPage() {
     );
   };
 
-  const stats = {
-    total: members.length,
-    active: members.filter((m) => m.subscriptionStatus === "active").length,
-    cancelled: members.filter((m) => m.subscriptionStatus === "cancelled").length,
-    monthlyRevenue: members
-      .filter((m) => m.subscriptionStatus === "active")
-      .reduce((sum, m) => sum + (m.billingCycle === "monthly" ? 15000 : 12500), 0),
-  };
 
   return (
     <>
@@ -198,6 +289,14 @@ export default function MembersPage() {
                 <option value="expired">Expirados</option>
                 <option value="paused">Pausados</option>
               </select>
+              <button
+                onClick={exportToExcel}
+                disabled={members.length === 0}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center gap-2 font-medium"
+              >
+                <Download className="w-4 h-4" />
+                Exportar Excel
+              </button>
             </div>
           </div>
 
@@ -232,7 +331,7 @@ export default function MembersPage() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredMembers.map((member) => (
+                    {members.map((member) => (
                       <tr key={member.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4">
                           <div>
@@ -248,10 +347,12 @@ export default function MembersPage() {
                         <td className="px-6 py-4">
                           <div>
                             <div className="text-sm text-gray-900">{member.planName}</div>
-                            <div className="text-xs text-gray-500 flex items-center gap-1 mt-1">
-                              <Calendar className="w-3 h-3" />
-                              Desde {new Date(member.subscriptionStartDate).toLocaleDateString("es-CL")}
-                            </div>
+                            {member.subscriptionStartDate && (
+                              <div className="text-xs text-gray-500 flex items-center gap-1 mt-1">
+                                <Calendar className="w-3 h-3" />
+                                Desde {new Date(member.subscriptionStartDate).toLocaleDateString("es-CL")}
+                              </div>
+                            )}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -281,7 +382,7 @@ export default function MembersPage() {
                 </table>
               </div>
               
-              {filteredMembers.length === 0 && (
+              {members.length === 0 && (
                 <div className="text-center py-12">
                   <Users className="w-16 h-16 mx-auto mb-4 text-gray-300" />
                   <p className="text-gray-500 text-lg mb-2">No se encontraron miembros</p>
@@ -299,6 +400,7 @@ export default function MembersPage() {
     </>
   );
 }
+
 
 
 

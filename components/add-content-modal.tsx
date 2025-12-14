@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, FormEvent, ChangeEvent, useRef } from "react";
-import { X, Upload, File as FileIcon, Image, Video, FileText, Music } from "lucide-react";
+import { X, Upload, File as FileIcon, Image, Video, FileText, Music, Loader2 } from "lucide-react";
 import { addCourseContent, type AddCourseContentDto } from "@/services/courses";
 import { uploadFile } from "@/services/files";
 
@@ -172,7 +172,7 @@ export function AddContentModal({
       setLoading(true);
       
       // Subir miniatura primero si existe
-      let thumbnailUrl = formData.thumbnailUrl;
+      let thumbnailUrl: string | undefined = undefined;
       if (thumbnailFile) {
         try {
           const uploadResponse = await uploadFile(thumbnailFile, {
@@ -183,6 +183,9 @@ export function AddContentModal({
         } catch (error) {
           throw new Error("Error al subir la miniatura: " + (error as Error).message);
         }
+      } else if (formData.thumbnailUrl && formData.thumbnailUrl.trim() !== "") {
+        // Si hay una URL existente y no está vacía, usarla
+        thumbnailUrl = formData.thumbnailUrl;
       }
 
       // Asegurar que unlockValue sea 0 y unlockType sea "immediate" si está disponible de inmediato
@@ -253,7 +256,7 @@ export function AddContentModal({
           <h2 className="text-2xl font-bold text-gray-900">Agregar Contenido</h2>
           <button
             onClick={handleClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={loading}
           >
             <X className="w-5 h-5 text-gray-600" />
@@ -275,7 +278,7 @@ export function AddContentModal({
               type="text"
               value={formData.title}
               onChange={(e) => handleTitleChange(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
               required
               disabled={loading}
             />
@@ -291,7 +294,7 @@ export function AddContentModal({
                 setFormData({ ...formData, description: e.target.value })
               }
               rows={3}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={loading}
             />
           </div>
@@ -301,7 +304,7 @@ export function AddContentModal({
               Contenido <span className="text-red-500">*</span>
             </label>
             <div className="space-y-2">
-              <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
+              <label className={`flex flex-col items-center justify-center w-full h-40 border-2 border-gray-300 border-dashed rounded-lg bg-gray-50 transition-colors ${loading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-gray-100'}`}>
                 {filePreview ? (
                   <div className="relative w-full h-full">
                     {formData.contentType === "image" ? (
@@ -332,6 +335,7 @@ export function AddContentModal({
                       type="button"
                       onClick={(e) => {
                         e.preventDefault();
+                        if (loading) return;
                         setSelectedFile(null);
                         setFilePreview(null);
                         setFormData({ ...formData, contentType: "video" });
@@ -339,7 +343,8 @@ export function AddContentModal({
                           fileInputRef.current.value = "";
                         }
                       }}
-                      className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                      disabled={loading}
+                      className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -441,7 +446,7 @@ export function AddContentModal({
                           });
                         }}
                         min="1"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                         required={!isAvailableImmediately}
                         disabled={loading}
                       />
@@ -462,7 +467,7 @@ export function AddContentModal({
                             unlockType: type,
                           });
                         }}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                         required={!isAvailableImmediately}
                         disabled={loading}
                       >
@@ -483,7 +488,7 @@ export function AddContentModal({
               Miniatura (Imagen)
             </label>
             <div className="space-y-2">
-              <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
+              <label className={`flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg bg-gray-50 transition-colors ${loading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-gray-100'}`}>
                 {thumbnailPreview ? (
                   <div className="relative w-full h-full">
                     <img
@@ -495,13 +500,15 @@ export function AddContentModal({
                       type="button"
                       onClick={(e) => {
                         e.preventDefault();
+                        if (loading) return;
                         setThumbnailFile(null);
                         setThumbnailPreview(null);
                         if (thumbnailInputRef.current) {
                           thumbnailInputRef.current.value = "";
                         }
                       }}
-                      className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                      disabled={loading}
+                      className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -531,16 +538,17 @@ export function AddContentModal({
             <button
               type="button"
               onClick={handleClose}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={loading}
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               disabled={loading}
             >
+              {loading && <Loader2 className="w-4 h-4 animate-spin" />}
               {loading ? "Agregando..." : "Agregar Contenido"}
             </button>
           </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, FormEvent, ChangeEvent, useRef, useEffect } from "react";
-import { X, Upload, File as FileIcon, Image, Video, FileText, Music } from "lucide-react";
+import { X, Upload, File as FileIcon, Image, Video, FileText, Music, Loader2 } from "lucide-react";
 import { updateCourseContent, type UpdateCourseContentDto, type CourseContent } from "@/services/courses";
 import { uploadFile } from "@/services/files";
 
@@ -205,6 +205,30 @@ export function EditContentModal({
     try {
       setLoading(true);
       
+      // Subir archivo de contenido primero si existe
+      let contentUrl = formData.contentUrl;
+      if (selectedFile) {
+        try {
+          // Determinar la carpeta según el tipo de contenido
+          let folder = "videos";
+          if (formData.contentType === "image") {
+            folder = "imagenes";
+          } else if (formData.contentType === "pdf" || formData.contentType === "document") {
+            folder = "documentos";
+          } else if (formData.contentType === "audio") {
+            folder = "audio";
+          }
+
+          const uploadResponse = await uploadFile(selectedFile, {
+            folder,
+            isPublic: true,
+          });
+          contentUrl = uploadResponse.url;
+        } catch (error) {
+          throw new Error("Error al subir el archivo: " + (error as Error).message);
+        }
+      }
+      
       // Subir miniatura primero si existe
       let thumbnailUrl = formData.thumbnailUrl;
       if (thumbnailFile) {
@@ -224,7 +248,7 @@ export function EditContentModal({
       const finalUnlockType = isAvailableImmediately ? "immediate" : unlockType;
       const finalAvailabilityType = isAvailableImmediately ? "none" : formData.availabilityType;
 
-      // Preparar datos para actualizar
+      // Preparar datos para actualizar (sin el archivo, solo con la URL)
       const updateData: UpdateCourseContentDto = {
         title: formData.title,
         slug: formData.slug,
@@ -234,11 +258,11 @@ export function EditContentModal({
         unlockType: finalUnlockType,
         availabilityType: finalAvailabilityType,
         thumbnailUrl,
+        contentUrl,
         durationSeconds: formData.durationSeconds,
         sortOrder: formData.sortOrder,
         isPreview: formData.isPreview,
         isActive: formData.isActive,
-        file: selectedFile || undefined,
       };
 
       await updateCourseContent(content.id, updateData);
@@ -300,7 +324,7 @@ export function EditContentModal({
           <h2 className="text-2xl font-bold text-gray-900">Editar Contenido</h2>
           <button
             onClick={handleClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={loading}
           >
             <X className="w-5 h-5 text-gray-600" />
@@ -322,7 +346,7 @@ export function EditContentModal({
               type="text"
               value={formData.title}
               onChange={(e) => handleTitleChange(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
               required
               disabled={loading}
             />
@@ -338,7 +362,7 @@ export function EditContentModal({
                 setFormData({ ...formData, description: e.target.value })
               }
               rows={3}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={loading}
             />
           </div>
@@ -348,7 +372,7 @@ export function EditContentModal({
               Contenido
             </label>
             <div className="space-y-2">
-              <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
+              <label className={`flex flex-col items-center justify-center w-full h-40 border-2 border-gray-300 border-dashed rounded-lg bg-gray-50 transition-colors ${loading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-gray-100'}`}>
                 {filePreview ? (
                   <div className="relative w-full h-full">
                     {formData.contentType === "image" ? (
@@ -383,13 +407,25 @@ export function EditContentModal({
                       type="button"
                       onClick={(e) => {
                         e.preventDefault();
+                        e.stopPropagation();
+                        if (loading) return;
                         setSelectedFile(null);
-                        setFilePreview(content.contentUrl || null);
+                        // Limpiar el preview
+                        setFilePreview(null);
+                        // Limpiar el input file
                         if (fileInputRef.current) {
                           fileInputRef.current.value = "";
+                          // Abrir el selector de archivos
+                          fileInputRef.current.click();
                         }
+                        // Limpiar el file del formData
+                        setFormData({
+                          ...formData,
+                          contentUrl: undefined,
+                        });
                       }}
-                      className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                      disabled={loading}
+                      className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 z-10 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -491,7 +527,7 @@ export function EditContentModal({
                           });
                         }}
                         min="1"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                         required={!isAvailableImmediately}
                         disabled={loading}
                       />
@@ -512,7 +548,7 @@ export function EditContentModal({
                             unlockType: type,
                           });
                         }}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                         required={!isAvailableImmediately}
                         disabled={loading}
                       >
@@ -533,7 +569,7 @@ export function EditContentModal({
               Miniatura (Imagen)
             </label>
             <div className="space-y-2">
-              <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
+              <label className={`flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg bg-gray-50 transition-colors ${loading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-gray-100'}`}>
                 {thumbnailPreview ? (
                   <div className="relative w-full h-full">
                     <img
@@ -545,13 +581,25 @@ export function EditContentModal({
                       type="button"
                       onClick={(e) => {
                         e.preventDefault();
+                        e.stopPropagation();
+                        if (loading) return;
                         setThumbnailFile(null);
-                        setThumbnailPreview(content.thumbnailUrl || null);
+                        // Limpiar el preview
+                        setThumbnailPreview(null);
+                        // Limpiar el input file
                         if (thumbnailInputRef.current) {
                           thumbnailInputRef.current.value = "";
+                          // Abrir el selector de archivos
+                          thumbnailInputRef.current.click();
                         }
+                        // Limpiar el thumbnailUrl en formData
+                        setFormData({
+                          ...formData,
+                          thumbnailUrl: "",
+                        });
                       }}
-                      className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                      disabled={loading}
+                      className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 z-10 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -581,16 +629,17 @@ export function EditContentModal({
             <button
               type="button"
               onClick={handleClose}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={loading}
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               disabled={loading}
             >
+              {loading && <Loader2 className="w-4 h-4 animate-spin" />}
               {loading ? "Actualizando..." : "Actualizar Contenido"}
             </button>
           </div>

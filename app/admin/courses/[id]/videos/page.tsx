@@ -56,7 +56,13 @@ export default function CourseVideosPage() {
         getCourseContent(courseId),
       ]);
       setCourse(courseData);
-      setContent(contentData);
+      // Ordenar contenido por sortOrder
+      const sortedContent = [...contentData].sort((a, b) => {
+        const orderA = a.sortOrder ?? 999999;
+        const orderB = b.sortOrder ?? 999999;
+        return orderA - orderB;
+      });
+      setContent(sortedContent);
     } catch (error) {
       console.error("Error al cargar datos del curso:", error);
     } finally {
@@ -137,8 +143,8 @@ export default function CourseVideosPage() {
 
   // Ordenar contenido por sortOrder
   const sortedContent = [...content].sort((a, b) => {
-    const orderA = a.sortOrder || 999;
-    const orderB = b.sortOrder || 999;
+    const orderA = a.sortOrder ?? 999999;
+    const orderB = b.sortOrder ?? 999999;
     return orderA - orderB;
   });
 
@@ -175,7 +181,13 @@ export default function CourseVideosPage() {
         getCourseContent(courseId),
       ]);
       setCourse(courseData);
-      setContent(contentData);
+      // Ordenar contenido por sortOrder
+      const sortedContent = [...contentData].sort((a, b) => {
+        const orderA = a.sortOrder ?? 999999;
+        const orderB = b.sortOrder ?? 999999;
+        return orderA - orderB;
+      });
+      setContent(sortedContent);
     } catch (error) {
       console.error("Error al actualizar el orden:", error);
       // Recargar datos en caso de error
@@ -190,8 +202,8 @@ export default function CourseVideosPage() {
     if (over && active.id !== over.id) {
       // Obtener el contenido ordenado actual
       const currentSorted = [...content].sort((a, b) => {
-        const orderA = a.sortOrder || 999;
-        const orderB = b.sortOrder || 999;
+        const orderA = a.sortOrder ?? 999999;
+        const orderB = b.sortOrder ?? 999999;
         return orderA - orderB;
       });
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, FormEvent, ChangeEvent, useRef } from "react";
-import { X, Image, Video } from "lucide-react";
+import { X, Image, Video, Loader2 } from "lucide-react";
 import { createCourse, type CreateCourseDto } from "@/services/courses";
 import { useAppSelector } from "@/lib/store/hooks";
 
@@ -31,7 +31,7 @@ export function CreateCourseModal({
     description: "",
     thumbnailUrl: "",
     trailerUrl: "",
-    isPublished: false,
+    isPublished: true,
     creatorId: user?.id || "",
   });
 
@@ -100,7 +100,7 @@ export function CreateCourseModal({
       description: "",
       thumbnailUrl: "",
       trailerUrl: "",
-      isPublished: false,
+      isPublished: true,
       creatorId: user?.id || "",
     });
     setThumbnailFile(null);
@@ -186,13 +186,13 @@ export function CreateCourseModal({
               type="text"
               value={formData.title}
               onChange={(e) => handleTitleChange(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
               required
               disabled={loading}
             />
           </div>
 
-          <div>
+          {/* <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Slug <span className="text-red-500">*</span>
             </label>
@@ -211,7 +211,7 @@ export function CreateCourseModal({
             <p className="mt-1 text-xs text-gray-500">
               URL amigable (solo minúsculas, números y guiones)
             </p>
-          </div>
+          </div> */}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -223,13 +223,13 @@ export function CreateCourseModal({
                 setFormData({ ...formData, description: e.target.value })
               }
               rows={3}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={loading}
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div>
+            {/* <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Miniatura (Imagen)
               </label>
@@ -277,14 +277,14 @@ export function CreateCourseModal({
                   />
                 </label>
               </div>
-            </div>
+            </div> */}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Trailer (Video)
               </label>
               <div className="space-y-2">
-                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
+                <label className={`flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg bg-gray-50 transition-colors ${loading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-gray-100'}`}>
                   {trailerPreview ? (
                     <div className="relative w-full h-full">
                       <video
@@ -296,6 +296,7 @@ export function CreateCourseModal({
                         type="button"
                         onClick={(e) => {
                           e.preventDefault();
+                          if (loading) return;
                           setTrailerFile(null);
                           setTrailerPreview(null);
                           setFormData({ ...formData, trailerFile: undefined });
@@ -303,7 +304,8 @@ export function CreateCourseModal({
                             trailerInputRef.current.value = "";
                           }
                         }}
-                        className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                        disabled={loading}
+                        className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -329,7 +331,7 @@ export function CreateCourseModal({
               </div>
             </div>
           </div>
-
+{/* 
           <div className="flex items-center">
             <input
               type="checkbox"
@@ -344,22 +346,23 @@ export function CreateCourseModal({
             <label htmlFor="isPublished" className="ml-2 text-sm text-gray-700">
               Publicar curso
             </label>
-          </div>
+          </div> */}
 
           <div className="flex gap-3 pt-4">
             <button
               type="button"
               onClick={handleClose}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={loading}
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               disabled={loading}
             >
+              {loading && <Loader2 className="w-4 h-4 animate-spin" />}
               {loading ? "Creando..." : "Crear Curso"}
             </button>
           </div>

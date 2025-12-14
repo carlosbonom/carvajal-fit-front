@@ -103,7 +103,18 @@ export default function ClubPage() {
         console.log("Cargando cursos de suscripción...");
         const coursesData = await getSubscriptionCourses();
         console.log("Cursos cargados:", coursesData);
-        setCourses(coursesData);
+        // Ordenar contenido de cada curso por sortOrder
+        const coursesWithSortedContent = coursesData.map((course) => ({
+          ...course,
+          content: course.content
+            ? [...course.content].sort((a, b) => {
+                const orderA = a.sortOrder ?? 999999;
+                const orderB = b.sortOrder ?? 999999;
+                return orderA - orderB;
+              })
+            : [],
+        }));
+        setCourses(coursesWithSortedContent);
       } catch (err: any) {
         console.error("Error al cargar cursos:", err);
         if (err.response?.status === 403) {
@@ -232,7 +243,14 @@ export default function ClubPage() {
                     </div>
                     {/* Carrusel horizontal en mobile */}
                     <div className="flex md:hidden gap-4 overflow-x-auto scrollbar-hide pb-2 -mx-4 px-4 snap-x snap-mandatory scroll-smooth">
-                      {course.content.slice(0, 3).map((contentItem) => (
+                      {[...course.content]
+                        .sort((a, b) => {
+                          const orderA = a.sortOrder ?? 999999;
+                          const orderB = b.sortOrder ?? 999999;
+                          return orderA - orderB;
+                        })
+                        .slice(0, 3)
+                        .map((contentItem) => (
                         <div
                           key={contentItem.id}
                           className="flex-shrink-0 w-[85vw] max-w-[320px] bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-xl aspect-[4/3] flex items-center justify-center border border-white/10 active:border-[#00b2de]/30 transition-all duration-300 cursor-pointer group snap-start relative overflow-hidden"
@@ -253,6 +271,14 @@ export default function ClubPage() {
                               src={contentItem.thumbnailUrl}
                               alt={contentItem.title}
                               className="w-full h-full object-cover"
+                            />
+                          ) : contentItem.contentType === "video" && contentItem.contentUrl ? (
+                            <video
+                              src={contentItem.contentUrl}
+                              className="w-full h-full object-cover"
+                              preload="metadata"
+                              muted
+                              playsInline
                             />
                           ) : (
                             <div className="text-center space-y-2 opacity-40 group-hover:opacity-60 transition-opacity">
@@ -281,7 +307,14 @@ export default function ClubPage() {
 
                     {/* Grid en desktop */}
                     <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                      {course.content.slice(0, 3).map((contentItem) => (
+                      {[...course.content]
+                        .sort((a, b) => {
+                          const orderA = a.sortOrder ?? 999999;
+                          const orderB = b.sortOrder ?? 999999;
+                          return orderA - orderB;
+                        })
+                        .slice(0, 3)
+                        .map((contentItem) => (
                         <div
                           key={contentItem.id}
                           className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-xl aspect-[4/3] flex items-center justify-center border border-white/10 hover:border-[#00b2de]/30 transition-all duration-300 cursor-pointer group relative overflow-hidden"
@@ -302,6 +335,14 @@ export default function ClubPage() {
                               src={contentItem.thumbnailUrl}
                               alt={contentItem.title}
                               className="w-full h-full object-cover"
+                            />
+                          ) : contentItem.contentType === "video" && contentItem.contentUrl ? (
+                            <video
+                              src={contentItem.contentUrl}
+                              className="w-full h-full object-cover"
+                              preload="metadata"
+                              muted
+                              playsInline
                             />
                           ) : (
                             <div className="text-center space-y-2 opacity-40 group-hover:opacity-60 transition-opacity">

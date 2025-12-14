@@ -143,12 +143,13 @@ export const createCourse = async (
   }
 
   // Crear el curso con las URLs obtenidas
+  // Convertir strings vacíos a null para que el backend no valide URLs vacías
   const courseData: Omit<CreateCourseDto, "thumbnailFile" | "trailerFile"> = {
     title: data.title,
     slug: data.slug,
-    description: data.description,
-    thumbnailUrl,
-    trailerUrl,
+    description: data.description || undefined,
+    thumbnailUrl: thumbnailUrl && thumbnailUrl.trim() !== "" ? thumbnailUrl : undefined,
+    trailerUrl: trailerUrl && trailerUrl.trim() !== "" ? trailerUrl : undefined,
     level: data.level,
     durationMinutes: data.durationMinutes,
     isPublished: data.isPublished,
@@ -191,16 +192,17 @@ export const addCourseContent = async (
   }
 
   // Preparar los datos para enviar
+  // Convertir strings vacíos a undefined para que el backend no valide URLs vacías
   const requestData: Omit<AddCourseContentDto, "file"> = {
     title: data.title,
     slug: data.slug,
-    description: data.description,
+    description: data.description || undefined,
     contentType: data.contentType,
     unlockValue: data.unlockValue,
     unlockType: data.unlockType,
     availabilityType: data.availabilityType,
     contentUrl,
-    thumbnailUrl: data.thumbnailUrl,
+    thumbnailUrl: data.thumbnailUrl && data.thumbnailUrl.trim() !== "" ? data.thumbnailUrl : undefined,
     durationSeconds: data.durationSeconds,
     sortOrder: data.sortOrder,
     isPreview: data.isPreview,
@@ -366,6 +368,69 @@ export const getSubscriptionCourses = async (): Promise<CourseWithSubscriptionCo
   const response = await apiAxios.get<CourseWithSubscriptionContent[]>(
     "/courses/subscription",
   );
+
+  return response.data;
+};
+
+// PATCH /courses/:id - Actualizar curso
+export interface UpdateCourseDto {
+  title?: string;
+  slug?: string;
+  description?: string;
+  thumbnailUrl?: string;
+  trailerUrl?: string;
+  level?: "beginner" | "intermediate" | "advanced" | null;
+  durationMinutes?: number | null;
+  isPublished?: boolean;
+  sortOrder?: number | null;
+  creatorId?: string | null;
+  metadata?: Record<string, any>;
+  thumbnailFile?: File;
+  trailerFile?: File;
+}
+
+export const updateCourse = async (
+  courseId: string,
+  data: UpdateCourseDto,
+): Promise<Course> => {
+  let thumbnailUrl = data.thumbnailUrl;
+  let trailerUrl = data.trailerUrl;
+
+  // Subir archivos primero si existen
+  if (data.thumbnailFile) {
+    try {
+      const uploadResponse = await uploadFile(data.thumbnailFile, {
+        folder: "imagenes",
+        isPublic: true,
+      });
+      thumbnailUrl = uploadResponse.url;
+    } catch (error) {
+      throw new Error("Error al subir la miniatura: " + (error as Error).message);
+    }
+  }
+
+  if (data.trailerFile) {
+    try {
+      const uploadResponse = await uploadFile(data.trailerFile, {
+        folder: "videos",
+        isPublic: true,
+      });
+      trailerUrl = uploadResponse.url;
+    } catch (error) {
+      throw new Error("Error al subir el trailer: " + (error as Error).message);
+    }
+  }
+
+  // Preparar los datos para enviar (sin los archivos)
+  const { thumbnailFile, trailerFile, ...requestData } = data;
+  // Convertir strings vacíos a undefined para que el backend no valide URLs vacías
+  const courseData: Omit<UpdateCourseDto, "thumbnailFile" | "trailerFile"> = {
+    ...requestData,
+    thumbnailUrl: thumbnailUrl && thumbnailUrl.trim() !== "" ? thumbnailUrl : undefined,
+    trailerUrl: trailerUrl && trailerUrl.trim() !== "" ? trailerUrl : undefined,
+  };
+
+  const response = await apiAxios.patch<Course>(`/courses/${courseId}`, courseData);
 
   return response.data;
 };

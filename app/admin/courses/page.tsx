@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 
 import { AdminSidebar } from "@/components/admin-sidebar";
 import { CreateCourseModal } from "@/components/create-course-modal";
+import { EditCourseModal } from "@/components/edit-course-modal";
 import { getCourses, type Course } from "@/services/courses";
 
 export default function CoursesPage() {
@@ -14,6 +15,8 @@ export default function CoursesPage() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const router = useRouter();
 
@@ -138,7 +141,7 @@ export default function CoursesPage() {
                       >
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-4">
-                            <div className="flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden bg-gray-100">
+                            {/* <div className="flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden bg-gray-100">
                               {course.thumbnailUrl ? (
                                 <img
                                   src={course.thumbnailUrl}
@@ -150,7 +153,7 @@ export default function CoursesPage() {
                                   <BookOpen className="w-6 h-6 text-gray-400" />
                                 </div>
                               )}
-                            </div>
+                            </div> */}
                             <div className="min-w-0 flex-1">
                               <div className="text-sm font-medium text-gray-900 truncate">
                                 {course.title}
@@ -190,7 +193,8 @@ export default function CoursesPage() {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                // TODO: Implementar edición
+                                setSelectedCourseId(course.id);
+                                setIsEditModalOpen(true);
                               }}
                               className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                               title="Editar curso"
@@ -225,6 +229,18 @@ export default function CoursesPage() {
         onSuccess={() => {
           loadCourses();
         }}
+      />
+
+      <EditCourseModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setSelectedCourseId(null);
+        }}
+        onSuccess={() => {
+          loadCourses();
+        }}
+        courseId={selectedCourseId}
       />
     </>
   );

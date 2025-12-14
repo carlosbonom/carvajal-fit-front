@@ -71,10 +71,22 @@ function CoursePageContent() {
           return;
         }
 
-        setCourse(foundCourse);
+        // Ordenar contenido por sortOrder antes de establecerlo
+        const sortedContent = foundCourse.content
+          ? [...foundCourse.content].sort((a, b) => {
+              const orderA = a.sortOrder ?? 999999;
+              const orderB = b.sortOrder ?? 999999;
+              return orderA - orderB;
+            })
+          : [];
+        
+        setCourse({
+          ...foundCourse,
+          content: sortedContent,
+        });
         // Seleccionar el primer contenido disponible por defecto
-        if (foundCourse.content && foundCourse.content.length > 0) {
-          setSelectedContent(foundCourse.content[0]);
+        if (sortedContent.length > 0) {
+          setSelectedContent(sortedContent[0]);
         }
       } catch (err: any) {
         console.error("Error al cargar curso:", err);
@@ -229,6 +241,14 @@ function CoursePageContent() {
                           alt={selectedContent.title}
                           className="w-full h-full object-cover"
                         />
+                      ) : selectedContent.contentType === "video" && selectedContent.contentUrl ? (
+                        <video
+                          src={selectedContent.contentUrl}
+                          className="w-full h-full object-cover"
+                          preload="metadata"
+                          muted
+                          playsInline
+                        />
                       ) : (
                         <div className="text-center space-y-2 opacity-50">
                           <Play className="w-16 h-16 mx-auto text-white/50" />
@@ -249,13 +269,21 @@ function CoursePageContent() {
                     </div>
                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-gray-700/30 to-gray-900/50 flex items-center justify-center">
-                      {selectedContent.thumbnailUrl && (
+                      {selectedContent.thumbnailUrl ? (
                         <img
                           src={selectedContent.thumbnailUrl}
                           alt={selectedContent.title}
                           className="w-full h-full object-cover opacity-50"
                         />
-                      )}
+                      ) : selectedContent.contentType === "video" && selectedContent.contentUrl ? (
+                        <video
+                          src={selectedContent.contentUrl}
+                          className="w-full h-full object-cover opacity-50"
+                          preload="metadata"
+                          muted
+                          playsInline
+                        />
+                      ) : null}
                       <div className="absolute inset-0 flex items-center justify-center bg-black/60">
                         <div className="text-center space-y-4">
                           <Lock className="w-16 h-16 mx-auto text-white/50" />
@@ -343,7 +371,13 @@ function CoursePageContent() {
               </h3>
               <div className="space-y-2 md:space-y-3 max-h-[calc(100vh-250px)] lg:max-h-[calc(100vh-200px)] overflow-y-auto scrollbar-hide">
                 {course.content && course.content.length > 0 ? (
-                  course.content.map((contentItem) => {
+                  [...course.content]
+                    .sort((a, b) => {
+                      const orderA = a.sortOrder ?? 999999;
+                      const orderB = b.sortOrder ?? 999999;
+                      return orderA - orderB;
+                    })
+                    .map((contentItem) => {
                     const isUnlocked = isContentUnlocked(contentItem);
                     const isSelected = selectedContent?.id === contentItem.id;
                     const isWatched = watchedContent.has(contentItem.id);

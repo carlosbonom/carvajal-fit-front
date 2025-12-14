@@ -129,3 +129,63 @@ export const getPayments = async (): Promise<{
 
   return response.data;
 };
+
+// Tipos para el endpoint de miembros
+export interface MemberSubscription {
+  id: string;
+  planName: string;
+  status: "active" | "cancelled" | "expired" | "paused";
+  startedAt: string;
+  currentPeriodStart: string;
+  currentPeriodEnd: string;
+}
+
+export interface Member {
+  id: string;
+  name: string;
+  email: string;
+  subscription: MemberSubscription | null;
+  progress: number;
+  totalPaid: number;
+  currency: string;
+}
+
+export interface MembersStats {
+  total: number;
+  active: number;
+  cancelled: number;
+  monthlyRevenue: number;
+}
+
+export interface GetMembersParams {
+  search?: string;
+  status?: "active" | "cancelled" | "expired" | "paused";
+}
+
+export interface MembersResponse {
+  stats: MembersStats;
+  members: Member[];
+  total: number;
+}
+
+// GET /subscriptions/members - Obtener miembros con filtros opcionales
+export const getMembers = async (
+  params?: GetMembersParams,
+): Promise<MembersResponse> => {
+  const queryParams = new URLSearchParams();
+  
+  if (params?.search) {
+    queryParams.append("search", params.search);
+  }
+  
+  if (params?.status) {
+    queryParams.append("status", params.status);
+  }
+
+  const queryString = queryParams.toString();
+  const url = `/subscriptions/members${queryString ? `?${queryString}` : ""}`;
+  
+  const response = await apiAxios.get<MembersResponse>(url);
+
+  return response.data;
+};
