@@ -77,20 +77,17 @@ export function ProductModal({ isOpen, onClose, onSuccess, product, creatorSlug 
           priceCLP: clpPrice ? clpPrice.amount.toString() : "",
           priceUSD: usdPrice ? usdPrice.amount.toString() : "",
           isActive: product.isActive,
+          thumbnailUrl: product.thumbnailUrl || "",
+          bannerUrl: product.bannerUrl || "",
+          fileUrl: product.fileUrl || "",
+          productImages: product.metadata?.productImages || [],
         });
         
         setPreviews({
           thumbnail: product.thumbnailUrl || "",
           banner: product.bannerUrl || "",
-        });
-        
-        setFormData(prev => ({
-          ...prev,
-          thumbnailUrl: product.thumbnailUrl || "",
-          bannerUrl: product.bannerUrl || "",
-          fileUrl: product.fileUrl || "",
           productImages: product.metadata?.productImages || [],
-        }));
+        });
         
         if (product.metadata?.productImages) {
           setPreviews(prev => ({
