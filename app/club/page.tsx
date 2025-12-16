@@ -1,15 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Calendar, MessageCircle, Flame, ArrowRight, Loader2 } from "lucide-react";
+import { Calendar, MessageCircle, Flame, ArrowRight, Loader2, Lock } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { useAppSelector, useAppDispatch } from "@/lib/store/hooks";
-import { getSubscriptionCourses, type CourseWithSubscriptionContent } from "@/services/courses";
+import { getSubscriptionCourses, type CourseWithSubscriptionContent, type SubscriptionContent } from "@/services/courses";
 import { getProfile } from "@/services/auth";
 import { setUser } from "@/lib/store/slices/userSlice";
 import { getAccessToken } from "@/lib/auth-utils";
 import { store } from "@/lib/store/store";
+import { InstallPWABanner } from "@/components/install-pwa-banner";
 
 export default function ClubPage() {
   const dispatch = useAppDispatch();
@@ -27,6 +28,98 @@ export default function ClubPage() {
   const hasActiveSubscription = user?.subscription?.status === "active";
   const isAdmin = user?.role === "admin" || user?.role === "support";
   const canAccessContent = hasActiveSubscription || isAdmin;
+
+  // Calcular meses desde el inicio de la suscripción
+  const calculateMonthsSinceStart = (): number => {
+    if (!user?.subscription?.startedAt) return 0;
+    const start = new Date(user.subscription.startedAt);
+    const now = new Date();
+    const yearsDiff = now.getFullYear() - start.getFullYear();
+    const monthsDiff = now.getMonth() - start.getMonth();
+    return yearsDiff * 12 + monthsDiff;
+  };
+
+  // Verificar si el contenido está desbloqueado
+  const isContentUnlocked = (content: SubscriptionContent): boolean => {
+    if (isAdmin) return true;
+    if (content.unlockType === "immediate") return true;
+    if (!hasActiveSubscription) return false;
+
+    const monthsSinceStart = calculateMonthsSinceStart();
+    let unlockThreshold = 0;
+
+    switch (content.unlockType) {
+      case "day":
+        unlockThreshold = Math.floor(content.unlockValue / 30);
+        break;
+      case "week":
+        unlockThreshold = Math.floor(content.unlockValue / 4);
+        break;
+      case "month":
+        unlockThreshold = content.unlockValue;
+        break;
+      case "year":
+        unlockThreshold = content.unlockValue * 12;
+        break;
+      default:
+        return true;
+    }
+
+    return monthsSinceStart >= unlockThreshold;
+  };
+
+  // Calcular días desde el inicio de la suscripción
+  const calculateDaysSinceStart = (): number => {
+    if (!user?.subscription?.startedAt) return 0;
+    const start = new Date(user.subscription.startedAt);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - start.getTime());
+    return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  };
+
+  // Formatear mensaje de desbloqueo
+  const getUnlockMessage = (content: SubscriptionContent): string => {
+    if (content.unlockType === "immediate") return "";
+    if (!hasActiveSubscription) return "Requiere suscripción activa";
+    
+    const monthsSinceStart = calculateMonthsSinceStart();
+    const daysSinceStart = calculateDaysSinceStart();
+
+    // Formatear según el tipo original
+    if (content.unlockType === "day") {
+      const daysRemaining = content.unlockValue - daysSinceStart;
+      if (daysRemaining <= 0) return "";
+      if (daysRemaining === 1) {
+        return `Se desbloquea en 1 día`;
+      }
+      return `Se desbloquea en ${daysRemaining} días`;
+    } else if (content.unlockType === "week") {
+      const weeksSinceStart = Math.floor(daysSinceStart / 7);
+      const weeksRemaining = content.unlockValue - weeksSinceStart;
+      if (weeksRemaining <= 0) return "";
+      if (weeksRemaining === 1) {
+        return `Se desbloquea en 1 semana`;
+      }
+      return `Se desbloquea en ${weeksRemaining} semanas`;
+    } else if (content.unlockType === "month") {
+      const monthsRemaining = content.unlockValue - monthsSinceStart;
+      if (monthsRemaining <= 0) return "";
+      if (monthsRemaining === 1) {
+        return `Se desbloquea en 1 mes`;
+      }
+      return `Se desbloquea en ${monthsRemaining} meses`;
+    } else if (content.unlockType === "year") {
+      const yearsSinceStart = Math.floor(monthsSinceStart / 12);
+      const yearsRemaining = content.unlockValue - yearsSinceStart;
+      if (yearsRemaining <= 0) return "";
+      if (yearsRemaining === 1) {
+        return `Se desbloquea en 1 año`;
+      }
+      return `Se desbloquea en ${yearsRemaining} años`;
+    }
+
+    return "";
+  };
 
   // Link de WhatsApp (esto podría venir de configuración)
   const whatsappLink = "https://chat.whatsapp.com/your-link";
@@ -104,16 +197,18 @@ export default function ClubPage() {
         const coursesData = await getSubscriptionCourses();
         console.log("Cursos cargados:", coursesData);
         // Ordenar contenido de cada curso por sortOrder
-        const coursesWithSortedContent = coursesData.map((course) => ({
-          ...course,
-          content: course.content
-            ? [...course.content].sort((a, b) => {
-                const orderA = a.sortOrder ?? 999999;
-                const orderB = b.sortOrder ?? 999999;
-                return orderA - orderB;
-              })
-            : [],
-        }));
+        const coursesWithSortedContent = coursesData
+          .map((course) => ({
+            ...course,
+            content: course.content
+              ? [...course.content].sort((a, b) => {
+                  const orderA = a.sortOrder ?? 999999;
+                  const orderB = b.sortOrder ?? 999999;
+                  return orderA - orderB;
+                })
+              : [],
+          }))
+          .filter((course) => course.content && course.content.length > 0); // Filtrar cursos sin contenido
         setCourses(coursesWithSortedContent);
       } catch (err: any) {
         console.error("Error al cargar cursos:", err);
@@ -250,59 +345,76 @@ export default function ClubPage() {
                           return orderA - orderB;
                         })
                         .slice(0, 3)
-                        .map((contentItem) => (
-                        <div
-                          key={contentItem.id}
-                          className="flex-shrink-0 w-[85vw] max-w-[320px] bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-xl aspect-[4/3] flex items-center justify-center border border-white/10 active:border-[#00b2de]/30 transition-all duration-300 cursor-pointer group snap-start relative overflow-hidden"
-                          onClick={() =>
-                            router.push(`/club/${course.slug}`)
-                          }
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault();
-                              router.push(`/club/${course.slug}`);
-                            }
-                          }}
-                          role="button"
-                          tabIndex={0}
-                        >
-                          {contentItem.thumbnailUrl ? (
-                            <img
-                              src={contentItem.thumbnailUrl}
-                              alt={contentItem.title}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : contentItem.contentType === "video" && contentItem.contentUrl ? (
-                            <video
-                              src={contentItem.contentUrl}
-                              className="w-full h-full object-cover"
-                              preload="metadata"
-                              muted
-                              playsInline
-                            />
-                          ) : (
-                            <div className="text-center space-y-2 opacity-40 group-hover:opacity-60 transition-opacity">
-                              <svg
-                                className="w-16 h-16 mx-auto text-white/50"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={1.5}
+                        .map((contentItem) => {
+                          const isUnlocked = isContentUnlocked(contentItem);
+                          const unlockMessage = getUnlockMessage(contentItem);
+                          
+                          return (
+                            <div
+                              key={contentItem.id}
+                              className="flex-shrink-0 w-[85vw] max-w-[320px] bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-xl aspect-[4/3] flex items-center justify-center border border-white/10 active:border-[#00b2de]/30 transition-all duration-300 cursor-pointer group snap-start relative overflow-hidden"
+                              onClick={() =>
+                                router.push(`/club/${course.slug}`)
+                              }
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                  e.preventDefault();
+                                  router.push(`/club/${course.slug}`);
+                                }
+                              }}
+                              role="button"
+                              tabIndex={0}
+                            >
+                              {contentItem.thumbnailUrl ? (
+                                <img
+                                  src={contentItem.thumbnailUrl}
+                                  alt={contentItem.title}
+                                  className={`w-full h-full object-cover ${!isUnlocked ? "blur-sm opacity-50" : ""}`}
                                 />
-                              </svg>
-                              <p className="text-white/50 text-sm px-4">{contentItem.title}</p>
+                              ) : contentItem.contentType === "video" && contentItem.contentUrl ? (
+                                <video
+                                  src={contentItem.contentUrl}
+                                  className={`w-full h-full object-cover ${!isUnlocked ? "blur-sm opacity-50" : ""}`}
+                                  preload="metadata"
+                                  muted
+                                  playsInline
+                                />
+                              ) : (
+                                <div className="text-center space-y-2 opacity-40 group-hover:opacity-60 transition-opacity">
+                                  <svg
+                                    className="w-16 h-16 mx-auto text-white/50"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={1.5}
+                                    />
+                                  </svg>
+                                  <p className="text-white/50 text-sm px-4">{contentItem.title}</p>
+                                </div>
+                              )}
+                              {!isUnlocked && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+                                  <div className="text-center space-y-3 px-4">
+                                    <Lock className="w-12 h-12 mx-auto text-white/70" />
+                                    {unlockMessage && (
+                                      <p className="text-white/80 text-sm font-medium">
+                                        {unlockMessage}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/0 to-black/0 flex items-end p-4">
+                                <p className="text-white font-medium text-sm">{contentItem.title}</p>
+                              </div>
                             </div>
-                          )}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/0 to-black/0 flex items-end p-4">
-                            <p className="text-white font-medium text-sm">{contentItem.title}</p>
-                          </div>
-                        </div>
-                      ))}
+                          );
+                        })}
                     </div>
 
                     {/* Grid en desktop */}
@@ -314,59 +426,76 @@ export default function ClubPage() {
                           return orderA - orderB;
                         })
                         .slice(0, 3)
-                        .map((contentItem) => (
-                        <div
-                          key={contentItem.id}
-                          className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-xl aspect-[4/3] flex items-center justify-center border border-white/10 hover:border-[#00b2de]/30 transition-all duration-300 cursor-pointer group relative overflow-hidden"
-                          onClick={() =>
-                            router.push(`/club/${course.slug}`)
-                          }
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault();
-                              router.push(`/club/${course.slug}`);
-                            }
-                          }}
-                          role="button"
-                          tabIndex={0}
-                        >
-                          {contentItem.thumbnailUrl ? (
-                            <img
-                              src={contentItem.thumbnailUrl}
-                              alt={contentItem.title}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : contentItem.contentType === "video" && contentItem.contentUrl ? (
-                            <video
-                              src={contentItem.contentUrl}
-                              className="w-full h-full object-cover"
-                              preload="metadata"
-                              muted
-                              playsInline
-                            />
-                          ) : (
-                            <div className="text-center space-y-2 opacity-40 group-hover:opacity-60 transition-opacity">
-                              <svg
-                                className="w-16 h-16 mx-auto text-white/50"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={1.5}
+                        .map((contentItem) => {
+                          const isUnlocked = isContentUnlocked(contentItem);
+                          const unlockMessage = getUnlockMessage(contentItem);
+                          
+                          return (
+                            <div
+                              key={contentItem.id}
+                              className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-xl aspect-[4/3] flex items-center justify-center border border-white/10 hover:border-[#00b2de]/30 transition-all duration-300 cursor-pointer group relative overflow-hidden"
+                              onClick={() =>
+                                router.push(`/club/${course.slug}`)
+                              }
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                  e.preventDefault();
+                                  router.push(`/club/${course.slug}`);
+                                }
+                              }}
+                              role="button"
+                              tabIndex={0}
+                            >
+                              {contentItem.thumbnailUrl ? (
+                                <img
+                                  src={contentItem.thumbnailUrl}
+                                  alt={contentItem.title}
+                                  className={`w-full h-full object-cover ${!isUnlocked ? "blur-sm opacity-50" : ""}`}
                                 />
-                              </svg>
-                              <p className="text-white/50 text-sm px-4">{contentItem.title}</p>
+                              ) : contentItem.contentType === "video" && contentItem.contentUrl ? (
+                                <video
+                                  src={contentItem.contentUrl}
+                                  className={`w-full h-full object-cover ${!isUnlocked ? "blur-sm opacity-50" : ""}`}
+                                  preload="metadata"
+                                  muted
+                                  playsInline
+                                />
+                              ) : (
+                                <div className="text-center space-y-2 opacity-40 group-hover:opacity-60 transition-opacity">
+                                  <svg
+                                    className="w-16 h-16 mx-auto text-white/50"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={1.5}
+                                    />
+                                  </svg>
+                                  <p className="text-white/50 text-sm px-4">{contentItem.title}</p>
+                                </div>
+                              )}
+                              {!isUnlocked && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+                                  <div className="text-center space-y-3 px-4">
+                                    <Lock className="w-12 h-12 mx-auto text-white/70" />
+                                    {unlockMessage && (
+                                      <p className="text-white/80 text-sm font-medium">
+                                        {unlockMessage}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/0 to-black/0 flex items-end p-4">
+                                <p className="text-white font-medium text-sm">{contentItem.title}</p>
+                              </div>
                             </div>
-                          )}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/0 to-black/0 flex items-end p-4">
-                            <p className="text-white font-medium text-sm">{contentItem.title}</p>
-                          </div>
-                        </div>
-                      ))}
+                          );
+                        })}
                     </div>
                   </div>
                 )}
@@ -382,6 +511,7 @@ export default function ClubPage() {
           </div>
         )}
       </div>
+      <InstallPWABanner />
     </div>
   );
 }

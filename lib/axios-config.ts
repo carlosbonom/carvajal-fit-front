@@ -12,7 +12,7 @@ import {
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
   process.env.API_URL ||
-  "http://localhost:3000";
+  "http://localhost:3001";
 
 // Instancia de axios para las peticiones de autenticación
 export const authAxios = axios.create({
@@ -84,6 +84,15 @@ const setupRequestInterceptor = (axiosInstance: typeof axios) => {
 
       if (token && config.headers) {
         config.headers.Authorization = `Bearer ${token}`;
+        // Log temporal para depuración
+        if (config.url?.includes('/marketing')) {
+          console.log('🔑 Token agregado a la petición:', config.url);
+        }
+      } else {
+        // Log si no hay token
+        if (config.url?.includes('/marketing')) {
+          console.warn('⚠️ No hay token disponible para la petición:', config.url);
+        }
       }
 
       return config;

@@ -12,6 +12,9 @@ import { Logo } from "./icons";
 import {
   getPlans,
   createSubscription,
+  createWebpayTransaction,
+  createPayPalOrder,
+  createMercadoPagoCheckout,
   type Plan,
   type Price,
 } from "@/services/subscriptions";
@@ -29,8 +32,8 @@ function PaymentCheckoutContent() {
   const [error, setError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<
-    "mercadopago" | "paypal"
-  >("mercadopago");
+    "webpay" | "mercadopago" | "paypal"
+  >("webpay");
   const user = useAppSelector((state) => state.user.user);
 
   // Cargar planes del API
@@ -105,14 +108,6 @@ function PaymentCheckoutContent() {
       setProcessing(true);
       setError(null);
 
-      // Si es Mercado Pago, redirigir directamente al checkout
-      if (selectedPaymentMethod === "mercadopago") {
-        window.location.href =
-          "https://www.mercadopago.cl/subscriptions/checkout/v2?preapproval_plan_id=8151fbc5cc024cbfb2fd2c5a539db98c";
-        return;
-      }
-
-      // Para PayPal, usar el flujo del backend
       // Obtener el precio según el ciclo seleccionado
       const selectedCycle = isAnnual ? "year" : "month";
       const selectedPrice = plan.prices.find(
@@ -124,6 +119,61 @@ function PaymentCheckoutContent() {
         throw new Error("No se encontró el precio para el ciclo seleccionado");
       }
 
+      // Si es WebPay, usar el nuevo flujo
+      if (selectedPaymentMethod === "webpay") {
+        const webpayResponse = await createWebpayTransaction({
+          planId: plan.id,
+          billingCycleId: selectedPrice.billingCycle.id,
+          currency: selectedPrice.currency,
+        });
+
+        // WebPay requiere enviar un formulario POST con el token
+        // Crear y enviar formulario automáticamente
+        const form = document.createElement("form");
+        form.method = "POST";
+        form.action = webpayResponse.url;
+        
+        // Agregar el token como input hidden
+        const tokenInput = document.createElement("input");
+        tokenInput.type = "hidden";
+        tokenInput.name = "token_ws";
+        tokenInput.value = webpayResponse.token;
+        form.appendChild(tokenInput);
+        
+        // Agregar el formulario al body y enviarlo
+        document.body.appendChild(form);
+        form.submit();
+        
+        return;
+      }
+
+      // Para PayPal, usar el nuevo flujo
+      if (selectedPaymentMethod === "paypal") {
+        const paypalResponse = await createPayPalOrder({
+          planId: plan.id,
+          billingCycleId: selectedPrice.billingCycle.id,
+          currency: selectedPrice.currency,
+        });
+
+        // Redirigir a PayPal para aprobar el pago
+        window.location.href = paypalResponse.approveUrl;
+        return;
+      }
+
+      // Para Mercado Pago Checkout (nueva API)
+      if (selectedPaymentMethod === "mercadopago") {
+        const mercadoPagoResponse = await createMercadoPagoCheckout({
+          planId: plan.id,
+          billingCycleId: selectedPrice.billingCycle.id,
+          currency: selectedPrice.currency,
+        });
+
+        // Redirigir a Mercado Pago Checkout
+        window.location.href = mercadoPagoResponse.initPoint;
+        return;
+      }
+
+      // Para otros métodos de pago (legacy)
       // Obtener datos del usuario si están disponibles
       let userEmail = user?.email;
       let userName = user?.name;
@@ -149,19 +199,15 @@ function PaymentCheckoutContent() {
         payerEmail: userEmail,
         payerFirstName: userName?.split(" ")[0],
         payerLastName: userName?.split(" ").slice(1).join(" "),
-        backUrl: `https://carvajalfit.fydeli.com/checkout/success`,
+        backUrl: `${window.location.origin}/checkout/success`,
       };
 
       const response = await createSubscription(subscriptionData);
 
       // Redirigir según el método de pago
       if (response.url) {
-        // Redirigir a PayPal u otro método
+        // Redirigir a otro método
         window.location.href = response.url;
-      } else if (response.webpayToken) {
-        // Si hay token de WebPay, construir la URL
-        window.location.href =
-          response.url || `#webpay-${response.webpayToken}`;
       } else {
         throw new Error(
           response.message || "No se recibió URL de redirección para el pago",
@@ -359,6 +405,36 @@ function PaymentCheckoutContent() {
             </h3>
 
             <div className="space-y-3">
+              {/* WebPay */}
+              <button
+                className={`w-full p-3 rounded-xl border-2 transition-all duration-300 ${
+                  selectedPaymentMethod === "webpay"
+                    ? "border-[#00b2de] bg-[#00b2de]/10"
+                    : "border-[#00b2de]/20 bg-transparent hover:border-[#00b2de]/40"
+                }`}
+                type="button"
+                onClick={() => setSelectedPaymentMethod("webpay")}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`w-5 h-5 rounded-full flex items-center justify-center transition-all ${
+                      selectedPaymentMethod === "webpay"
+                        ? "bg-[#00b2de]"
+                        : "bg-gray-600 border-2 border-gray-500"
+                    }`}
+                  >
+                    {selectedPaymentMethod === "webpay" && (
+                      <Check className="w-3 h-3 text-white" />
+                    )}
+                  </div>
+                  <img
+                    alt="WebPay"
+                    className="h-10 object-contain"
+                    src="https://melli.fydeli.com/carvajal-fit/logos/1.Webpay_FN_300px.png"
+                  />
+                </div>
+              </button>
+
               {/* Mercado Pago */}
               <button
                 className={`w-full p-3 rounded-xl border-2 transition-all duration-300 ${
@@ -461,7 +537,9 @@ function PaymentCheckoutContent() {
             {processing
               ? "Procesando..."
               : `Suscribirse con ${
-                  selectedPaymentMethod === "mercadopago"
+                  selectedPaymentMethod === "webpay"
+                    ? "WebPay"
+                    : selectedPaymentMethod === "mercadopago"
                     ? "Mercado Pago"
                     : "PayPal"
                 }`}

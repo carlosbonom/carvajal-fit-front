@@ -1,27 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Store, Plus, Edit, Trash2, Upload, FileText, Image, Package, DollarSign, Eye } from "lucide-react";
+import { Store, Plus, Edit, Trash2, FileText, Image, Package, DollarSign, Eye, Loader2 } from "lucide-react";
 
 import { AdminSidebar } from "@/components/admin-sidebar";
-
-type ProductType = "pdf" | "digital" | "merchandise";
-
-interface Product {
-  id: string;
-  name: string;
-  description: string;
-  type: ProductType;
-  price: number;
-  currency: "CLP" | "USD";
-  imageUrl?: string;
-  fileUrl?: string;
-  stock?: number; // Solo para merchandise
-  isActive: boolean;
-  salesCount: number;
-  totalRevenue: number;
-  createdAt: string;
-}
+import { ProductModal } from "@/components/product-modal";
+import { 
+  getProductsByCreator, 
+  deleteProduct, 
+  type Product, 
+  type ProductType 
+} from "@/services/products";
 
 export default function MarketJosePage() {
   const [isOpen, setIsOpen] = useState(false);
@@ -30,6 +19,7 @@ export default function MarketJosePage() {
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState<ProductType | "all">("all");
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   useEffect(() => {
     setIsMobile(window.innerWidth < 768);
@@ -39,62 +29,8 @@ export default function MarketJosePage() {
   const loadProducts = async () => {
     try {
       setLoading(true);
-      // Aquí harías la llamada a la API
-      // const response = await getProducts("jose");
-      // setProducts(response.products);
-      
-      // Datos de ejemplo
-      setProducts([
-        {
-          id: "1",
-          name: "Guía de Nutrición Avanzada",
-          description: "PDF completo con recetas y planes nutricionales",
-          type: "pdf",
-          price: 9900,
-          currency: "CLP",
-          isActive: true,
-          salesCount: 45,
-          totalRevenue: 445500,
-          createdAt: "2024-01-15",
-        },
-        {
-          id: "2",
-          name: "Rutina de Hipertrofia",
-          description: "Programa completo de 12 semanas para ganar masa muscular",
-          type: "digital",
-          price: 19900,
-          currency: "CLP",
-          isActive: true,
-          salesCount: 32,
-          totalRevenue: 636800,
-          createdAt: "2024-01-20",
-        },
-        {
-          id: "3",
-          name: "Camiseta Carvajal Fit",
-          description: "Camiseta oficial de entrenamiento",
-          type: "merchandise",
-          price: 15900,
-          currency: "CLP",
-          stock: 25,
-          isActive: true,
-          salesCount: 18,
-          totalRevenue: 286200,
-          createdAt: "2024-02-01",
-        },
-        {
-          id: "4",
-          name: "Ebook: Mentalidad de Campeón",
-          description: "Guía psicológica para alcanzar tus objetivos",
-          type: "pdf",
-          price: 12900,
-          currency: "CLP",
-          isActive: true,
-          salesCount: 28,
-          totalRevenue: 361200,
-          createdAt: "2024-02-10",
-        },
-      ]);
+      const productsData = await getProductsByCreator("jose");
+      setProducts(productsData);
     } catch (error) {
       console.error("Error al cargar productos:", error);
     } finally {
@@ -102,53 +38,98 @@ export default function MarketJosePage() {
     }
   };
 
+  const handleDelete = async (productId: string) => {
+    if (!confirm("¿Estás seguro de que quieres eliminar este producto?")) {
+      return;
+    }
+
+    try {
+      await deleteProduct(productId);
+      await loadProducts();
+    } catch (error) {
+      console.error("Error al eliminar producto:", error);
+      alert("Error al eliminar el producto");
+    }
+  };
+
+  const handleEdit = (product: Product) => {
+    setEditingProduct(product);
+    setShowAddModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowAddModal(false);
+    setEditingProduct(null);
+  };
+
   const filteredProducts = filterType === "all" 
     ? products 
-    : products.filter(p => p.type === filterType);
+    : products.filter(p => p.productType === filterType);
 
   const stats = {
     total: products.length,
     active: products.filter(p => p.isActive).length,
-    totalSales: products.reduce((sum, p) => sum + p.salesCount, 0),
-    totalRevenue: products.reduce((sum, p) => sum + p.totalRevenue, 0),
+    totalSales: 0, // TODO: Implementar cuando haya datos de ventas
+    totalRevenue: 0, // TODO: Implementar cuando haya datos de ingresos
     byType: {
-      pdf: products.filter(p => p.type === "pdf").length,
-      digital: products.filter(p => p.type === "digital").length,
-      merchandise: products.filter(p => p.type === "merchandise").length,
+      pdf: products.filter(p => p.productType === "pdf").length,
+      digital_file: products.filter(p => p.productType === "digital_file").length,
+      merchandise: products.filter(p => p.productType === "merchandise").length,
+      video: products.filter(p => p.productType === "video").length,
+      ebook: products.filter(p => p.productType === "ebook").length,
     },
   };
 
-  const getTypeIcon = (type: ProductType) => {
+  const getTypeIcon = (type: string) => {
     switch (type) {
       case "pdf":
         return <FileText className="w-5 h-5" />;
-      case "digital":
+      case "digital_file":
+      case "video":
+      case "ebook":
         return <Image className="w-5 h-5" />;
       case "merchandise":
+        return <Package className="w-5 h-5" />;
+      default:
         return <Package className="w-5 h-5" />;
     }
   };
 
-  const getTypeLabel = (type: ProductType) => {
+  const getTypeLabel = (type: string) => {
     switch (type) {
       case "pdf":
         return "PDF";
-      case "digital":
-        return "Contenido Digital";
+      case "digital_file":
+        return "Digital";
+      case "video":
+        return "Video";
+      case "ebook":
+        return "Ebook";
       case "merchandise":
         return "Merchandise";
+      default:
+        return "Producto";
     }
   };
 
-  const getTypeColor = (type: ProductType) => {
+  const getTypeColor = (type: string) => {
     switch (type) {
       case "pdf":
         return "bg-blue-100 text-blue-800";
-      case "digital":
+      case "digital_file":
+      case "video":
+      case "ebook":
         return "bg-purple-100 text-purple-800";
       case "merchandise":
         return "bg-orange-100 text-orange-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
+  };
+
+  const getPrice = (product: Product) => {
+    const price = product.prices.find(p => p.currency === "CLP" && p.isActive) || product.prices[0];
+    return price ? { amount: price.amount, currency: price.currency } : null;
   };
 
   return (
@@ -203,7 +184,7 @@ export default function MarketJosePage() {
                   {stats.byType.pdf} PDF
                 </span>
                 <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded">
-                  {stats.byType.digital} Digital
+                  {stats.byType.digital_file} Digital
                 </span>
                 <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded">
                   {stats.byType.merchandise} Merch
@@ -223,7 +204,9 @@ export default function MarketJosePage() {
               >
                 <option value="all">Todos los productos</option>
                 <option value="pdf">PDFs</option>
-                <option value="digital">Contenido Digital</option>
+                <option value="digital_file">Archivos Digitales</option>
+                <option value="video">Videos</option>
+                <option value="ebook">Ebooks</option>
                 <option value="merchandise">Merchandise</option>
               </select>
             </div>
@@ -231,7 +214,7 @@ export default function MarketJosePage() {
 
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <div className="text-gray-500">Cargando productos...</div>
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -241,22 +224,22 @@ export default function MarketJosePage() {
                   className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow overflow-hidden"
                 >
                   <div className="h-48 bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center relative">
-                    {product.imageUrl ? (
+                    {product.thumbnailUrl ? (
                       <img
-                        src={product.imageUrl}
+                        src={product.thumbnailUrl}
                         alt={product.name}
                         className="w-full h-full object-cover"
                       />
                     ) : (
                       <div className="text-primary/40">
-                        {getTypeIcon(product.type)}
+                        {getTypeIcon(product.productType)}
                       </div>
                     )}
                     <div className="absolute top-3 right-3">
                       <span
-                        className={`px-2 py-1 text-xs font-medium rounded-full ${getTypeColor(product.type)}`}
+                        className={`px-2 py-1 text-xs font-medium rounded-full ${getTypeColor(product.productType)}`}
                       >
-                        {getTypeLabel(product.type)}
+                        {getTypeLabel(product.productType)}
                       </span>
                     </div>
                     {!product.isActive && (
@@ -279,42 +262,29 @@ export default function MarketJosePage() {
                     
                     <div className="flex items-center justify-between mb-4">
                       <div>
-                        <p className="text-2xl font-bold text-gray-900">
-                          ${product.price.toLocaleString("es-CL")}
-                          <span className="text-sm font-normal text-gray-500 ml-1">
-                            {product.currency}
-                          </span>
-                        </p>
-                      </div>
-                      {product.type === "merchandise" && product.stock !== undefined && (
-                        <div className="text-right">
-                          <p className="text-sm text-gray-600">Stock</p>
-                          <p className={`text-lg font-semibold ${product.stock > 10 ? "text-green-600" : product.stock > 0 ? "text-yellow-600" : "text-red-600"}`}>
-                            {product.stock}
+                        {getPrice(product) ? (
+                          <p className="text-2xl font-bold text-gray-900">
+                            ${getPrice(product)!.amount.toLocaleString("es-CL")}
+                            <span className="text-sm font-normal text-gray-500 ml-1">
+                              {getPrice(product)!.currency}
+                            </span>
                           </p>
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="flex items-center gap-4 text-sm text-gray-500 mb-4 pb-4 border-b border-gray-200">
-                      <div className="flex items-center gap-1">
-                        <Eye className="w-4 h-4" />
-                        <span>{product.salesCount} ventas</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <DollarSign className="w-4 h-4" />
-                        <span>${product.totalRevenue.toLocaleString("es-CL")}</span>
+                        ) : (
+                          <p className="text-gray-500">Sin precio</p>
+                        )}
                       </div>
                     </div>
                     
                     <div className="flex gap-2">
                       <button
+                        onClick={() => handleEdit(product)}
                         className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors"
                       >
                         <Edit className="w-4 h-4" />
                         Editar
                       </button>
                       <button
+                        onClick={() => handleDelete(product.id)}
                         className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                         title="Eliminar producto"
                       >
@@ -331,7 +301,7 @@ export default function MarketJosePage() {
                   <p className="text-gray-500 text-lg mb-2">No hay productos</p>
                   <p className="text-gray-400 text-sm">
                     {filterType !== "all" 
-                      ? `No hay productos de tipo "${getTypeLabel(filterType as ProductType)}"`
+                      ? `No hay productos de tipo "${getTypeLabel(filterType as string)}"`
                       : "Crea tu primer producto para comenzar"}
                   </p>
                 </div>
@@ -340,9 +310,18 @@ export default function MarketJosePage() {
           )}
         </div>
       </main>
+
+      <ProductModal
+        isOpen={showAddModal}
+        onClose={handleCloseModal}
+        onSuccess={loadProducts}
+        product={editingProduct}
+        creatorSlug="jose"
+      />
     </>
   );
 }
+
 
 
 

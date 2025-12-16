@@ -1,0 +1,34 @@
+{
+  "name": "Carvajal fit",
+  "short_name": "Carvajal fit",
+  "description": "Tu salud, nuestro compromiso.",
+  "start_url": "/club",
+  "display": "standalone",
+  "background_color": "#0b0b0b",
+  "theme_color": "#00b2de",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "any",
+      "type": "image/x-icon"
+    }
+  ],
+  "categories": ["health", "fitness", "lifestyle"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "El Club",
+      "short_name": "Club",
+      "description": "Accede a tus cursos y contenido exclusivo",
+      "url": "/club",
+      "icons": [
+        {
+          "src": "/favicon.ico",
+          "sizes": "any"
+        }
+      ]
+    }
+  ]
+}
+

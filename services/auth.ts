@@ -107,3 +107,64 @@ export const logout = async (
 
   return response.data;
 };
+
+// POST /auth/password/forgot - Solicitar recuperación de contraseña (público)
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+export const forgotPassword = async (
+  data: ForgotPasswordRequest,
+): Promise<{ message: string }> => {
+  const response = await authAxios.post<{ message: string }>(
+    "/password/forgot",
+    data,
+  );
+
+  return response.data;
+};
+
+// POST /auth/password/reset - Restablecer contraseña con código (público)
+export interface ResetPasswordRequest {
+  email: string;
+  code: string;
+  newPassword: string;
+}
+
+export const resetPassword = async (
+  data: ResetPasswordRequest,
+): Promise<{ message: string }> => {
+  const response = await authAxios.post<{ message: string }>(
+    "/password/reset",
+    data,
+  );
+
+  return response.data;
+};
+
+// POST /auth/password/request-change - Solicitar cambio de contraseña (requiere auth)
+export const requestPasswordChange = async (): Promise<{ message: string }> => {
+  const response = await authAxios.post<{ message: string }>(
+    "/password/request-change",
+    {},
+  );
+
+  return response.data;
+};
+
+// POST /auth/password/verify-and-change - Verificar código y cambiar contraseña (requiere auth)
+export interface VerifyPasswordChangeRequest {
+  code: string;
+  newPassword: string;
+}
+
+export const verifyAndChangePassword = async (
+  data: VerifyPasswordChangeRequest,
+): Promise<{ message: string }> => {
+  const response = await authAxios.post<{ message: string }>(
+    "/password/verify-and-change",
+    data,
+  );
+
+  return response.data;
+};

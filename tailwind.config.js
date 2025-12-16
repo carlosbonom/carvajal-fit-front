@@ -51,6 +51,8 @@ const config = {
               900: "#00262a",
               foreground: "#ffffff",
             },
+            background: "#0b0b0b",
+            foreground: "#ffffff",
           },
         },
       },

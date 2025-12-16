@@ -73,7 +73,7 @@ export interface CourseContent {
   durationSeconds: number | null;
   sortOrder: number | null;
   availabilityType: "none" | "month" | "day" | "week";
-  resources: string[];
+  resources: ContentResource[];
   isPreview: boolean;
   isActive: boolean;
   course: {
@@ -305,7 +305,7 @@ export const updateContentOrder = async (
   return response.data;
 };
 
-// Tipos para cursos con contenido de suscripción
+// Tipos para recursos de contenido
 export interface ContentResource {
   id: string;
   title: string;
@@ -313,6 +313,14 @@ export interface ContentResource {
   resourceUrl: string;
   createdAt: string;
   updatedAt: string;
+}
+
+// DTO para crear recurso de contenido
+export interface AddContentResourceDto {
+  title: string;
+  description?: string;
+  resourceUrl?: string;
+  file?: File;
 }
 
 export interface SubscriptionContent {
@@ -432,6 +440,142 @@ export const updateCourse = async (
 
   const response = await apiAxios.patch<Course>(`/courses/${courseId}`, courseData);
 
+  return response.data;
+};
+
+// PATCH /courses/:id/order - Actualizar orden del curso
+export const updateCourseOrder = async (
+  courseId: string,
+  sortOrder: number,
+): Promise<Course> => {
+  const response = await apiAxios.patch<Course>(
+    `/courses/${courseId}/order`,
+    { sortOrder },
+  );
+
+  return response.data;
+};
+
+// POST /courses/content/:contentId/resources - Agregar recurso a un contenido
+export const addContentResource = async (
+  contentId: string,
+  data: AddContentResourceDto,
+): Promise<ContentResource> => {
+  let resourceUrl = data.resourceUrl;
+
+  // Subir archivo primero si existe
+  if (data.file) {
+    try {
+      const uploadResponse = await uploadFile(data.file, {
+        folder: "documentos",
+        isPublic: true,
+      });
+      resourceUrl = uploadResponse.url;
+    } catch (error) {
+      throw new Error("Error al subir el archivo: " + (error as Error).message);
+    }
+  }
+
+  // Si hay archivo, usar FormData
+  if (data.file) {
+    const formData = new FormData();
+    formData.append("file", data.file);
+    formData.append("title", data.title);
+    if (data.description) {
+      formData.append("description", data.description);
+    }
+
+    const response = await apiAxios.post<ContentResource>(
+      `/courses/content/${contentId}/resources`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      },
+    );
+    return response.data;
+  } else {
+    // Enviar como JSON (sin archivo)
+    const requestData: Omit<AddContentResourceDto, "file"> = {
+      title: data.title,
+      description: data.description || undefined,
+      resourceUrl,
+    };
+    const response = await apiAxios.post<ContentResource>(
+      `/courses/content/${contentId}/resources`,
+      requestData,
+    );
+    return response.data;
+  }
+};
+
+// DELETE /courses/content/:contentId/resources/:resourceId - Eliminar recurso
+export const deleteContentResource = async (
+  contentId: string,
+  resourceId: string,
+): Promise<void> => {
+  await apiAxios.delete(`/courses/content/${contentId}/resources/${resourceId}`, {
+    // El backend retorna 204 No Content, así que no esperamos respuesta
+  });
+};
+
+// Tipos para progreso de contenido
+export interface ContentProgress {
+  progressSeconds: number;
+  isCompleted: boolean;
+}
+
+export interface SaveContentProgressDto {
+  progressSeconds: number;
+  totalSeconds: number;
+}
+
+export interface MarkContentCompletedDto {
+  isCompleted: boolean;
+}
+
+// POST /courses/content/:contentId/progress - Guardar progreso de visualización
+export const saveContentProgress = async (
+  contentId: string,
+  data: SaveContentProgressDto,
+): Promise<ContentProgress> => {
+  const response = await apiAxios.post<ContentProgress>(
+    `/courses/content/${contentId}/progress`,
+    data,
+  );
+  return response.data;
+};
+
+// GET /courses/content/:contentId/progress - Obtener progreso de visualización
+export const getContentProgress = async (
+  contentId: string,
+): Promise<ContentProgress | null> => {
+  const response = await apiAxios.get<ContentProgress | null>(
+    `/courses/content/${contentId}/progress`,
+  );
+  return response.data;
+};
+
+// POST /courses/content/:contentId/completed - Marcar contenido como completado
+export const markContentCompleted = async (
+  contentId: string,
+  data: MarkContentCompletedDto,
+): Promise<ContentProgress> => {
+  const response = await apiAxios.post<ContentProgress>(
+    `/courses/content/${contentId}/completed`,
+    data,
+  );
+  return response.data;
+};
+
+// GET /courses/course/:courseId/progress - Obtener progreso de todo el curso
+export const getCourseProgress = async (
+  courseId: string,
+): Promise<Record<string, ContentProgress>> => {
+  const response = await apiAxios.get<Record<string, ContentProgress>>(
+    `/courses/course/${courseId}/progress`,
+  );
   return response.data;
 };
 

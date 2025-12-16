@@ -14,7 +14,8 @@ import { link as linkStyles } from "@heroui/theme";
 import NextLink from "next/link";
 import clsx from "clsx";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
+import { ShoppingCart } from "lucide-react";
 
 import { siteConfig } from "@/config/site";
 import { Logo } from "@/components/icons";
@@ -27,8 +28,10 @@ import { store } from "@/lib/store/store";
 export const Navbar = () => {
   const dispatch = useAppDispatch();
   const router = useRouter();
+  const pathname = usePathname();
   const user = useAppSelector((state) => state.user.user);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [cartItemCount, setCartItemCount] = useState(0);
 
   // Cargar usuario desde token si existe
   useEffect(() => {
@@ -65,6 +68,58 @@ export const Navbar = () => {
 
     loadUserFromToken();
   }, []);
+
+  // Obtener conteo del carrito cuando estamos en rutas de market
+  useEffect(() => {
+    const updateCartCount = () => {
+      if (pathname?.startsWith("/market/jose")) {
+        const cart = localStorage.getItem("cart_jose");
+        if (cart) {
+          try {
+            const items = JSON.parse(cart);
+            const count = items.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0);
+            setCartItemCount(count);
+          } catch {
+            setCartItemCount(0);
+          }
+        } else {
+          setCartItemCount(0);
+        }
+      } else if (pathname?.startsWith("/market/gabriel")) {
+        const cart = localStorage.getItem("cart_gabriel");
+        if (cart) {
+          try {
+            const items = JSON.parse(cart);
+            const count = items.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0);
+            setCartItemCount(count);
+          } catch {
+            setCartItemCount(0);
+          }
+        } else {
+          setCartItemCount(0);
+        }
+      } else {
+        setCartItemCount(0);
+      }
+    };
+
+    updateCartCount();
+    
+    // Escuchar cambios en localStorage
+    const handleStorageChange = () => {
+      updateCartCount();
+    };
+    
+    window.addEventListener("storage", handleStorageChange);
+    
+    // Polling para detectar cambios en el mismo tab (localStorage no dispara eventos en el mismo tab)
+    const interval = setInterval(updateCartCount, 500);
+    
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      clearInterval(interval);
+    };
+  }, [pathname]);
 
   const handleLogout = async () => {
     try {
@@ -161,6 +216,27 @@ export const Navbar = () => {
               </NavbarItem>
             ))}
           </ul>
+          {/* Carrito para rutas de market */}
+          {(pathname?.startsWith("/market/jose") || pathname?.startsWith("/market/gabriel")) && cartItemCount > 0 && (
+            <Button
+              isIconOnly
+              color="primary"
+              variant="flat"
+              className="relative"
+              onClick={() => {
+                if (pathname?.startsWith("/market/jose")) {
+                  router.push("/market/jose/checkout");
+                } else if (pathname?.startsWith("/market/gabriel")) {
+                  router.push("/market/gabriel/checkout");
+                }
+              }}
+            >
+              <ShoppingCart className="w-5 h-5 text-white" />
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                {cartItemCount}
+              </span>
+            </Button>
+          )}
           {user ? (
             <Button
               color="primary"
@@ -197,6 +273,27 @@ export const Navbar = () => {
       </NavbarContent>
 
       <NavbarContent className="sm:hidden basis-1 pl-4" justify="end">
+        {/* Carrito para móvil en rutas de market */}
+        {(pathname?.startsWith("/market/jose") || pathname?.startsWith("/market/gabriel")) && cartItemCount > 0 && (
+          <Button
+            isIconOnly
+            color="primary"
+            variant="flat"
+            className="relative mr-2"
+            onClick={() => {
+              if (pathname?.startsWith("/market/jose")) {
+                router.push("/market/jose/checkout");
+              } else if (pathname?.startsWith("/market/gabriel")) {
+                router.push("/market/gabriel/checkout");
+              }
+            }}
+          >
+            <ShoppingCart className="w-5 h-5 text-white" />
+            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+              {cartItemCount}
+            </span>
+          </Button>
+        )}
         {user ? (
           <Button
             color="primary"

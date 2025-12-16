@@ -1,57 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-
-const successStories = [
-  {
-    id: 1,
-    name: "Juan Perez",
-    image: "https://placehold.co/280x320/gray/white?text=Imagen",
-    description: "Transformación real de un miembro del club",
-  },
-  {
-    id: 2,
-    name: "Maria Gomez",
-    image: "https://placehold.co/280x320/gray/white?text=Imagen",
-    description: "Transformación real de un miembro del club",
-  },
-  {
-    id: 3,
-    name: "Pedro Rodriguez",
-    image: "https://placehold.co/280x320/gray/white?text=Imagen",
-    description: "Transformación real de un miembro del club",
-  },
-  {
-    id: 4,
-    name: "Ana Lopez",
-    image: "https://placehold.co/280x320/gray/white?text=Imagen",
-    description: "Transformación real de un miembro del club",
-  },
-  {
-    id: 5,
-    name: "Luis Garcia",
-    image: "https://placehold.co/280x320/gray/white?text=Imagen",
-    description: "Transformación real de un miembro del club",
-  },
-  {
-    id: 6,
-    name: "Carlos Hernandez",
-    image: "https://placehold.co/280x320/gray/white?text=Imagen",
-    description: "Transformación real de un miembro del club",
-  },
-  {
-    id: 7,
-    name: "Rosa Martinez",
-    image: "https://placehold.co/280x320/gray/white?text=Imagen",
-    description: "Transformación real de un miembro del club",
-  },
-  {
-    id: 8,
-    name: "Jorge Lopez",
-    image: "https://placehold.co/280x320/gray/white?text=Imagen",
-    description: "Transformación real de un miembro del club",
-  },
-];
+import { useEffect, useRef, useState } from "react";
+import { getActiveSuccessStories, SuccessStory } from "@/services/success-stories";
 
 export const SuccessStories = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -61,11 +11,31 @@ export const SuccessStories = () => {
   const userScrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
+  const [successStories, setSuccessStories] = useState<SuccessStory[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadStories = async () => {
+      try {
+        setLoading(true);
+        const response = await getActiveSuccessStories();
+        setSuccessStories(response.stories);
+      } catch (error) {
+        console.error("Error al cargar casos de éxito:", error);
+        // Si hay error, usar array vacío
+        setSuccessStories([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadStories();
+  }, []);
 
   useEffect(() => {
     const scrollContainer = scrollRef.current;
 
-    if (!scrollContainer) return;
+    if (!scrollContainer || successStories.length === 0) return;
 
     const scrollSpeed = 1;
     const PAUSE_DURATION = 1000;
@@ -218,7 +188,16 @@ export const SuccessStories = () => {
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
     };
-  }, []);
+  }, [successStories]);
+
+  // No mostrar la sección si está cargando o no hay casos de éxito
+  if (loading) {
+    return null;
+  }
+
+  if (successStories.length === 0) {
+    return null;
+  }
 
   return (
     <div className="text-white items-center justify-center pt-16 pb-16">
@@ -248,16 +227,18 @@ export const SuccessStories = () => {
                 <img
                   alt={story.name}
                   className="w-full h-full object-cover"
-                  src={story.image || "/placeholder.svg"}
+                  src={story.imageUrl || "/placeholder.svg"}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                 <div className="absolute bottom-0 left-0 right-0 p-2 md:p-6 text-white">
                   <h3 className="text-sm md:text-base lg:text-lg font-bold mb-1">
                     {story.name}
                   </h3>
-                  <p className="text-primary text-xs md:text-sm lg:text-base font-semibold">
-                    {story.description}
-                  </p>
+                  {story.description && (
+                    <p className="text-primary text-xs md:text-sm lg:text-base font-semibold">
+                      {story.description}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>

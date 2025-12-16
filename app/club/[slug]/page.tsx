@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft, Home, Play, Check, Lock, Unlock } from "lucide-react";
 import { Loader2 } from "lucide-react";
 
-import { getSubscriptionCourses, type CourseWithSubscriptionContent, type SubscriptionContent } from "@/services/courses";
+import { getSubscriptionCourses, type CourseWithSubscriptionContent, type SubscriptionContent, saveContentProgress, getContentProgress, markContentCompleted, getCourseProgress, type ContentProgress } from "@/services/courses";
 import { useAppSelector, useAppDispatch } from "@/lib/store/hooks";
 import { getProfile } from "@/services/auth";
 import { setUser } from "@/lib/store/slices/userSlice";
@@ -25,6 +25,10 @@ function CoursePageContent() {
   const [error, setError] = useState<string | null>(null);
   const [userLoading, setUserLoading] = useState(true);
   const [watchedContent, setWatchedContent] = useState<Set<string>>(new Set());
+  const [contentProgress, setContentProgress] = useState<Map<string, ContentProgress>>(new Map());
+  const [markingAsWatched, setMarkingAsWatched] = useState<Set<string>>(new Set());
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const progressSaveTimer = useRef<NodeJS.Timeout | null>(null);
 
   // Cargar usuario desde token si no está en Redux
   useEffect(() => {
@@ -105,16 +109,185 @@ function CoursePageContent() {
     loadCourse();
   }, [courseSlug, userLoading]);
 
-  const handleMarkAsWatched = (contentId: string) => {
-    setWatchedContent((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(contentId)) {
-        newSet.delete(contentId);
-      } else {
-        newSet.add(contentId);
+  // Cargar progreso del curso al cargar el curso
+  useEffect(() => {
+    const loadCourseProgress = async () => {
+      if (!course || !user) return;
+      
+      try {
+        const progress = await getCourseProgress(course.id);
+        const progressMap = new Map<string, ContentProgress>();
+        Object.entries(progress).forEach(([contentId, prog]) => {
+          progressMap.set(contentId, prog);
+          if (prog.isCompleted) {
+            setWatchedContent((prev) => new Set(prev).add(contentId));
+          }
+        });
+        setContentProgress(progressMap);
+      } catch (error) {
+        console.error("Error al cargar progreso del curso:", error);
       }
-      return newSet;
-    });
+    };
+
+    if (course && user) {
+      loadCourseProgress();
+    }
+  }, [course, user]);
+
+  // Cargar progreso específico cuando se selecciona contenido
+  useEffect(() => {
+    const loadContentProgress = async () => {
+      if (!selectedContent || !user) return;
+      
+      try {
+        const progress = await getContentProgress(selectedContent.id);
+        if (progress) {
+          setContentProgress((prev) => {
+            const newMap = new Map(prev);
+            newMap.set(selectedContent.id, progress);
+            return newMap;
+          });
+          
+          // Restaurar posición del video
+          if (videoRef.current && progress.progressSeconds > 0) {
+            videoRef.current.currentTime = progress.progressSeconds;
+          }
+          
+          // Actualizar estado de visto
+          if (progress.isCompleted) {
+            setWatchedContent((prev) => new Set(prev).add(selectedContent.id));
+          }
+        }
+      } catch (error) {
+        console.error("Error al cargar progreso del contenido:", error);
+      }
+    };
+
+    if (selectedContent && user) {
+      loadContentProgress();
+    }
+  }, [selectedContent, user]);
+
+  // Guardar progreso automáticamente cada 5 segundos
+  useEffect(() => {
+    if (!selectedContent || !user || !videoRef.current) return;
+    
+    const video = videoRef.current;
+    
+    const handleTimeUpdate = () => {
+      if (progressSaveTimer.current) {
+        clearTimeout(progressSaveTimer.current);
+      }
+      
+      progressSaveTimer.current = setTimeout(async () => {
+        try {
+          const currentTime = Math.floor(video.currentTime);
+          const duration = Math.floor(video.duration || 0);
+          
+          if (duration > 0 && currentTime > 0) {
+            const progress = await saveContentProgress(selectedContent.id, {
+              progressSeconds: currentTime,
+              totalSeconds: duration,
+            });
+            
+            setContentProgress((prev) => {
+              const newMap = new Map(prev);
+              newMap.set(selectedContent.id, progress);
+              return newMap;
+            });
+            
+            // Si se completó automáticamente (90% visto), marcar como visto
+            if (progress.isCompleted && !watchedContent.has(selectedContent.id)) {
+              setWatchedContent((prev) => new Set(prev).add(selectedContent.id));
+            }
+          }
+        } catch (error) {
+          console.error("Error al guardar progreso:", error);
+        }
+      }, 5000); // Guardar después de 5 segundos de inactividad
+    };
+
+    const handleVideoEnded = async () => {
+      setMarkingAsWatched((prev) => new Set(prev).add(selectedContent.id));
+      
+      try {
+        // Marcar como completado cuando el video termine
+        const progress = await markContentCompleted(selectedContent.id, { isCompleted: true });
+        
+        setContentProgress((prev) => {
+          const newMap = new Map(prev);
+          newMap.set(selectedContent.id, progress);
+          return newMap;
+        });
+        
+        // Marcar como visto en el estado local
+        if (!watchedContent.has(selectedContent.id)) {
+          setWatchedContent((prev) => new Set(prev).add(selectedContent.id));
+        }
+      } catch (error) {
+        console.error("Error al marcar video como completado:", error);
+      } finally {
+        setMarkingAsWatched((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(selectedContent.id);
+          return newSet;
+        });
+      }
+    };
+    
+    video.addEventListener('timeupdate', handleTimeUpdate);
+    video.addEventListener('ended', handleVideoEnded);
+    
+    return () => {
+      video.removeEventListener('timeupdate', handleTimeUpdate);
+      video.removeEventListener('ended', handleVideoEnded);
+      if (progressSaveTimer.current) {
+        clearTimeout(progressSaveTimer.current);
+      }
+    };
+  }, [selectedContent, user, watchedContent]);
+
+  const handleMarkAsWatched = async (contentId: string) => {
+    const isCurrentlyWatched = watchedContent.has(contentId);
+    const newIsCompleted = !isCurrentlyWatched;
+    
+    setMarkingAsWatched((prev) => new Set(prev).add(contentId));
+    
+    try {
+      await markContentCompleted(contentId, { isCompleted: newIsCompleted });
+      
+      setWatchedContent((prev) => {
+        const newSet = new Set(prev);
+        if (newIsCompleted) {
+          newSet.add(contentId);
+        } else {
+          newSet.delete(contentId);
+        }
+        return newSet;
+      });
+      
+      // Actualizar progreso local
+      setContentProgress((prev) => {
+        const newMap = new Map(prev);
+        const current = newMap.get(contentId);
+        if (current) {
+          newMap.set(contentId, {
+            ...current,
+            isCompleted: newIsCompleted,
+          });
+        }
+        return newMap;
+      });
+    } catch (error) {
+      console.error("Error al marcar como visto:", error);
+      alert("Error al actualizar el estado. Por favor, intenta nuevamente.");
+    } finally {
+      setMarkingAsWatched((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(contentId);
+        return newSet;
+      });
+    }
   };
 
   const formatDuration = (seconds: number | null) => {
@@ -127,6 +300,25 @@ function CoursePageContent() {
     return `${minutes}min`;
   };
 
+  // Calcular meses desde el inicio de la suscripción
+  const calculateMonthsSinceStart = (): number => {
+    if (!user?.subscription?.startedAt) return 0;
+    const start = new Date(user.subscription.startedAt);
+    const now = new Date();
+    const yearsDiff = now.getFullYear() - start.getFullYear();
+    const monthsDiff = now.getMonth() - start.getMonth();
+    return yearsDiff * 12 + monthsDiff;
+  };
+
+  // Calcular días desde el inicio de la suscripción
+  const calculateDaysSinceStart = (): number => {
+    if (!user?.subscription?.startedAt) return 0;
+    const start = new Date(user.subscription.startedAt);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - start.getTime());
+    return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  };
+
   const isContentUnlocked = (content: SubscriptionContent) => {
     if (!user) return false;
     const isAdmin = user?.role === "admin" || user?.role === "support";
@@ -136,10 +328,71 @@ function CoursePageContent() {
     
     const hasActiveSubscription = user?.subscription?.status === "active";
     if (!hasActiveSubscription) return false;
+
+    const monthsSinceStart = calculateMonthsSinceStart();
+    let unlockThreshold = 0;
+
+    switch (content.unlockType) {
+      case "day":
+        unlockThreshold = Math.floor(content.unlockValue / 30);
+        break;
+      case "week":
+        unlockThreshold = Math.floor(content.unlockValue / 4);
+        break;
+      case "month":
+        unlockThreshold = content.unlockValue;
+        break;
+      case "year":
+        unlockThreshold = content.unlockValue * 12;
+        break;
+      default:
+        return true;
+    }
+
+    return monthsSinceStart >= unlockThreshold;
+  };
+
+  // Formatear mensaje de desbloqueo
+  const getUnlockMessage = (content: SubscriptionContent): string => {
+    if (content.unlockType === "immediate") return "";
+    if (!user?.subscription || user.subscription.status !== "active") return "Requiere suscripción activa";
     
-    // Aquí puedes agregar lógica adicional para verificar el desbloqueo basado en unlockValue y unlockType
-    // Por ahora, asumimos que si tiene suscripción activa, puede ver todo
-    return true;
+    const monthsSinceStart = calculateMonthsSinceStart();
+    const daysSinceStart = calculateDaysSinceStart();
+
+    if (content.unlockType === "day") {
+      const daysRemaining = content.unlockValue - daysSinceStart;
+      if (daysRemaining <= 0) return "";
+      if (daysRemaining === 1) {
+        return `Se desbloquea en 1 día`;
+      }
+      return `Se desbloquea en ${daysRemaining} días`;
+    } else if (content.unlockType === "week") {
+      const weeksSinceStart = Math.floor(daysSinceStart / 7);
+      const weeksRemaining = content.unlockValue - weeksSinceStart;
+      if (weeksRemaining <= 0) return "";
+      if (weeksRemaining === 1) {
+        return `Se desbloquea en 1 semana`;
+      }
+      return `Se desbloquea en ${weeksRemaining} semanas`;
+    } else if (content.unlockType === "month") {
+      const monthsRemaining = content.unlockValue - monthsSinceStart;
+      if (monthsRemaining <= 0) return "";
+      if (monthsRemaining === 1) {
+        return `Se desbloquea en 1 mes`;
+      }
+      return `Se desbloquea en ${monthsRemaining} meses`;
+    } else if (content.unlockType === "year") {
+      const yearsSinceStart = Math.floor(monthsSinceStart / 12);
+      const yearsRemaining = content.unlockValue - yearsSinceStart;
+      if (yearsRemaining <= 0) return "";
+      if (yearsRemaining === 1) {
+        return `Se desbloquea en 1 año`;
+      }
+      return `Se desbloquea en ${yearsRemaining} años`;
+    }
+
+    return "";
   };
 
   if (loading || userLoading) {
@@ -221,6 +474,7 @@ function CoursePageContent() {
                 <div className="relative aspect-video bg-black rounded-xl overflow-hidden border border-white/10">
                   {isContentUnlocked(selectedContent) && selectedContent.contentType === "video" ? (
                     <video
+                      ref={videoRef}
                       key={selectedContent.id}
                       className="w-full h-full"
                       controls
@@ -268,26 +522,31 @@ function CoursePageContent() {
                       </div>
                     </div>
                   ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-gray-700/30 to-gray-900/50 flex items-center justify-center">
+                    <div className="w-full h-full bg-gradient-to-br from-gray-700/30 to-gray-900/50 flex items-center justify-center relative">
                       {selectedContent.thumbnailUrl ? (
                         <img
                           src={selectedContent.thumbnailUrl}
                           alt={selectedContent.title}
-                          className="w-full h-full object-cover opacity-50"
+                          className="w-full h-full object-cover blur-sm opacity-50"
                         />
                       ) : selectedContent.contentType === "video" && selectedContent.contentUrl ? (
                         <video
                           src={selectedContent.contentUrl}
-                          className="w-full h-full object-cover opacity-50"
+                          className="w-full h-full object-cover blur-sm opacity-50"
                           preload="metadata"
                           muted
                           playsInline
                         />
                       ) : null}
                       <div className="absolute inset-0 flex items-center justify-center bg-black/60">
-                        <div className="text-center space-y-4">
-                          <Lock className="w-16 h-16 mx-auto text-white/50" />
-                          <p className="text-white/70">Este contenido está bloqueado</p>
+                        <div className="text-center space-y-4 px-4">
+                          <Lock className="w-16 h-16 mx-auto text-white/70" />
+                          <p className="text-white/70 font-medium">Este contenido está bloqueado</p>
+                          {getUnlockMessage(selectedContent) && (
+                            <p className="text-white/80 text-sm">
+                              {getUnlockMessage(selectedContent)}
+                            </p>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -381,11 +640,15 @@ function CoursePageContent() {
                     const isUnlocked = isContentUnlocked(contentItem);
                     const isSelected = selectedContent?.id === contentItem.id;
                     const isWatched = watchedContent.has(contentItem.id);
+                    const progress = contentProgress.get(contentItem.id);
+                    const progressPercent = progress && contentItem.durationSeconds
+                      ? Math.min((progress.progressSeconds / contentItem.durationSeconds) * 100, 100)
+                      : 0;
 
                     return (
                       <button
                         key={contentItem.id}
-                        className={`w-full text-left p-3 rounded-lg transition-all ${
+                        className={`w-full text-left p-3 rounded-lg transition-all relative overflow-hidden ${
                           isSelected
                             ? "bg-[#00b2de]/20 border border-[#00b2de]/50"
                             : "bg-white/5 border border-transparent hover:bg-white/10"
@@ -397,23 +660,38 @@ function CoursePageContent() {
                         }}
                         disabled={!isUnlocked}
                       >
+                        {/* Barra de progreso de fondo */}
+                        {progress && progressPercent > 0 && (
+                          <div
+                            className="absolute bottom-0 left-0 h-1 bg-[#00b2de] transition-all"
+                            style={{ width: `${progressPercent}%` }}
+                          />
+                        )}
                         <div className="flex items-start gap-3">
                           <div
                             className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
                               isSelected
                                 ? "bg-[#00b2de]"
-                                : isUnlocked
-                                  ? "bg-white/10 border border-white/20"
-                                  : "bg-white/5 border border-white/10"
+                                : isWatched && isUnlocked
+                                  ? "bg-[#00b2de]"
+                                  : isUnlocked
+                                    ? "bg-white/10 border border-white/20"
+                                    : "bg-white/5 border border-white/10"
                             }`}
                           >
                             {isUnlocked ? (
-                              <Play
-                                className={`w-4 h-4 ${
-                                  isSelected ? "text-white" : "text-white/60"
-                                }`}
-                                fill={isSelected ? "white" : "none"}
-                              />
+                              markingAsWatched.has(contentItem.id) ? (
+                                <Loader2 className="w-4 h-4 text-white animate-spin" />
+                              ) : isWatched ? (
+                                <Check className="w-5 h-5 text-white" />
+                              ) : (
+                                <Play
+                                  className={`w-4 h-4 ${
+                                    isSelected ? "text-white" : "text-white/60"
+                                  }`}
+                                  fill={isSelected ? "white" : "none"}
+                                />
+                              )
                             ) : (
                               <Lock className="w-4 h-4 text-white/40" />
                             )}
@@ -427,15 +705,24 @@ function CoursePageContent() {
                               >
                                 {contentItem.title}
                               </p>
-                              {isWatched && (
-                                <Check className="w-4 h-4 text-[#00b2de] flex-shrink-0" />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <p className="text-white/60 text-sm">
+                                {formatDuration(contentItem.durationSeconds)}
+                              </p>
+                              {progress && progressPercent > 0 && progressPercent < 100 && (
+                                <span className="text-white/40 text-xs">
+                                  {Math.round(progressPercent)}% visto
+                                </span>
                               )}
                             </div>
-                            <p className="text-white/60 text-sm">
-                              {formatDuration(contentItem.durationSeconds)}
-                            </p>
                             {!isUnlocked && (
-                              <p className="text-white/40 text-xs mt-1">Bloqueado</p>
+                              <div className="flex items-center gap-1 mt-1">
+                                <Lock className="w-3 h-3 text-white/40" />
+                                <p className="text-white/40 text-xs">
+                                  {getUnlockMessage(contentItem) || "Bloqueado"}
+                                </p>
+                              </div>
                             )}
                           </div>
                         </div>

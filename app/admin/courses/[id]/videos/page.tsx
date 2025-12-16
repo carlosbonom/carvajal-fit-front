@@ -24,7 +24,8 @@ import { CSS } from "@dnd-kit/utilities";
 import { AdminSidebar } from "@/components/admin-sidebar";
 import { AddContentModal } from "@/components/add-content-modal";
 import { EditContentModal } from "@/components/edit-content-modal";
-import { getCourseById, getCourseContent, updateContentStatus, updateContentOrder, type Course, type CourseContent } from "@/services/courses";
+import { AddResourceModal } from "@/components/add-resource-modal";
+import { getCourseById, getCourseContent, updateContentStatus, updateContentOrder, deleteContentResource, type Course, type CourseContent } from "@/services/courses";
 
 export default function CourseVideosPage() {
   const params = useParams();
@@ -40,6 +41,10 @@ export default function CourseVideosPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedContent, setSelectedContent] = useState<CourseContent | null>(null);
   const [updatingContentId, setUpdatingContentId] = useState<string | null>(null);
+  const [isAddResourceModalOpen, setIsAddResourceModalOpen] = useState(false);
+  const [selectedContentForResource, setSelectedContentForResource] = useState<CourseContent | null>(null);
+  const [deletingResourceId, setDeletingResourceId] = useState<string | null>(null);
+  const [expandedContentId, setExpandedContentId] = useState<string | null>(null);
 
   useEffect(() => {
     setIsMobile(window.innerWidth < 768);
@@ -85,6 +90,23 @@ export default function CourseVideosPage() {
       loadCourseData();
     } finally {
       setUpdatingContentId(null);
+    }
+  };
+
+  const handleDeleteResource = async (contentId: string, resourceId: string) => {
+    if (!confirm("¿Estás seguro de que deseas eliminar este recurso?")) {
+      return;
+    }
+
+    setDeletingResourceId(resourceId);
+    try {
+      await deleteContentResource(contentId, resourceId);
+      loadCourseData();
+    } catch (error) {
+      console.error("Error al eliminar recurso:", error);
+      alert("Error al eliminar el recurso. Por favor, intenta nuevamente.");
+    } finally {
+      setDeletingResourceId(null);
     }
   };
 
@@ -261,106 +283,181 @@ export default function CourseVideosPage() {
       opacity: isDragging ? 0.5 : 1,
     };
 
+    const isExpanded = expandedContentId === item.id;
+    const hasResources = item.resources && item.resources.length > 0;
+
     return (
-      <tr
-        ref={setNodeRef}
-        style={style}
-        className={`hover:bg-gray-50 ${isDragging ? "bg-gray-100" : ""}`}
-      >
-        <td className="px-6 py-4 w-16">
-          <div
-            {...attributes}
-            {...listeners}
-            className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 flex items-center justify-center"
-          >
-            <GripVertical className="w-5 h-5" />
-          </div>
-        </td>
-        <td className="px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className="flex-shrink-0">
-              {getContentTypeIcon(item.contentType)}
+      <>
+        <tr
+          ref={setNodeRef}
+          style={style}
+          className={`hover:bg-gray-50 ${isDragging ? "bg-gray-100" : ""}`}
+        >
+          <td className="px-6 py-4 w-16">
+            <div
+              {...attributes}
+              {...listeners}
+              className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 flex items-center justify-center"
+            >
+              <GripVertical className="w-5 h-5" />
             </div>
-            <div>
-              <div className="text-sm font-medium text-gray-900">
-                {item.title}
+          </td>
+          <td className="px-6 py-4">
+            <div className="flex items-center gap-3">
+              <div className="flex-shrink-0">
+                {getContentTypeIcon(item.contentType)}
               </div>
-              {item.description && (
-                <div className="text-sm text-gray-500 line-clamp-1">
-                  {item.description}
+              <div>
+                <div className="text-sm font-medium text-gray-900">
+                  {item.title}
                 </div>
-              )}
+                {item.description && (
+                  <div className="text-sm text-gray-500 line-clamp-1">
+                    {item.description}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        </td>
-        <td className="px-6 py-4 whitespace-nowrap">
-          <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded">
-            {item.contentType}
-          </span>
-        </td>
-        <td className="px-6 py-4 whitespace-nowrap">
-          <span className="text-sm text-gray-900">
-            {formatUnlock(item.unlockValue, item.unlockType)}
-          </span>
-        </td>
-        <td className="px-6 py-4 whitespace-nowrap">
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-600">Activo:</span>
-              {updatingContentId === item.id ? (
-                <div className="relative inline-flex items-center justify-center w-11 h-6">
-                  <Loader2 className="w-4 h-4 text-primary animate-spin" />
+          </td>
+          <td className="px-6 py-4 whitespace-nowrap">
+            <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded">
+              {item.contentType}
+            </span>
+          </td>
+          <td className="px-6 py-4 whitespace-nowrap">
+            <span className="text-sm text-gray-900">
+              {formatUnlock(item.unlockValue, item.unlockType)}
+            </span>
+          </td>
+          <td className="px-6 py-4 whitespace-nowrap">
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-600">Activo:</span>
+                {updatingContentId === item.id ? (
+                  <div className="relative inline-flex items-center justify-center w-11 h-6">
+                    <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                  </div>
+                ) : (
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={item.isActive}
+                      onChange={() => handleToggleActive(item.id, item.isActive)}
+                      className="sr-only peer"
+                      disabled={updatingContentId === item.id}
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                  </label>
+                )}
+              </div>
+              <div className="flex flex-col gap-1">
+                {item.isPreview && (
+                  <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full w-fit">
+                    <Eye className="w-3 h-3" />
+                    Vista Previa
+                  </span>
+                )}
+                {hasResources && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setExpandedContentId(isExpanded ? null : item.id);
+                    }}
+                    className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded-full w-fit hover:bg-purple-200 transition-colors cursor-pointer"
+                  >
+                    <FileText className="w-3 h-3" />
+                    Recursos ({item.resources.length})
+                  </button>
+                )}
+              </div>
+            </div>
+          </td>
+          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+            <div className="flex items-center justify-end gap-2">
+              <button
+                onClick={() => {
+                  setSelectedContentForResource(item);
+                  setIsAddResourceModalOpen(true);
+                }}
+                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                title="Agregar recurso"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => {
+                  setSelectedContent(item);
+                  setIsEditModalOpen(true);
+                }}
+                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Editar contenido"
+              >
+                <Edit className="w-4 h-4" />
+              </button>
+              <button
+                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                title="Eliminar contenido"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          </td>
+        </tr>
+        {isExpanded && hasResources && (
+          <tr>
+            <td colSpan={6} className="px-6 py-4 bg-gray-50">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-semibold text-gray-900">Recursos del contenido</h4>
+                  <button
+                    onClick={() => {
+                      setSelectedContentForResource(item);
+                      setIsAddResourceModalOpen(true);
+                    }}
+                    className="text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                  >
+                    + Agregar recurso
+                  </button>
                 </div>
-              ) : (
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={item.isActive}
-                    onChange={() => handleToggleActive(item.id, item.isActive)}
-                    className="sr-only peer"
-                    disabled={updatingContentId === item.id}
-                  />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                </label>
-              )}
-            </div>
-            <div className="flex flex-col gap-1">
-              {item.isPreview && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full w-fit">
-                  <Eye className="w-3 h-3" />
-                  Vista Previa
-                </span>
-              )}
-              {item.resources && item.resources.length > 0 && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded-full w-fit">
-                  <FileText className="w-3 h-3" />
-                  Recursos ({item.resources.length})
-                </span>
-              )}
-            </div>
-          </div>
-        </td>
-        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-          <div className="flex items-center justify-end gap-2">
-            <button
-              onClick={() => {
-                setSelectedContent(item);
-                setIsEditModalOpen(true);
-              }}
-              className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-              title="Editar contenido"
-            >
-              <Edit className="w-4 h-4" />
-            </button>
-            <button
-              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-              title="Eliminar contenido"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          </div>
-        </td>
-      </tr>
+                <div className="space-y-2">
+                  {item.resources.map((resource) => (
+                    <div
+                      key={resource.id}
+                      className="flex items-center justify-between p-3 bg-white rounded border border-gray-200"
+                    >
+                      <div className="flex-1">
+                        <a
+                          href={resource.resourceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm font-medium text-gray-900 hover:text-blue-600"
+                        >
+                          {resource.title}
+                        </a>
+                        {resource.description && (
+                          <p className="text-xs text-gray-500 mt-1">{resource.description}</p>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => handleDeleteResource(item.id, resource.id)}
+                        disabled={deletingResourceId === resource.id}
+                        className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+                        title="Eliminar recurso"
+                      >
+                        {deletingResourceId === resource.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </td>
+          </tr>
+        )}
+      </>
     );
   }
 
@@ -522,6 +619,17 @@ export default function CourseVideosPage() {
               loadCourseData();
             }}
             content={selectedContent}
+          />
+          <AddResourceModal
+            isOpen={isAddResourceModalOpen}
+            onClose={() => {
+              setIsAddResourceModalOpen(false);
+              setSelectedContentForResource(null);
+            }}
+            onSuccess={() => {
+              loadCourseData();
+            }}
+            contentId={selectedContentForResource?.id || ""}
           />
         </>
       )}

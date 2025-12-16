@@ -17,6 +17,7 @@ import {
   Users,
   Clock,
   CheckCircle2,
+  AlertTriangle,
   ArrowRight,
   Zap,
   Maximize2,
@@ -40,6 +41,9 @@ import {
   EmailRecipient,
 } from "@/services/marketing";
 import { uploadFile } from "@/services/files";
+import { getAccessToken } from "@/lib/auth-utils";
+import { useRouter } from "next/navigation";
+import { getMembers } from "@/services/subscriptions";
 
 // Datos dummy para demostración
 const dummyTemplates: EmailTemplate[] = [
@@ -70,9 +74,10 @@ const dummyTemplates: EmailTemplate[] = [
 ];
 
 export default function MarketingPage() {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [templates, setTemplates] = useState<EmailTemplate[]>(dummyTemplates);
+  const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [loading, setLoading] = useState(false);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showSendModal, setShowSendModal] = useState(false);
@@ -80,6 +85,18 @@ export default function MarketingPage() {
   const [previewTemplate, setPreviewTemplate] = useState<EmailTemplate | null>(null);
   const [recipients, setRecipients] = useState<EmailRecipient[]>([]);
   const [sending, setSending] = useState(false);
+  const [loadingRecipients, setLoadingRecipients] = useState(false);
+  const [showManualAdd, setShowManualAdd] = useState(false);
+  const [manualEmail, setManualEmail] = useState("");
+  const [manualName, setManualName] = useState("");
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [pendingTemplateId, setPendingTemplateId] = useState<string | null>(null);
+  const [showResultModal, setShowResultModal] = useState(false);
+  const [sendResult, setSendResult] = useState<{
+    success: number;
+    failed: number;
+    errors?: string[];
+  } | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [showImageModal, setShowImageModal] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -120,9 +137,17 @@ export default function MarketingPage() {
 
   useEffect(() => {
     setIsMobile(window.innerWidth < 768);
-    // Usar datos dummy en lugar de cargar desde API
-    // loadTemplates();
-  }, []);
+    
+    // Verificar autenticación antes de cargar
+    const token = getAccessToken();
+    if (!token) {
+      console.error("No hay token de autenticación. Redirigiendo al login...");
+      router.push("/login");
+      return;
+    }
+    
+    loadTemplates();
+  }, [router]);
 
   // Efecto para manejar el redimensionamiento de imágenes en el editor
   useEffect(() => {
@@ -1393,12 +1418,28 @@ export default function MarketingPage() {
   const loadTemplates = async () => {
     try {
       setLoading(true);
+      const token = getAccessToken();
+      
+      if (!token) {
+        console.error("No hay token de autenticación");
+        router.push("/login");
+        return;
+      }
+      
+      console.log("Token presente, cargando plantillas...");
       const data = await getEmailTemplates();
       setTemplates(data);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error al cargar plantillas:", error);
-      // En caso de error, usar datos dummy
-      setTemplates(dummyTemplates);
+      
+      // Si es un error 401, redirigir al login
+      if (error.response?.status === 401) {
+        alert("Tu sesión ha expirado. Por favor, inicia sesión nuevamente.");
+        router.push("/login");
+        return;
+      }
+      
+      alert("Error al cargar las plantillas. Por favor, recarga la página.");
     } finally {
       setLoading(false);
     }
@@ -1447,24 +1488,26 @@ export default function MarketingPage() {
     }
 
     try {
+      setLoading(true);
       const htmlContent = editorRef.current?.innerHTML || templateForm.htmlContent;
       
       if (editingTemplate) {
         // Actualizar template existente
+        const updated = await updateEmailTemplate(editingTemplate.id, {
+          name: templateForm.name,
+          subject: templateForm.subject,
+          htmlContent: htmlContent,
+        });
         setTemplates(templates.map(t => 
-          t.id === editingTemplate.id 
-            ? { ...t, ...templateForm, htmlContent, updatedAt: new Date().toISOString() }
-            : t
+          t.id === editingTemplate.id ? updated : t
         ));
       } else {
         // Crear nuevo template
-        const newTemplate: EmailTemplate = {
-          id: Date.now().toString(),
-          ...templateForm,
-          htmlContent,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
+        const newTemplate = await createEmailTemplate({
+          name: templateForm.name,
+          subject: templateForm.subject,
+          htmlContent: htmlContent,
+        });
         setTemplates([...templates, newTemplate]);
       }
       
@@ -1473,6 +1516,8 @@ export default function MarketingPage() {
     } catch (error) {
       console.error("Error al guardar plantilla:", error);
       alert("Error al guardar la plantilla");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -1482,14 +1527,18 @@ export default function MarketingPage() {
     }
 
     try {
+      setLoading(true);
+      await deleteEmailTemplate(id);
       setTemplates(templates.filter(t => t.id !== id));
     } catch (error) {
       console.error("Error al eliminar plantilla:", error);
       alert("Error al eliminar la plantilla");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -1498,12 +1547,21 @@ export default function MarketingPage() {
       return;
     }
 
-    // Crear preview
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setImagePreview(e.target?.result as string);
+    try {
+      setUploadingImage(true);
+      setShowImageModal(true); // Mostrar modal inmediatamente con el indicador de carga
+      
+      // Subir la imagen inmediatamente
+      const response = await uploadFile(file, {
+        folder: "marketing",
+        isPublic: true,
+      });
+      
+      const imageUrl = response.url;
+      
+      // Crear preview con la URL subida
+      setImagePreview(imageUrl);
       setImageFile(file);
-      setShowImageModal(true);
       
       // Obtener dimensiones originales
       const img = new Image();
@@ -1512,50 +1570,30 @@ export default function MarketingPage() {
         const initialWidth = Math.min(img.width, 600);
         setImageWidth(initialWidth);
       };
-      img.src = e.target?.result as string;
-    };
-    reader.readAsDataURL(file);
-
-    // Resetear el input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+      img.src = imageUrl;
+    } catch (error) {
+      console.error("Error al subir imagen:", error);
+      alert("Error al subir la imagen. Por favor, intenta de nuevo.");
+      setShowImageModal(false);
+      setImagePreview(null);
+      setImageFile(null);
+    } finally {
+      setUploadingImage(false);
+      // Resetear el input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   };
 
   const handleInsertImage = async () => {
-    if (!imageFile || !imagePreview) return;
+    if (!imagePreview || !imageFile) return;
 
     try {
-      setUploadingImage(true);
-      
-      // Redimensionar imagen si es necesario
-      let fileToUpload = imageFile;
-      let imageUrl = imagePreview;
-      
-      if (imageWidth < 2000) { // Solo redimensionar si es menor a 2000px
-        const resizedFile = await resizeImage(imageFile, imageWidth);
-        fileToUpload = resizedFile;
-        
-        // Crear URL del archivo redimensionado
-        imageUrl = await new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onload = (e) => resolve(e.target?.result as string);
-          reader.readAsDataURL(resizedFile);
-        });
-      }
-
-      // Intentar subir a la API, si falla usar base64 (modo demo)
-      let finalUrl = imageUrl;
-      try {
-        const response = await uploadFile(fileToUpload, {
-        folder: "marketing",
-        isPublic: true,
-      });
-        finalUrl = response.url;
-      } catch (error) {
-        console.log("Modo demo: usando imagen local");
-        // En modo demo, usar la imagen redimensionada directamente
-      }
+      // La imagen ya está subida, usar la URL directamente
+      // Si el usuario cambió el tamaño, podríamos subir una versión redimensionada
+      // Por ahora usamos la URL original que ya está subida
+      const finalUrl = imagePreview;
 
       // Insertar la imagen en el editor
       if (editorRef.current) {
@@ -2047,11 +2085,63 @@ export default function MarketingPage() {
     });
   };
 
+  const handleLoadFromDatabase = async () => {
+    try {
+      setLoadingRecipients(true);
+      const response = await getMembers();
+      
+      // Convertir miembros a EmailRecipient
+      const dbRecipients: EmailRecipient[] = response.members
+        .filter((member) => member.email) // Solo usuarios con email
+        .map((member) => ({
+          email: member.email,
+          name: member.name || undefined,
+          id: member.id, // Incluir ID para referencia
+        }));
+
+      setRecipients(dbRecipients);
+      alert(`Se cargaron ${dbRecipients.length} destinatarios desde la base de datos`);
+    } catch (error) {
+      console.error("Error al cargar desde la base de datos:", error);
+      alert("Error al cargar los destinatarios desde la base de datos");
+    } finally {
+      setLoadingRecipients(false);
+    }
+  };
+
+  const handleAddManualRecipient = () => {
+    if (!manualEmail || !manualEmail.includes("@")) {
+      alert("Por favor ingresa un email válido");
+      return;
+    }
+
+    const newRecipient: EmailRecipient = {
+      email: manualEmail.trim(),
+      name: manualName.trim() || undefined,
+    };
+
+    // Verificar que no esté duplicado
+    if (recipients.some((r) => r.email.toLowerCase() === newRecipient.email.toLowerCase())) {
+      alert("Este email ya está en la lista");
+      return;
+    }
+
+    setRecipients([...recipients, newRecipient]);
+    setManualEmail("");
+    setManualName("");
+    setShowManualAdd(false);
+  };
+
+  const handleRemoveRecipient = (index: number) => {
+    setRecipients(recipients.filter((_, i) => i !== index));
+  };
+
   const handleExcelUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     try {
+      setLoadingRecipients(true);
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data, { type: "array" });
       const sheetName = workbook.SheetNames[0];
@@ -2069,27 +2159,19 @@ export default function MarketingPage() {
         );
 
         return {
-          email: emailKey ? row[emailKey] : "",
-          name: nameKey ? row[nameKey] : undefined,
+          email: emailKey ? String(row[emailKey]).trim() : "",
+          name: nameKey ? String(row[nameKey]).trim() : undefined,
           ...row, // Incluir todos los demás campos
         };
-      }).filter((r) => r.email); // Filtrar filas sin email
+      }).filter((r) => r.email && r.email.includes("@")); // Filtrar filas sin email válido
 
       setRecipients(parsedRecipients);
-      alert(`Se cargaron ${parsedRecipients.length} destinatarios`);
+      alert(`Se cargaron ${parsedRecipients.length} destinatarios desde el archivo Excel`);
     } catch (error) {
       console.error("Error al leer Excel:", error);
-      // Si hay error, usar datos dummy para demostración
-      const dummyRecipients: EmailRecipient[] = [
-        { email: "juan.perez@example.com", name: "Juan Pérez" },
-        { email: "maria.garcia@example.com", name: "María García" },
-        { email: "carlos.rodriguez@example.com", name: "Carlos Rodríguez" },
-        { email: "ana.martinez@example.com", name: "Ana Martínez" },
-        { email: "luis.lopez@example.com", name: "Luis López" },
-      ];
-      setRecipients(dummyRecipients);
-      alert(`Modo demo: Se cargaron ${dummyRecipients.length} destinatarios de ejemplo`);
+      alert("Error al leer el archivo Excel. Por favor, verifica el formato del archivo.");
     } finally {
+      setLoadingRecipients(false);
       if (excelInputRef.current) {
         excelInputRef.current.value = "";
       }
@@ -2102,19 +2184,56 @@ export default function MarketingPage() {
       return;
     }
 
+    // Validar que todos los emails sean válidos
+    const invalidEmails = recipients.filter((r) => !r.email || !r.email.includes("@"));
+    if (invalidEmails.length > 0) {
+      alert(`Hay ${invalidEmails.length} email(s) inválido(s). Por favor, corrígelos antes de enviar.`);
+      return;
+    }
+
+    // Mostrar modal de confirmación
+    setPendingTemplateId(templateId);
+    setShowConfirmModal(true);
+  };
+
+  const confirmSendEmails = async () => {
+    if (!pendingTemplateId) return;
+
     try {
       setSending(true);
-      // Simular envío
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      setShowConfirmModal(false);
+      
+      const result = await sendBulkEmails({
+        templateId: pendingTemplateId,
+        recipients,
+      });
 
-      alert(
-        `Correos enviados: ${recipients.length} exitosos, 0 fallidos`
-      );
+      // Mostrar resultado en modal
+      setSendResult({
+        success: result.success,
+        failed: result.failed,
+        errors: result.errors || [],
+      });
+      setShowResultModal(true);
+      
+      // Cerrar modal de envío y limpiar
       setShowSendModal(false);
       setRecipients([]);
-    } catch (error) {
+      setPendingTemplateId(null);
+    } catch (error: any) {
       console.error("Error al enviar correos:", error);
-      alert("Error al enviar los correos");
+      const errorMessage = error.response?.data?.message || error.message || "Error al enviar los correos";
+      
+      // Mostrar error en modal también
+      setSendResult({
+        success: 0,
+        failed: recipients.length,
+        errors: [errorMessage],
+      });
+      setShowResultModal(true);
+      
+      setShowSendModal(false);
+      setPendingTemplateId(null);
     } finally {
       setSending(false);
     }
@@ -2714,98 +2833,130 @@ export default function MarketingPage() {
             <div className="flex items-center justify-center py-20">
               <div className="text-gray-500">Cargando plantillas...</div>
             </div>
+          ) : templates.length === 0 ? (
+            <div className="text-center py-20 bg-white/80 backdrop-blur-sm rounded-2xl border border-gray-200/50">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-2xl mb-4">
+                <Mail className="w-8 h-8 text-gray-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                No hay plantillas creadas
+              </h3>
+              <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                Comienza creando tu primera plantilla de email para comunicarte con tus miembros
+              </p>
+              <button
+                onClick={handleNewTemplate}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl hover:bg-primary/90 transition-all duration-200 shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 font-medium"
+              >
+                <Plus className="w-5 h-5" />
+                Crear primera plantilla
+              </button>
+            </div>
           ) : (
-            <div className="space-y-4">
-              {templates.map((template) => (
-                <div
-                  key={template.id}
-                  className="group bg-white/80 backdrop-blur-sm rounded-2xl border border-gray-200/50 shadow-sm hover:shadow-lg hover:border-primary/20 transition-all duration-300 overflow-hidden"
-                >
-                  <div className="p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h3 className="text-xl font-semibold text-gray-900">
-                        {template.name}
-                      </h3>
-                          <span className="px-2.5 py-1 text-xs font-medium bg-primary/10 text-primary rounded-full">
-                            Activa
-                          </span>
-                        </div>
-                        <p className="text-sm text-gray-600 mb-3 line-clamp-1">
-                        {template.subject}
-                      </p>
-                        <div className="flex items-center gap-4 text-xs text-gray-500">
-                          <div className="flex items-center gap-1.5">
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-gray-200/50 shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50/50 border-b border-gray-200">
+                    <tr>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Nombre
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Asunto
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Actualizada
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Estado
+                      </th>
+                      <th className="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Acciones
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {templates.map((template) => (
+                      <tr
+                        key={template.id}
+                        className="hover:bg-gray-50/50 transition-colors"
+                      >
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-primary/10 rounded-lg">
+                              <Mail className="w-4 h-4 text-primary" />
+                            </div>
+                            <div>
+                              <h3 className="text-sm font-semibold text-gray-900">
+                                {template.name}
+                              </h3>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <p className="text-sm text-gray-600 max-w-md truncate">
+                            {template.subject}
+                          </p>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2 text-xs text-gray-500">
                             <Clock className="w-3.5 h-3.5" />
-                            {new Date(template.updatedAt).toLocaleDateString("es-ES", { 
-                              day: "numeric", 
-                              month: "short", 
-                              year: "numeric" 
+                            {new Date(template.updatedAt).toLocaleDateString("es-ES", {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
                             })}
                           </div>
-                        </div>
-                    </div>
-                  </div>
-
-                    <div className="flex items-center gap-2 pt-4 border-t border-gray-100">
-                    <button
-                      onClick={() => handlePreviewTemplate(template)}
-                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
-                    >
-                      <Eye className="w-4 h-4" />
-                        Vista previa
-                    </button>
-                    <button
-                      onClick={() => handleEditTemplate(template)}
-                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
-                    >
-                      <Edit className="w-4 h-4" />
-                      Editar
-                    </button>
-                      <div className="flex-1" />
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="px-2.5 py-1 text-xs font-medium bg-green-100 text-green-700 rounded-full">
+                            Activa
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => handlePreviewTemplate(template)}
+                              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                              title="Vista previa"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleEditTemplate(template)}
+                              className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              title="Editar"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
                     <button
                       onClick={() => {
+                        setRecipients([]);
+                        setShowManualAdd(false);
+                        setManualEmail("");
+                        setManualName("");
                         setShowSendModal(true);
                         setEditingTemplate(template);
                       }}
-                        className="flex items-center gap-2 px-5 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors shadow-sm shadow-primary/20"
-                    >
-                      <Send className="w-4 h-4" />
-                      Enviar
-                    </button>
-                    <button
-                      onClick={() => handleDeleteTemplate(template.id)}
-                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        title="Eliminar"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-
-              {templates.length === 0 && (
-                <div className="text-center py-20 bg-white/80 backdrop-blur-sm rounded-2xl border border-gray-200/50">
-                  <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-2xl mb-4">
-                    <Mail className="w-8 h-8 text-gray-400" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                    No hay plantillas creadas
-                  </h3>
-                  <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                    Comienza creando tu primera plantilla de email para comunicarte con tus miembros
-                  </p>
-                  <button
-                    onClick={handleNewTemplate}
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl hover:bg-primary/90 transition-all duration-200 shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 font-medium"
-                  >
-                    <Plus className="w-5 h-5" />
-                    Crear primera plantilla
-                  </button>
-                </div>
-              )}
+                              className="p-2 text-gray-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                              title="Enviar"
+                            >
+                              <Send className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteTemplate(template.id)}
+                              className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Eliminar"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </div>
@@ -3306,7 +3457,13 @@ export default function MarketingPage() {
                     </p>
                   </div>
                 <button
-                  onClick={() => setShowSendModal(false)}
+                  onClick={() => {
+                    setShowSendModal(false);
+                    setRecipients([]);
+                    setShowManualAdd(false);
+                    setManualEmail("");
+                    setManualName("");
+                  }}
                     className="p-2 hover:bg-gray-100 rounded-xl transition-colors text-gray-400 hover:text-gray-600"
                 >
                   <X className="w-5 h-5" />
@@ -3316,19 +3473,44 @@ export default function MarketingPage() {
 
               <div className="p-6 md:p-8 overflow-y-auto flex-1 bg-gray-50/50">
                 <div className="space-y-6">
+                  {/* Opciones de carga */}
                   <div className="bg-white rounded-xl border border-gray-200 p-6">
-                    <div className="flex items-start gap-4">
-                      <div className="p-3 bg-primary/10 rounded-xl">
-                        <FileSpreadsheet className="w-6 h-6 text-primary" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="text-sm font-semibold text-gray-900 mb-2">
-                          Cargar destinatarios
-                        </h3>
-                        <p className="text-sm text-gray-600 mb-4">
-                          El archivo Excel debe contener columnas: <span className="font-mono text-xs bg-gray-100 px-2 py-1 rounded">email</span> y <span className="font-mono text-xs bg-gray-100 px-2 py-1 rounded">nombre</span> (opcional)
-                        </p>
-                        <div className="flex items-center gap-3 flex-wrap">
+                    <h3 className="text-sm font-semibold text-gray-900 mb-4">
+                      Cargar destinatarios
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {/* Cargar desde Base de Datos */}
+                      <button
+                        onClick={handleLoadFromDatabase}
+                        disabled={loadingRecipients}
+                        className="flex flex-col items-center gap-3 p-4 border-2 border-dashed border-gray-200 rounded-xl hover:border-primary hover:bg-primary/5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <div className="p-3 bg-blue-100 rounded-xl">
+                          <Users className="w-6 h-6 text-blue-600" />
+                        </div>
+                        <div className="text-center">
+                          <p className="text-sm font-medium text-gray-900">Desde Base de Datos</p>
+                          <p className="text-xs text-gray-500 mt-1">Cargar todos los usuarios</p>
+                        </div>
+                        {loadingRecipients && (
+                          <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                        )}
+                      </button>
+
+                      {/* Cargar desde Excel */}
+                      <button
+                        onClick={() => excelInputRef.current?.click()}
+                        disabled={loadingRecipients}
+                        className="flex flex-col items-center gap-3 p-4 border-2 border-dashed border-gray-200 rounded-xl hover:border-primary hover:bg-primary/5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <div className="p-3 bg-green-100 rounded-xl">
+                          <FileSpreadsheet className="w-6 h-6 text-green-600" />
+                        </div>
+                        <div className="text-center">
+                          <p className="text-sm font-medium text-gray-900">Desde Excel</p>
+                          <p className="text-xs text-gray-500 mt-1">Subir archivo .xlsx o .xls</p>
+                        </div>
+                      </button>
                       <input
                         ref={excelInputRef}
                         type="file"
@@ -3336,36 +3518,98 @@ export default function MarketingPage() {
                         onChange={handleExcelUpload}
                         className="hidden"
                       />
+
+                      {/* Agregar Manualmente */}
                       <button
-                        onClick={() => excelInputRef.current?.click()}
-                            className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl transition-colors font-medium"
+                        onClick={() => setShowManualAdd(true)}
+                        disabled={loadingRecipients}
+                        className="flex flex-col items-center gap-3 p-4 border-2 border-dashed border-gray-200 rounded-xl hover:border-primary hover:bg-primary/5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <FileSpreadsheet className="w-5 h-5" />
-                            Seleccionar archivo Excel
-                      </button>
-                          <button
-                            onClick={() => {
-                              const dummyRecipients: EmailRecipient[] = [
-                                { email: "juan.perez@example.com", name: "Juan Pérez" },
-                                { email: "maria.garcia@example.com", name: "María García" },
-                                { email: "carlos.rodriguez@example.com", name: "Carlos Rodríguez" },
-                                { email: "ana.martinez@example.com", name: "Ana Martínez" },
-                                { email: "luis.lopez@example.com", name: "Luis López" },
-                                { email: "sofia.fernandez@example.com", name: "Sofía Fernández" },
-                                { email: "diego.torres@example.com", name: "Diego Torres" },
-                                { email: "laura.sanchez@example.com", name: "Laura Sánchez" },
-                              ];
-                              setRecipients(dummyRecipients);
-                            }}
-                            className="inline-flex items-center gap-2 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl transition-colors font-medium"
-                          >
-                            <Zap className="w-5 h-5" />
-                            Usar datos de ejemplo
-                          </button>
+                        <div className="p-3 bg-purple-100 rounded-xl">
+                          <Plus className="w-6 h-6 text-purple-600" />
                         </div>
-                      </div>
+                        <div className="text-center">
+                          <p className="text-sm font-medium text-gray-900">Agregar Manual</p>
+                          <p className="text-xs text-gray-500 mt-1">Ingresar uno por uno</p>
+                        </div>
+                      </button>
                     </div>
                   </div>
+
+                  {/* Formulario para agregar manualmente */}
+                  {showManualAdd && (
+                    <div className="bg-white rounded-xl border border-gray-200 p-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-sm font-semibold text-gray-900">
+                          Agregar destinatario manualmente
+                        </h3>
+                        <button
+                          onClick={() => {
+                            setShowManualAdd(false);
+                            setManualEmail("");
+                            setManualName("");
+                          }}
+                          className="p-1 hover:bg-gray-100 rounded-lg transition-colors text-gray-400 hover:text-gray-600"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                            Email *
+                          </label>
+                          <input
+                            type="email"
+                            value={manualEmail}
+                            onChange={(e) => setManualEmail(e.target.value)}
+                            placeholder="ejemplo@correo.com"
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-primary focus:border-primary"
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                handleAddManualRecipient();
+                              }
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                            Nombre (opcional)
+                          </label>
+                          <input
+                            type="text"
+                            value={manualName}
+                            onChange={(e) => setManualName(e.target.value)}
+                            placeholder="Nombre completo"
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-primary focus:border-primary"
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                handleAddManualRecipient();
+                              }
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <div className="flex gap-2 mt-4">
+                        <button
+                          onClick={handleAddManualRecipient}
+                          className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium"
+                        >
+                          Agregar
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowManualAdd(false);
+                            setManualEmail("");
+                            setManualName("");
+                          }}
+                          className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
                   {recipients.length > 0 && (
                     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -3388,6 +3632,7 @@ export default function MarketingPage() {
                             <tr>
                               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Email</th>
                               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nombre</th>
+                              <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Acciones</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-100">
@@ -3395,11 +3640,20 @@ export default function MarketingPage() {
                               <tr key={index} className="hover:bg-gray-50/50 transition-colors">
                                 <td className="px-4 py-3 text-gray-900">{recipient.email}</td>
                                 <td className="px-4 py-3 text-gray-600">{recipient.name || "-"}</td>
+                                <td className="px-4 py-3 text-right">
+                                  <button
+                                    onClick={() => handleRemoveRecipient(index)}
+                                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                    title="Eliminar"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </td>
                               </tr>
                             ))}
                             {recipients.length > 10 && (
                               <tr>
-                                <td colSpan={2} className="px-4 py-3 text-center text-gray-500 text-sm bg-gray-50/50">
+                                <td colSpan={3} className="px-4 py-3 text-center text-gray-500 text-sm bg-gray-50/50">
                                   ... y {recipients.length - 10} más
                                 </td>
                               </tr>
@@ -3410,10 +3664,19 @@ export default function MarketingPage() {
                     </div>
                   )}
 
-                  {recipients.length === 0 && (
+                  {recipients.length === 0 && !loadingRecipients && (
                     <div className="text-center py-12 bg-white rounded-xl border border-gray-200 border-dashed">
-                      <FileSpreadsheet className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                      <p className="text-sm text-gray-600">Carga un archivo Excel para comenzar</p>
+                      <Users className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                      <p className="text-sm text-gray-600">Carga destinatarios desde la base de datos, Excel o agrégalos manualmente</p>
+                    </div>
+                  )}
+
+                  {loadingRecipients && (
+                    <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                        <p className="text-sm text-gray-600">Cargando destinatarios...</p>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -3421,7 +3684,13 @@ export default function MarketingPage() {
 
               <div className="p-6 border-t border-gray-100 bg-gray-50/50 flex gap-3 justify-end">
                 <button
-                  onClick={() => setShowSendModal(false)}
+                  onClick={() => {
+                    setShowSendModal(false);
+                    setRecipients([]);
+                    setShowManualAdd(false);
+                    setManualEmail("");
+                    setManualName("");
+                  }}
                   className="px-5 py-2.5 text-gray-700 hover:bg-gray-100 rounded-xl transition-colors font-medium"
                 >
                   Cancelar
@@ -3440,7 +3709,7 @@ export default function MarketingPage() {
         )}
 
         {/* Modal de Imagen - Compacto */}
-        {showImageModal && imagePreview && (
+        {showImageModal && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col border border-gray-200/50">
               <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-gray-50 to-white">
@@ -3462,114 +3731,120 @@ export default function MarketingPage() {
 
               <div className="p-5 space-y-4">
                 {/* Preview de la imagen - Compacto */}
-                <div className="bg-gray-50 rounded-lg p-3 flex items-center justify-center border border-gray-200 max-h-[200px] overflow-hidden">
-                  <img
-                    ref={imagePreviewRef}
-                    src={imagePreview}
-                    alt="Preview"
-                    style={{ maxWidth: `${Math.min(imageWidth, 400)}px`, width: "100%", height: "auto", maxHeight: "180px", objectFit: "contain" }}
-                    className="rounded"
-                  />
+                <div className="bg-gray-50 rounded-lg p-3 flex items-center justify-center border border-gray-200 max-h-[200px] overflow-hidden min-h-[180px]">
+                  {uploadingImage ? (
+                    <div className="flex flex-col items-center justify-center gap-3 py-8">
+                      <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                      <p className="text-sm text-gray-600">Subiendo imagen...</p>
+                    </div>
+                  ) : imagePreview ? (
+                    <img
+                      ref={imagePreviewRef}
+                      src={imagePreview}
+                      alt="Preview"
+                      style={{ maxWidth: `${Math.min(imageWidth, 400)}px`, width: "100%", height: "auto", maxHeight: "180px", objectFit: "contain" }}
+                      className="rounded"
+                    />
+                  ) : null}
                 </div>
 
                 {/* Controles de tamaño - Compactos */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-medium text-gray-700">
-                      Ancho
-                    </label>
-                    <div className="flex items-center gap-1.5">
+                {!uploadingImage && imagePreview && (
+                  <>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-medium text-gray-700">
+                          Ancho
+                        </label>
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="number"
+                            value={imageWidth}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value) || 100;
+                              setImageWidth(Math.max(100, Math.min(2000, val)));
+                            }}
+                            className="w-16 px-2 py-1 border border-gray-200 rounded-lg text-xs text-center focus:ring-1 focus:ring-primary"
+                            min="100"
+                            max="2000"
+                          />
+                          <span className="text-xs text-gray-500">px</span>
+                        </div>
+                      </div>
                       <input
-                        type="number"
-                        value={imageWidth}
-                        onChange={(e) => {
-                          const val = parseInt(e.target.value) || 100;
-                          setImageWidth(Math.max(100, Math.min(2000, val)));
-                        }}
-                        className="w-16 px-2 py-1 border border-gray-200 rounded-lg text-xs text-center focus:ring-1 focus:ring-primary"
+                        type="range"
                         min="100"
                         max="2000"
+                        value={imageWidth}
+                        onChange={(e) => setImageWidth(parseInt(e.target.value))}
+                        className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary"
                       />
-                      <span className="text-xs text-gray-500">px</span>
+                      <div className="flex items-center justify-between text-xs text-gray-400">
+                        <span>100</span>
+                        <span>2000</span>
+                      </div>
                     </div>
-                  </div>
-                  <input
-                    type="range"
-                    min="100"
-                    max="2000"
-                    value={imageWidth}
-                    onChange={(e) => setImageWidth(parseInt(e.target.value))}
-                    className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary"
-                  />
-                  <div className="flex items-center justify-between text-xs text-gray-400">
-                    <span>100</span>
-                    <span>2000</span>
-                  </div>
-                </div>
 
-                {/* Botones de acción rápida - Compactos */}
-                <div className="grid grid-cols-3 gap-2 pt-1">
-                  <button
-                    onClick={() => setImageWidth(300)}
-                    className={`px-2 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                      imageWidth === 300 
-                        ? "bg-primary/20 text-primary border border-primary/30" 
-                        : "bg-gray-100 hover:bg-gray-200 text-gray-700"
-                    }`}
-                  >
-                    Pequeña
-                  </button>
-                  <button
-                    onClick={() => setImageWidth(600)}
-                    className={`px-2 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                      imageWidth === 600 
-                        ? "bg-primary/20 text-primary border border-primary/30" 
-                        : "bg-gray-100 hover:bg-gray-200 text-gray-700"
-                    }`}
-                  >
-                    Mediana
-                  </button>
-                  <button
-                    onClick={() => setImageWidth(1000)}
-                    className={`px-2 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                      imageWidth === 1000 
-                        ? "bg-primary/20 text-primary border border-primary/30" 
-                        : "bg-gray-100 hover:bg-gray-200 text-gray-700"
-                    }`}
-                  >
-                    Grande
-                  </button>
-                </div>
+                    {/* Botones de acción rápida - Compactos */}
+                    <div className="grid grid-cols-3 gap-2 pt-1">
+                      <button
+                        onClick={() => setImageWidth(300)}
+                        className={`px-2 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                          imageWidth === 300 
+                            ? "bg-primary/20 text-primary border border-primary/30" 
+                            : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+                        }`}
+                      >
+                        Pequeña
+                      </button>
+                      <button
+                        onClick={() => setImageWidth(600)}
+                        className={`px-2 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                          imageWidth === 600 
+                            ? "bg-primary/20 text-primary border border-primary/30" 
+                            : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+                        }`}
+                      >
+                        Mediana
+                      </button>
+                      <button
+                        onClick={() => setImageWidth(1000)}
+                        className={`px-2 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                          imageWidth === 1000 
+                            ? "bg-primary/20 text-primary border border-primary/30" 
+                            : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+                        }`}
+                      >
+                        Grande
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
 
               <div className="p-4 border-t border-gray-100 bg-gray-50/50 flex gap-2 justify-end">
-                <button
-                  onClick={() => {
-                    setShowImageModal(false);
-                    setImagePreview(null);
-                    setImageFile(null);
-                  }}
-                  className="px-3 py-1.5 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors font-medium text-sm"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleInsertImage}
-                  disabled={uploadingImage}
-                  className="flex items-center gap-1.5 px-4 py-1.5 bg-primary text-white rounded-lg hover:bg-primary/90 transition-all shadow-sm shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm"
-                >
-                  {uploadingImage ? (
-                    <>
-                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      <span>Subiendo...</span>
-                    </>
-                  ) : (
-                    <>
+                {!uploadingImage && (
+                  <>
+                    <button
+                      onClick={() => {
+                        setShowImageModal(false);
+                        setImagePreview(null);
+                        setImageFile(null);
+                      }}
+                      className="px-3 py-1.5 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors font-medium text-sm"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={handleInsertImage}
+                      disabled={!imagePreview}
+                      className="flex items-center gap-1.5 px-4 py-1.5 bg-primary text-white rounded-lg hover:bg-primary/90 transition-all shadow-sm shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm"
+                    >
                       <Check className="w-3.5 h-3.5" />
                       <span>Insertar</span>
-                    </>
-                  )}
-                </button>
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -3916,6 +4191,243 @@ export default function MarketingPage() {
                 >
                   <Check className="w-3.5 h-3.5" />
                   <span>Insertar</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Resultado de Envío */}
+        {showResultModal && sendResult && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col border border-gray-200/50">
+              <div className="p-6 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-xl ${
+                      sendResult.failed === 0 
+                        ? "bg-green-100" 
+                        : sendResult.success === 0
+                        ? "bg-red-100"
+                        : "bg-amber-100"
+                    }`}>
+                      {sendResult.failed === 0 ? (
+                        <CheckCircle2 className="w-5 h-5 text-green-600" />
+                      ) : sendResult.success === 0 ? (
+                        <X className="w-5 h-5 text-red-600" />
+                      ) : (
+                        <AlertTriangle className="w-5 h-5 text-amber-600" />
+                      )}
+                    </div>
+                    <h2 className="text-xl font-bold text-gray-900">
+                      Resultado del envío
+                    </h2>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowResultModal(false);
+                      setSendResult(null);
+                    }}
+                    className="p-2 hover:bg-gray-100 rounded-xl transition-colors text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-6 space-y-4">
+                {/* Estadísticas */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className={`rounded-xl p-4 border-2 ${
+                    sendResult.success > 0 
+                      ? "bg-green-50 border-green-200" 
+                      : "bg-gray-50 border-gray-200"
+                  }`}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <CheckCircle2 className={`w-4 h-4 ${
+                        sendResult.success > 0 ? "text-green-600" : "text-gray-400"
+                      }`} />
+                      <span className="text-xs font-medium text-gray-600">Exitosos</span>
+                    </div>
+                    <p className={`text-2xl font-bold ${
+                      sendResult.success > 0 ? "text-green-600" : "text-gray-400"
+                    }`}>
+                      {sendResult.success}
+                    </p>
+                  </div>
+                  <div className={`rounded-xl p-4 border-2 ${
+                    sendResult.failed > 0 
+                      ? "bg-red-50 border-red-200" 
+                      : "bg-gray-50 border-gray-200"
+                  }`}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <X className={`w-4 h-4 ${
+                        sendResult.failed > 0 ? "text-red-600" : "text-gray-400"
+                      }`} />
+                      <span className="text-xs font-medium text-gray-600">Fallidos</span>
+                    </div>
+                    <p className={`text-2xl font-bold ${
+                      sendResult.failed > 0 ? "text-red-600" : "text-gray-400"
+                    }`}>
+                      {sendResult.failed}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Mensaje resumen */}
+                <div className={`rounded-xl p-4 ${
+                  sendResult.failed === 0 
+                    ? "bg-green-50 border border-green-200" 
+                    : sendResult.success === 0
+                    ? "bg-red-50 border border-red-200"
+                    : "bg-amber-50 border border-amber-200"
+                }`}>
+                  <p className={`text-sm font-medium ${
+                    sendResult.failed === 0 
+                      ? "text-green-900" 
+                      : sendResult.success === 0
+                      ? "text-red-900"
+                      : "text-amber-900"
+                  }`}>
+                    {sendResult.failed === 0 
+                      ? `¡Todos los correos se enviaron exitosamente! (${sendResult.success} ${sendResult.success === 1 ? "correo" : "correos"})`
+                      : sendResult.success === 0
+                      ? `No se pudo enviar ningún correo. Todos fallaron (${sendResult.failed} ${sendResult.failed === 1 ? "correo" : "correos"})`
+                      : `Se enviaron ${sendResult.success} correos exitosamente, pero ${sendResult.failed} ${sendResult.failed === 1 ? "correo falló" : "correos fallaron"}`
+                    }
+                  </p>
+                </div>
+
+                {/* Lista de errores si hay */}
+                {sendResult.errors && sendResult.errors.length > 0 && (
+                  <div className="bg-red-50 border border-red-200 rounded-xl p-4 max-h-60 overflow-y-auto">
+                    <div className="flex items-center gap-2 mb-3">
+                      <AlertTriangle className="w-4 h-4 text-red-600" />
+                      <h3 className="text-sm font-semibold text-red-900">
+                        Errores ({sendResult.errors.length})
+                      </h3>
+                    </div>
+                    <div className="space-y-2">
+                      {sendResult.errors.slice(0, 10).map((error, index) => (
+                        <div key={index} className="text-xs text-red-800 bg-red-100 rounded-lg p-2">
+                          {error}
+                        </div>
+                      ))}
+                      {sendResult.errors.length > 10 && (
+                        <div className="text-xs text-red-600 text-center pt-2">
+                          ... y {sendResult.errors.length - 10} error(es) más
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="p-6 border-t border-gray-100 bg-gray-50/50 flex justify-end">
+                <button
+                  onClick={() => {
+                    setShowResultModal(false);
+                    setSendResult(null);
+                  }}
+                  className="px-5 py-2.5 bg-primary text-white rounded-xl hover:bg-primary/90 transition-all shadow-sm shadow-primary/20 font-medium"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Confirmación de Envío */}
+        {showConfirmModal && editingTemplate && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col border border-gray-200/50">
+              <div className="p-6 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-primary/10 rounded-xl">
+                      <Send className="w-5 h-5 text-primary" />
+                    </div>
+                    <h2 className="text-xl font-bold text-gray-900">
+                      Confirmar envío
+                    </h2>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowConfirmModal(false);
+                      setPendingTemplateId(null);
+                    }}
+                    className="p-2 hover:bg-gray-100 rounded-xl transition-colors text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="p-1.5 bg-blue-100 rounded-lg mt-0.5">
+                      <Send className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-blue-900 mb-1">
+                        ¿Estás seguro de que quieres enviar {recipients.length} {recipients.length === 1 ? "correo" : "correos"}?
+                      </p>
+                      <p className="text-xs text-blue-700">
+                        Plantilla: <span className="font-semibold">{editingTemplate.name}</span>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 rounded-xl p-4 space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">Destinatarios:</span>
+                    <span className="font-semibold text-gray-900">{recipients.length}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">Asunto:</span>
+                    <span className="font-semibold text-gray-900 truncate ml-2 max-w-[200px]" title={editingTemplate.subject}>
+                      {editingTemplate.subject}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+                  <p className="text-xs text-amber-800">
+                    <strong>Nota:</strong> Esta acción no se puede deshacer. Los correos se enviarán inmediatamente.
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-6 border-t border-gray-100 bg-gray-50/50 flex gap-3 justify-end">
+                <button
+                  onClick={() => {
+                    setShowConfirmModal(false);
+                    setPendingTemplateId(null);
+                  }}
+                  disabled={sending}
+                  className="px-5 py-2.5 text-gray-700 hover:bg-gray-100 rounded-xl transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmSendEmails}
+                  disabled={sending}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-xl hover:bg-primary/90 transition-all shadow-sm shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                >
+                  {sending ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Enviando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4" />
+                      <span>Confirmar y enviar</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>

@@ -266,6 +266,22 @@ const MarketingIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
+const SuccessStoriesIcon = ({ className }: { className?: string }) => (
+  <svg
+    className={className}
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+  >
+    <path
+      d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+    />
+  </svg>
+);
+
 interface MenuItem {
   label: string;
   icon: React.FC<{ className?: string }>;
@@ -291,6 +307,7 @@ const menuSections: MenuSection[] = [
       // { label: "Videos", icon: VideoIcon, path: "/admin/videos" },
       // { label: "Desbloqueos", icon: LockIcon, path: "/admin/unlocks" },
       { label: "Miembros", icon: UsersIcon, path: "/admin/members" },
+      { label: "Casos de Éxito", icon: SuccessStoriesIcon, path: "/admin/success-stories" },
     ],
   },
   {

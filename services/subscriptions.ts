@@ -52,6 +52,72 @@ export interface SubscriptionResponse {
   message: string;
 }
 
+export interface CreateWebpayTransactionDto {
+  planId: string;
+  billingCycleId: string;
+  currency?: string;
+}
+
+export interface CreateWebpayTransactionResponse {
+  token: string;
+  url: string;
+  subscriptionId: string;
+}
+
+export interface ValidateWebpayPaymentDto {
+  token: string;
+}
+
+export interface ValidateWebpayPaymentResponse {
+  success: boolean;
+  subscription?: UserSubscription;
+  redirectUrl?: string;
+}
+
+export interface CreatePayPalOrderDto {
+  planId: string;
+  billingCycleId: string;
+  currency?: string;
+}
+
+export interface CreatePayPalOrderResponse {
+  orderId: string;
+  approveUrl: string;
+  subscriptionId: string;
+}
+
+export interface ValidatePayPalPaymentDto {
+  orderId: string;
+}
+
+export interface ValidatePayPalPaymentResponse {
+  success: boolean;
+  subscription?: UserSubscription;
+  redirectUrl?: string;
+}
+
+export interface CreateMercadoPagoCheckoutDto {
+  planId: string;
+  billingCycleId: string;
+  currency?: string;
+}
+
+export interface CreateMercadoPagoCheckoutResponse {
+  preferenceId: string;
+  initPoint: string;
+  subscriptionId: string;
+}
+
+export interface ValidateMercadoPagoPaymentDto {
+  paymentId: string;
+}
+
+export interface ValidateMercadoPagoPaymentResponse {
+  success: boolean;
+  subscription?: UserSubscription;
+  redirectUrl?: string;
+}
+
 export interface UserSubscription {
   id: string;
   status: string;
@@ -186,6 +252,81 @@ export const getMembers = async (
   const url = `/subscriptions/members${queryString ? `?${queryString}` : ""}`;
   
   const response = await apiAxios.get<MembersResponse>(url);
+
+  return response.data;
+};
+
+// POST /subscriptions/webpay/create - Crear transacción WebPay
+export const createWebpayTransaction = async (
+  data: CreateWebpayTransactionDto,
+): Promise<CreateWebpayTransactionResponse> => {
+  const response = await apiAxios.post<CreateWebpayTransactionResponse>(
+    "/subscriptions/webpay/create",
+    data,
+  );
+
+  return response.data;
+};
+
+// POST /subscriptions/webpay/validate - Validar pago WebPay
+export const validateWebpayPayment = async (
+  token: string,
+  subscriptionId?: string,
+): Promise<ValidateWebpayPaymentResponse> => {
+  const response = await apiAxios.post<ValidateWebpayPaymentResponse>(
+    `/subscriptions/webpay/validate${subscriptionId ? `?subscriptionId=${subscriptionId}` : ""}`,
+    { token },
+  );
+
+  return response.data;
+};
+
+// POST /subscriptions/paypal/create - Crear orden PayPal
+export const createPayPalOrder = async (
+  data: CreatePayPalOrderDto,
+): Promise<CreatePayPalOrderResponse> => {
+  const response = await apiAxios.post<CreatePayPalOrderResponse>(
+    "/subscriptions/paypal/create",
+    data,
+  );
+
+  return response.data;
+};
+
+// POST /subscriptions/paypal/validate - Validar pago PayPal
+export const validatePayPalPayment = async (
+  orderId: string,
+  subscriptionId?: string,
+): Promise<ValidatePayPalPaymentResponse> => {
+  const response = await apiAxios.post<ValidatePayPalPaymentResponse>(
+    `/subscriptions/paypal/validate${subscriptionId ? `?subscriptionId=${subscriptionId}` : ""}`,
+    { orderId },
+  );
+
+  return response.data;
+};
+
+// POST /subscriptions/mercadopago/create - Crear checkout Mercado Pago
+export const createMercadoPagoCheckout = async (
+  data: CreateMercadoPagoCheckoutDto,
+): Promise<CreateMercadoPagoCheckoutResponse> => {
+  const response = await apiAxios.post<CreateMercadoPagoCheckoutResponse>(
+    "/subscriptions/mercadopago/create",
+    data,
+  );
+
+  return response.data;
+};
+
+// POST /subscriptions/mercadopago/validate - Validar pago Mercado Pago
+export const validateMercadoPagoPayment = async (
+  paymentId: string,
+  subscriptionId?: string,
+): Promise<ValidateMercadoPagoPaymentResponse> => {
+  const response = await apiAxios.post<ValidateMercadoPagoPaymentResponse>(
+    `/subscriptions/mercadopago/validate${subscriptionId ? `?subscriptionId=${subscriptionId}` : ""}`,
+    { paymentId },
+  );
 
   return response.data;
 };
