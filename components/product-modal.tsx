@@ -89,13 +89,6 @@ export function ProductModal({ isOpen, onClose, onSuccess, product, creatorSlug 
           productImages: product.metadata?.productImages || [],
         });
         
-        if (product.metadata?.productImages) {
-          setPreviews(prev => ({
-            ...prev,
-            productImages: product.metadata.productImages,
-          }));
-        }
-        
         // Usar el creator del producto si existe
         if (product.creator) {
           setSelectedCreator(product.creator);
