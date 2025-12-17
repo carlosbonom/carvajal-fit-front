@@ -30,9 +30,9 @@ export function AddResourceModal({
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      // Validar tamaño máximo (100MB)
-      if (file.size > 100 * 1024 * 1024) {
-        setError("El archivo no puede ser mayor a 100MB");
+      // Validar tamaño máximo (2GB)
+      if (file.size > 2 * 1024 * 1024 * 1024) {
+        setError("El archivo no puede ser mayor a 2GB");
         return;
       }
       
@@ -230,7 +230,7 @@ export function AddResourceModal({
                       <span className="font-semibold">Click para subir</span> o arrastra y suelta
                     </p>
                     <p className="text-xs text-gray-500">
-                      PDF, Documento, Imagen, etc. (máx. 100MB)
+                      PDF, Documento, Imagen, etc. (máx. 2GB)
                     </p>
                   </div>
                 )}

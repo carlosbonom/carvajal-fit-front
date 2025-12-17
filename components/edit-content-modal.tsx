@@ -66,9 +66,11 @@ export function EditContentModal({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const filePreviewUrlRef = useRef<string | null>(null);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
   const thumbnailInputRef = useRef<HTMLInputElement>(null);
+  const thumbnailPreviewUrlRef = useRef<string | null>(null);
   const [isAvailableImmediately, setIsAvailableImmediately] = useState(true);
   const [unlockValue, setUnlockValue] = useState(1);
   const [unlockType, setUnlockType] = useState<"immediate" | "day" | "week" | "month" | "year">("month");
@@ -139,10 +141,16 @@ export function EditContentModal({
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      // Validar tamaño máximo (100MB)
-      if (file.size > 100 * 1024 * 1024) {
-        setError("El archivo no puede ser mayor a 100MB");
+      // Validar tamaño máximo (2GB)
+      if (file.size > 2 * 1024 * 1024 * 1024) {
+        setError("El archivo no puede ser mayor a 2GB");
         return;
+      }
+      
+      // Limpiar preview anterior si existe
+      if (filePreviewUrlRef.current) {
+        URL.revokeObjectURL(filePreviewUrlRef.current);
+        filePreviewUrlRef.current = null;
       }
       
       // Detectar tipo de contenido automáticamente
@@ -155,14 +163,11 @@ export function EditContentModal({
       });
       setError(null);
       
-      // Crear preview
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFilePreview(reader.result as string);
-      };
-      
+      // Crear preview usando createObjectURL para archivos grandes (más eficiente)
       if (file.type.startsWith("image/") || file.type.startsWith("video/")) {
-        reader.readAsDataURL(file);
+        const objectUrl = URL.createObjectURL(file);
+        filePreviewUrlRef.current = objectUrl;
+        setFilePreview(objectUrl);
       } else {
         setFilePreview(null);
       }
@@ -177,14 +182,19 @@ export function EditContentModal({
         setError("El archivo de miniatura debe ser una imagen");
         return;
       }
+      
+      // Limpiar preview anterior si existe
+      if (thumbnailPreviewUrlRef.current) {
+        URL.revokeObjectURL(thumbnailPreviewUrlRef.current);
+        thumbnailPreviewUrlRef.current = null;
+      }
+      
       setThumbnailFile(file);
       
-      // Crear preview
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setThumbnailPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      // Crear preview usando createObjectURL
+      const objectUrl = URL.createObjectURL(file);
+      thumbnailPreviewUrlRef.current = objectUrl;
+      setThumbnailPreview(objectUrl);
     }
   };
 
@@ -281,6 +291,16 @@ export function EditContentModal({
   };
 
   const resetForm = () => {
+    // Limpiar URLs blob
+    if (filePreviewUrlRef.current) {
+      URL.revokeObjectURL(filePreviewUrlRef.current);
+      filePreviewUrlRef.current = null;
+    }
+    if (thumbnailPreviewUrlRef.current) {
+      URL.revokeObjectURL(thumbnailPreviewUrlRef.current);
+      thumbnailPreviewUrlRef.current = null;
+    }
+    
     setFormData({
       title: "",
       slug: "",
@@ -309,6 +329,18 @@ export function EditContentModal({
       thumbnailInputRef.current.value = "";
     }
   };
+
+  // Limpiar URLs blob cuando el componente se desmonte
+  useEffect(() => {
+    return () => {
+      if (filePreviewUrlRef.current) {
+        URL.revokeObjectURL(filePreviewUrlRef.current);
+      }
+      if (thumbnailPreviewUrlRef.current) {
+        URL.revokeObjectURL(thumbnailPreviewUrlRef.current);
+      }
+    };
+  }, []);
 
   const handleClose = () => {
     resetForm();
@@ -409,6 +441,11 @@ export function EditContentModal({
                         e.preventDefault();
                         e.stopPropagation();
                         if (loading) return;
+                        // Limpiar URL blob
+                        if (filePreviewUrlRef.current) {
+                          URL.revokeObjectURL(filePreviewUrlRef.current);
+                          filePreviewUrlRef.current = null;
+                        }
                         setSelectedFile(null);
                         // Limpiar el preview
                         setFilePreview(null);
@@ -437,7 +474,7 @@ export function EditContentModal({
                       <span className="font-semibold">Click para subir</span> o arrastra y suelta
                     </p>
                     <p className="text-xs text-gray-500">
-                      Video, Imagen, PDF, Documento, Audio (máx. 100MB)
+                      Video, Imagen, PDF, Documento, Audio (máx. 2GB)
                     </p>
                   </div>
                 )}
@@ -583,6 +620,11 @@ export function EditContentModal({
                         e.preventDefault();
                         e.stopPropagation();
                         if (loading) return;
+                        // Limpiar URL blob
+                        if (thumbnailPreviewUrlRef.current) {
+                          URL.revokeObjectURL(thumbnailPreviewUrlRef.current);
+                          thumbnailPreviewUrlRef.current = null;
+                        }
                         setThumbnailFile(null);
                         // Limpiar el preview
                         setThumbnailPreview(null);

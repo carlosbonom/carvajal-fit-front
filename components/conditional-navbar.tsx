@@ -25,7 +25,7 @@ export const ConditionalNavbar = () => {
 
   // Patrones de rutas dinámicas donde NO queremos mostrar el navbar
   const hideNavbarPatterns = [
-    /^\/admin\/courses\/[^/]+\/videos$/, // /admin/courses/[id]/videos
+    /^\/admin/, // Todas las rutas que empiecen con /admin
     /^\/club/, // Todas las rutas que empiecen con /club
   ];
 

@@ -309,3 +309,61 @@ select.PhoneInputCountrySelect::-webkit-scrollbar-thumb {
   background-color: #0a0e12 !important;
   color: white !important;
 }
+
+/* Estilos específicos para inputs en rutas admin - texto negro */
+section[class*="bg-gray-50"] input[type="text"],
+section[class*="bg-gray-50"] input[type="password"],
+section[class*="bg-gray-50"] input[type="number"],
+section[class*="bg-gray-50"] input[type="email"],
+section[class*="bg-gray-50"] input[type="search"],
+section[class*="bg-gray-50"] input:not([type]),
+main[class*="bg-gray-50"] input[type="text"],
+main[class*="bg-gray-50"] input[type="password"],
+main[class*="bg-gray-50"] input[type="number"],
+main[class*="bg-gray-50"] input[type="email"],
+main[class*="bg-gray-50"] input[type="search"],
+main[class*="bg-gray-50"] input:not([type]),
+main[class*="bg-gradient-to-br"] input[type="text"],
+main[class*="bg-gradient-to-br"] input[type="password"],
+main[class*="bg-gradient-to-br"] input[type="number"],
+main[class*="bg-gradient-to-br"] input[type="email"],
+main[class*="bg-gradient-to-br"] input[type="search"],
+main[class*="bg-gradient-to-br"] input:not([type]) {
+  color: #000000 !important;
+}
+
+section[class*="bg-gray-50"] input[type="text"]::placeholder,
+section[class*="bg-gray-50"] input[type="password"]::placeholder,
+section[class*="bg-gray-50"] input[type="number"]::placeholder,
+section[class*="bg-gray-50"] input[type="email"]::placeholder,
+section[class*="bg-gray-50"] input[type="search"]::placeholder,
+section[class*="bg-gray-50"] input:not([type])::placeholder,
+main[class*="bg-gray-50"] input[type="text"]::placeholder,
+main[class*="bg-gray-50"] input[type="password"]::placeholder,
+main[class*="bg-gray-50"] input[type="number"]::placeholder,
+main[class*="bg-gray-50"] input[type="email"]::placeholder,
+main[class*="bg-gray-50"] input[type="search"]::placeholder,
+main[class*="bg-gray-50"] input:not([type])::placeholder,
+main[class*="bg-gradient-to-br"] input[type="text"]::placeholder,
+main[class*="bg-gradient-to-br"] input[type="password"]::placeholder,
+main[class*="bg-gradient-to-br"] input[type="number"]::placeholder,
+main[class*="bg-gradient-to-br"] input[type="email"]::placeholder,
+main[class*="bg-gradient-to-br"] input[type="search"]::placeholder,
+main[class*="bg-gradient-to-br"] input:not([type])::placeholder {
+  color: #9ca3af !important;
+}
+
+/* Estilos específicos para selects en rutas admin - texto negro */
+section[class*="bg-gray-50"] select,
+main[class*="bg-gray-50"] select,
+main[class*="bg-gradient-to-br"] select {
+  color: #000000 !important;
+  background-color: #ffffff !important;
+}
+
+section[class*="bg-gray-50"] select option,
+main[class*="bg-gray-50"] select option,
+main[class*="bg-gradient-to-br"] select option {
+  color: #000000 !important;
+  background-color: #ffffff !important;
+}
