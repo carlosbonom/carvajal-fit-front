@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Edit, Save, X, DollarSign } from "lucide-react";
+import { Edit, Save, X, DollarSign, Loader2 } from "lucide-react";
 
 import { AdminSidebar } from "@/components/admin-sidebar";
-import { getPlans, Plan, Price } from "@/services/subscriptions";
+import { getPlans, updatePrice, Plan, Price } from "@/services/subscriptions";
 
 interface TableRow {
   planId: string;
@@ -22,6 +22,7 @@ export default function PricingPage() {
   const [error, setError] = useState<string | null>(null);
   const [editingPrice, setEditingPrice] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<{ amount: number; currency: string } | null>(null);
+  const [savingPriceId, setSavingPriceId] = useState<string | null>(null);
 
   useEffect(() => {
     const handleResize = () => {
@@ -77,9 +78,10 @@ export default function PricingPage() {
     if (!originalPrice) return;
     
     try {
-      // Aquí harías la llamada a la API para actualizar el precio
-      // await updatePrice(priceId, { amount: editForm.amount, currency: originalPrice.currency });
-      console.log("Actualizando precio:", priceId, { amount: editForm.amount, currency: originalPrice.currency });
+      setError(null);
+      setSavingPriceId(priceId);
+      // Llamar a la API para actualizar el precio
+      await updatePrice(priceId, editForm.amount);
       
       // Actualizar localmente - mantener la moneda original
       setPlans(plans.map(plan => ({
@@ -93,8 +95,15 @@ export default function PricingPage() {
       
       setEditingPrice(null);
       setEditForm(null);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error al actualizar precio:", error);
+      setError(
+        error.response?.data?.message ||
+        error.message ||
+        "Error al actualizar el precio. Por favor, intenta nuevamente."
+      );
+    } finally {
+      setSavingPriceId(null);
     }
   };
 
@@ -250,14 +259,20 @@ export default function PricingPage() {
                             <div className="flex items-center justify-end gap-2">
                               <button
                                 onClick={() => handleSavePrice(row.priceId)}
-                                className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors"
+                                disabled={savingPriceId === row.priceId}
+                                className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 title="Guardar"
                               >
-                                <Save className="w-4 h-4" />
+                                {savingPriceId === row.priceId ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <Save className="w-4 h-4" />
+                                )}
                               </button>
                               <button
                                 onClick={handleCancelEdit}
-                                className="p-1.5 text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+                                disabled={savingPriceId === row.priceId}
+                                className="p-1.5 text-gray-600 hover:bg-gray-100 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 title="Cancelar"
                               >
                                 <X className="w-4 h-4" />
@@ -287,6 +302,8 @@ export default function PricingPage() {
     </>
   );
 }
+
+
 
 
 

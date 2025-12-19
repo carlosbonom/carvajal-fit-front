@@ -10,6 +10,8 @@ interface AddContentModalProps {
   onClose: () => void;
   onSuccess: () => void;
   courseId: string;
+  onLoadingChange?: (loading: boolean) => void;
+  onUploadProgressChange?: (progress: number | null) => void;
 }
 
 // Función para detectar el tipo de contenido basado en el tipo de archivo
@@ -61,8 +63,11 @@ export function AddContentModal({
   onClose,
   onSuccess,
   courseId,
+  onLoadingChange,
+  onUploadProgressChange,
 }: AddContentModalProps) {
   const [loading, setLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
@@ -180,6 +185,9 @@ export function AddContentModal({
 
     try {
       setLoading(true);
+      onLoadingChange?.(true);
+      setUploadProgress(0);
+      onUploadProgressChange?.(0);
       
       // Subir miniatura primero si existe
       let thumbnailUrl: string | undefined = undefined;
@@ -222,6 +230,9 @@ export function AddContentModal({
       );
     } finally {
       setLoading(false);
+      onLoadingChange?.(false);
+      setUploadProgress(null);
+      onUploadProgressChange?.(null);
     }
   };
 

@@ -230,6 +230,11 @@ export const updateContentStatus = async (
   return response.data;
 };
 
+// DELETE /courses/content/{contentId} - Eliminar contenido
+export const deleteCourseContent = async (contentId: string): Promise<void> => {
+  await apiAxios.delete(`/courses/content/${contentId}`);
+};
+
 // PATCH /courses/content/{contentId} - Actualizar contenido
 export interface UpdateCourseContentDto {
   title?: string;
@@ -252,13 +257,29 @@ export const updateCourseContent = async (
   contentId: string,
   data: UpdateCourseContentDto,
 ): Promise<CourseContent> => {
+  // Normalizar campos string opcionales para evitar enviar URLs vacías
+  const {
+    file,
+    thumbnailUrl,
+    contentUrl,
+    ...rest
+  } = data;
+
+  const normalizedData: UpdateCourseContentDto = {
+    ...rest,
+    thumbnailUrl:
+      thumbnailUrl && thumbnailUrl.trim() !== "" ? thumbnailUrl : undefined,
+    contentUrl:
+      contentUrl && contentUrl.trim() !== "" ? contentUrl : undefined,
+  };
+
   // Si hay archivo, usar FormData
-  if (data.file) {
+  if (file) {
     const formData = new FormData();
-    formData.append("file", data.file);
+    formData.append("file", file);
     
     // Agregar otros campos al FormData
-    Object.entries(data).forEach(([key, value]) => {
+    Object.entries(normalizedData).forEach(([key, value]) => {
       if (key === "file") return; // Ya agregado
       if (value !== undefined && value !== null) {
         if (typeof value === "boolean") {
@@ -274,19 +295,13 @@ export const updateCourseContent = async (
     const response = await apiAxios.patch<CourseContent>(
       `/courses/content/${contentId}`,
       formData,
-      {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      },
     );
     return response.data;
   } else {
     // Enviar como JSON (sin archivo)
-    const { file, ...requestData } = data;
     const response = await apiAxios.patch<CourseContent>(
       `/courses/content/${contentId}`,
-      requestData,
+      normalizedData,
     );
     return response.data;
   }
@@ -454,6 +469,11 @@ export const updateCourseOrder = async (
   );
 
   return response.data;
+};
+
+// DELETE /courses/:id - Eliminar curso
+export const deleteCourse = async (courseId: string): Promise<void> => {
+  await apiAxios.delete(`/courses/${courseId}`);
 };
 
 // POST /courses/content/:contentId/resources - Agregar recurso a un contenido

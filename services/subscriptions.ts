@@ -161,6 +161,18 @@ export const getPlans = async (): Promise<PlansResponse> => {
   return response.data;
 };
 
+// PUT /subscriptions/prices/:id - Actualizar precio
+export const updatePrice = async (
+  priceId: string,
+  amount: number,
+): Promise<Price> => {
+  const response = await apiAxios.put<Price>(`/subscriptions/prices/${priceId}`, {
+    amount,
+  });
+
+  return response.data;
+};
+
 // POST /subscriptions/subscribe - Crear suscripción
 export const createSubscription = async (
   data: CreateSubscriptionDto,

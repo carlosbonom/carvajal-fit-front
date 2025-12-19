@@ -17,6 +17,7 @@ interface Member {
   planName: string;
   billingCycle: string;
   totalPaid: number;
+  currency: string;
   videosWatched: number;
   coursesCompleted: number;
 }
@@ -33,6 +34,8 @@ export default function MembersPage() {
     active: 0,
     cancelled: 0,
     monthlyRevenue: 0,
+    monthlyRevenueCLP: 0,
+    monthlyRevenueUSD: 0,
   });
 
   useEffect(() => {
@@ -69,19 +72,20 @@ export default function MembersPage() {
       const mappedMembers: Member[] = response.members.map((apiMember: ApiMember) => {
         // Si no tiene suscripción, usar valores por defecto
         if (!apiMember.subscription) {
-          return {
-            id: apiMember.id,
-            name: apiMember.name,
-            email: apiMember.email,
-            subscriptionStatus: "expired" as const,
-            subscriptionStartDate: "",
-            subscriptionEndDate: undefined,
-            planName: "Sin suscripción",
-            billingCycle: "monthly",
-            totalPaid: apiMember.totalPaid,
-            videosWatched: Math.round((apiMember.progress / 100) * 10),
-            coursesCompleted: apiMember.progress >= 100 ? 1 : 0,
-          };
+        return {
+          id: apiMember.id,
+          name: apiMember.name,
+          email: apiMember.email,
+          subscriptionStatus: "expired" as const,
+          subscriptionStartDate: "",
+          subscriptionEndDate: undefined,
+          planName: "Sin suscripción",
+          billingCycle: "monthly",
+          totalPaid: apiMember.totalPaid,
+          currency: apiMember.currency || "CLP",
+          videosWatched: Math.round((apiMember.progress / 100) * 10),
+          coursesCompleted: apiMember.progress >= 100 ? 1 : 0,
+        };
         }
 
         // Calcular el ciclo de facturación basado en las fechas
@@ -116,17 +120,68 @@ export default function MembersPage() {
           planName: apiMember.subscription.planName,
           billingCycle: billingCycle,
           totalPaid: apiMember.totalPaid,
+          currency: apiMember.currency || "CLP",
           videosWatched: videosWatched,
           coursesCompleted: coursesCompleted,
         };
       });
 
       setMembers(mappedMembers);
+      
+      // Calcular ingresos mensuales separados por moneda
+      // Filtrar miembros activos con suscripción y calcular ingresos por moneda
+      const activeMembers = mappedMembers.filter(m => 
+        m.subscriptionStatus === "active" && m.subscriptionStartDate
+      );
+      
+      // Calcular ingresos mensuales estimados por moneda
+      // Esto es una aproximación basada en el total pagado y el ciclo de facturación
+      let monthlyRevenueCLP = 0;
+      let monthlyRevenueUSD = 0;
+      
+      activeMembers.forEach(member => {
+        if (member.subscriptionStartDate && member.subscriptionEndDate) {
+          const startDate = new Date(member.subscriptionStartDate);
+          const endDate = new Date(member.subscriptionEndDate);
+          const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          
+          // Calcular el monto mensual estimado basado en el ciclo de facturación
+          let monthlyAmount = 0;
+          if (diffDays > 0) {
+            if (member.billingCycle === "yearly") {
+              // Si es anual, dividir el total pagado entre 12 meses
+              monthlyAmount = member.totalPaid / 12;
+            } else if (member.billingCycle === "monthly") {
+              // Si es mensual, usar el total pagado directamente
+              monthlyAmount = member.totalPaid;
+            } else if (member.billingCycle === "weekly") {
+              // Si es semanal, multiplicar por 4.33 (promedio de semanas por mes)
+              monthlyAmount = member.totalPaid * 4.33;
+            } else if (member.billingCycle === "daily") {
+              // Si es diario, multiplicar por 30 (días promedio por mes)
+              monthlyAmount = member.totalPaid * 30;
+            } else {
+              // Por defecto, asumir mensual
+              monthlyAmount = member.totalPaid;
+            }
+          }
+          
+          if (member.currency === "CLP" || member.currency === "clp") {
+            monthlyRevenueCLP += monthlyAmount;
+          } else if (member.currency === "USD" || member.currency === "usd") {
+            monthlyRevenueUSD += monthlyAmount;
+          }
+        }
+      });
+      
       setStats({
         total: response.stats.total,
         active: response.stats.active,
         cancelled: response.stats.cancelled,
         monthlyRevenue: response.stats.monthlyRevenue,
+        monthlyRevenueCLP,
+        monthlyRevenueUSD,
       });
     } catch (error) {
       console.error("Error al cargar miembros:", error);
@@ -157,7 +212,7 @@ export default function MembersPage() {
                           member.billingCycle === "monthly" ? "Mensual" :
                           member.billingCycle === "weekly" ? "Semanal" :
                           member.billingCycle === "daily" ? "Diario" : member.billingCycle,
-      "Total Pagado": member.totalPaid,
+      "Total Pagado": `${member.currency === "USD" || member.currency === "usd" ? "US$" : "$"}${member.totalPaid.toLocaleString("es-CL")} ${member.currency || "CLP"}`,
       "Videos Vistos": member.videosWatched,
       "Cursos Completados": member.coursesCompleted,
     }));
@@ -244,7 +299,7 @@ export default function MembersPage() {
           </div>
 
           {/* Estadísticas rápidas */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div className="bg-white rounded-lg shadow p-4">
               <p className="text-sm text-gray-600">Total Miembros</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">{stats.total}</p>
@@ -257,10 +312,20 @@ export default function MembersPage() {
               <p className="text-sm text-gray-600">Cancelados</p>
               <p className="text-2xl font-bold text-red-600 mt-1">{stats.cancelled}</p>
             </div>
+          </div>
+          
+          {/* Ingresos Mensuales por Moneda */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div className="bg-white rounded-lg shadow p-4">
-              <p className="text-sm text-gray-600">Ingresos Mensuales</p>
+              <p className="text-sm text-gray-600">Ingresos Mensuales (CLP)</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">
-                ${stats.monthlyRevenue.toLocaleString("es-CL")}
+                ${stats.monthlyRevenueCLP.toLocaleString("es-CL", { maximumFractionDigits: 0 })}
+              </p>
+            </div>
+            <div className="bg-white rounded-lg shadow p-4">
+              <p className="text-sm text-gray-600">Ingresos Mensuales (USD)</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">
+                US${stats.monthlyRevenueUSD.toLocaleString("es-CL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
             </div>
           </div>
@@ -368,7 +433,10 @@ export default function MembersPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm font-medium text-gray-900">
-                            ${member.totalPaid.toLocaleString("es-CL")}
+                            {member.currency === "USD" || member.currency === "usd" 
+                              ? `US$${member.totalPaid.toLocaleString("es-CL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                              : `$${member.totalPaid.toLocaleString("es-CL", { maximumFractionDigits: 0 })} ${member.currency || "CLP"}`
+                            }
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">

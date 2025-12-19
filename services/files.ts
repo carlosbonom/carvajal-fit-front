@@ -12,6 +12,7 @@ export interface UploadFileResponse {
 export interface UploadFileOptions {
   folder?: string;
   isPublic?: boolean;
+  onProgress?: (progress: number) => void;
 }
 
 // POST /file/upload - Subir archivo
@@ -37,6 +38,13 @@ export const uploadFile = async (
     {
       headers: {
         "Content-Type": "multipart/form-data",
+      },
+      // Permite reportar progreso de subida (por ejemplo, para archivos grandes)
+      onUploadProgress: (event) => {
+        if (options?.onProgress && event.total) {
+          const progress = Math.round((event.loaded * 100) / event.total);
+          options.onProgress(progress);
+        }
       },
     }
   );

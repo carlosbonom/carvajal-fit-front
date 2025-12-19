@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Plus, Edit, Trash2, Video, FileText, Image, Music, Link as LinkIcon, Lock, Unlock, Eye, Loader2, GripVertical } from "lucide-react";
+import { ArrowLeft, Plus, Edit, Trash2, Video, FileText, Image, Music, Link as LinkIcon, Lock, Unlock, Eye, Loader2, GripVertical, X } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -25,7 +25,7 @@ import { AdminSidebar } from "@/components/admin-sidebar";
 import { AddContentModal } from "@/components/add-content-modal";
 import { EditContentModal } from "@/components/edit-content-modal";
 import { AddResourceModal } from "@/components/add-resource-modal";
-import { getCourseById, getCourseContent, updateContentStatus, updateContentOrder, deleteContentResource, type Course, type CourseContent } from "@/services/courses";
+import { getCourseById, getCourseContent, updateContentStatus, updateContentOrder, deleteContentResource, deleteCourseContent, type Course, type CourseContent } from "@/services/courses";
 
 export default function CourseVideosPage() {
   const params = useParams();
@@ -45,6 +45,11 @@ export default function CourseVideosPage() {
   const [selectedContentForResource, setSelectedContentForResource] = useState<CourseContent | null>(null);
   const [deletingResourceId, setDeletingResourceId] = useState<string | null>(null);
   const [expandedContentId, setExpandedContentId] = useState<string | null>(null);
+  const [isAddingContent, setIsAddingContent] = useState(false);
+  const [addContentProgress, setAddContentProgress] = useState<number | null>(null);
+  const [deletingContentId, setDeletingContentId] = useState<string | null>(null);
+  const [contentToDelete, setContentToDelete] = useState<CourseContent | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   useEffect(() => {
     setIsMobile(window.innerWidth < 768);
@@ -107,6 +112,29 @@ export default function CourseVideosPage() {
       alert("Error al eliminar el recurso. Por favor, intenta nuevamente.");
     } finally {
       setDeletingResourceId(null);
+    }
+  };
+
+  const handleDeleteContent = (item: CourseContent) => {
+    setContentToDelete(item);
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDeleteContent = async () => {
+    if (!contentToDelete) return;
+
+    const contentId = contentToDelete.id;
+    setDeletingContentId(contentId);
+    try {
+      await deleteCourseContent(contentId);
+      await loadCourseData();
+      setIsDeleteModalOpen(false);
+      setContentToDelete(null);
+    } catch (error) {
+      console.error("Error al eliminar contenido:", error);
+      alert("Error al eliminar el contenido. Por favor, intenta nuevamente.");
+    } finally {
+      setDeletingContentId(null);
     }
   };
 
@@ -395,10 +423,16 @@ export default function CourseVideosPage() {
                 <Edit className="w-4 h-4" />
               </button>
               <button
-                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                onClick={() => handleDeleteContent(item)}
+                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 title="Eliminar contenido"
+                disabled={deletingContentId === item.id}
               >
-                <Trash2 className="w-4 h-4" />
+                {deletingContentId === item.id ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Trash2 className="w-4 h-4" />
+                )}
               </button>
             </div>
           </td>
@@ -494,10 +528,22 @@ export default function CourseVideosPage() {
                   </div>
                   <button
                     onClick={() => setIsAddModalOpen(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+                    disabled={isAddingContent}
+                    className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    <Plus className="w-5 h-5" />
-                    Agregar Contenido
+                    {isAddingContent ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        {addContentProgress !== null
+                          ? `Subiendo ${addContentProgress}%`
+                          : "Agregando contenido..."}
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="w-5 h-5" />
+                        Agregar Contenido
+                      </>
+                    )}
                   </button>
                 </div>
 
@@ -540,9 +586,14 @@ export default function CourseVideosPage() {
                     </p>
                     <button
                       onClick={() => setIsAddModalOpen(true)}
-                      className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+                      disabled={isAddingContent}
+                      className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                     >
-                      Agregar Primer Contenido
+                      {isAddingContent
+                        ? addContentProgress !== null
+                          ? `Subiendo ${addContentProgress}%`
+                          : "Agregando contenido..."
+                        : "Agregar Primer Contenido"}
                     </button>
                   </div>
                 ) : (
@@ -608,6 +659,8 @@ export default function CourseVideosPage() {
               loadCourseData();
             }}
             courseId={courseId}
+            onLoadingChange={setIsAddingContent}
+            onUploadProgressChange={setAddContentProgress}
           />
           <EditContentModal
             isOpen={isEditModalOpen}
@@ -631,6 +684,75 @@ export default function CourseVideosPage() {
             }}
             contentId={selectedContentForResource?.id || ""}
           />
+          {isDeleteModalOpen && contentToDelete && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+              <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+                <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                  <h2 className="text-lg font-semibold text-gray-900">
+                    Eliminar contenido
+                  </h2>
+                  <button
+                    onClick={() => {
+                      if (deletingContentId) return;
+                      setIsDeleteModalOpen(false);
+                      setContentToDelete(null);
+                    }}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={!!deletingContentId}
+                  >
+                    <X className="w-4 h-4 text-gray-500" />
+                  </button>
+                </div>
+                <div className="px-6 py-5 space-y-3">
+                  <p className="text-sm text-gray-700">
+                    ¿Seguro que quieres eliminar este contenido del curso?
+                  </p>
+                  <div className="p-3 bg-gray-50 rounded-md border border-gray-100">
+                    <p className="text-sm font-medium text-gray-900">
+                      {contentToDelete.title}
+                    </p>
+                    {contentToDelete.description && (
+                      <p className="mt-1 text-xs text-gray-500 line-clamp-2">
+                        {contentToDelete.description}
+                      </p>
+                    )}
+                  </div>
+                  <p className="text-xs text-red-600">
+                    Esta acción no se puede deshacer.
+                  </p>
+                </div>
+                <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (deletingContentId) return;
+                      setIsDeleteModalOpen(false);
+                      setContentToDelete(null);
+                    }}
+                    className="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={!!deletingContentId}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={confirmDeleteContent}
+                    className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    disabled={!!deletingContentId}
+                  >
+                    {deletingContentId ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Eliminando...
+                      </>
+                    ) : (
+                      "Eliminar"
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
     </>
