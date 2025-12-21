@@ -87,36 +87,52 @@ export function MembershipCardv2() {
 
   const features = [
     {
-      icon: Calendar,
-      title: "Planificación Mensual",
-      description:
-        "Videos de entrenamiento, guía de alimentación y mentalidad.",
-    },
-    {
       icon: GraduationCap,
-      title: "Aprende Mientras Entrenas",
+      title: "Metodología por Fases: Definición, Mantenimiento y Volumen",
       description:
-        "Ciclo de 6 meses: Definición → Mantenimiento → Aumento de masa muscular",
+        "Una ruta clara diseñada por ambos hermanos para que sepas exactamente qué hacer en cada etapa de tu evolución física.",
     },
     {
-      icon: Gift,
-      title: "Contenido Gratis",
-      description: "Todos los PDF de entrenamiento incluidos",
+      icon: Calendar,
+      title: "Mentorías de Mentalidad y Abundancia (Martes)",
+      description:
+        "Sesiones en vivo de alto nivel para hackear tu disciplina, dominar la gratificación instantánea y alinear tu mente con el éxito.",
     },
     {
       icon: Video,
-      title: "Zoom Semanal en Vivo",
-      description: "Viernes 1 hora para resolver dudas y nuevos conocimientos",
+      title: "Sesiones de Preguntas y Respuestas (Viernes)",
+      description:
+        "1 hora semanal de acceso directo con nosotros para resolver dudas de entrenamiento y dieta en tiempo real via zoom",
     },
     {
-      icon: Brain,
-      title: "Transformación Mental",
-      description: "Mentalidad inquebrantable en 6 meses",
+      icon: Gift,
+      title: "Grupo Privado de WhatsApp",
+      description:
+        "Acceso a nuestra comunidad de alto rendimiento con mensajes de motivación diaria y retroalimentación constante.",
+    },
+    {
+      icon: GraduationCap,
+      title: "Guía de Alimentación y Nutrición",
+      description:
+        "Aprende a nutrir tu cuerpo de manera efectiva con nuestra guía de alimentación diseñada para acompañar tus fases de entrenamiento.",
     },
     {
       icon: TrendingUp,
-      title: "Resultados Sostenibles",
-      description: "Sin efecto rebote, mantén tus logros",
+      title: "Protocolo de Cardio Optimizado",
+      description:
+        "Explicación completa sobre qué tipo de cardio hacer, en qué momento del día y cómo combinarlo para maximizar tus resultados.",
+    },
+    {
+      icon: Brain,
+      title: "Programa de Transformación Mental",
+      description:
+        "Acceso a la sección exclusiva de videos sobre mentalidad inquebrantable para asegurar un cambio interno permanente.",
+    },
+    {
+      icon: TrendingUp,
+      title: "Sistema de Mantenimiento y Cero Rebote",
+      description:
+        "No buscamos un cambio temporal. Te damos las herramientas para que mantengas tus logros y tu nueva identidad de por vida.",
     },
   ];
 
@@ -215,9 +231,8 @@ export function MembershipCardv2() {
             {/* Switch Mensual / Anual */}
             <div className="flex items-center justify-center gap-3 pb-4 border-b border-[#00b2de20]">
               <span
-                className={`text-sm ${
-                  !isAnnual ? "text-white font-medium" : "text-gray-500"
-                }`}
+                className={`text-sm ${!isAnnual ? "text-white font-medium" : "text-gray-500"
+                  }`}
               >
                 Mensual
               </span>
@@ -236,9 +251,8 @@ export function MembershipCardv2() {
                 />
               </button>
               <span
-                className={`text-sm ${
-                  isAnnual ? "text-white font-medium" : "text-gray-500"
-                }`}
+                className={`text-sm ${isAnnual ? "text-white font-medium" : "text-gray-500"
+                  }`}
               >
                 Anual
               </span>
@@ -302,7 +316,7 @@ export function MembershipCardv2() {
       <section className="w-full max-w-3xl text-center">
         <div className="mb-8 space-y-3">
           <h2 className="text-2xl md:text-3xl font-bold text-white">
-            ¿QUÉ ENCONTRARÁS EN EL CLUB?
+            DOMINA TU CUERPO Y TU MENTE: EL ECOSISTEMA CARVAJALFIT
           </h2>
           <p className="text-gray-400 text-sm md:text-base max-w-xl mx-auto">
             Todo lo que necesitas para lograr tu objetivo rápidamente.

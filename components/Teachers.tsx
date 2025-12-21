@@ -74,17 +74,31 @@ export function Teachers() {
                   </p>
 
                   <p>
+                    <span className="font-semibold text-white">
+                      Divulgadores de Mentalidad y Disciplina:
+                    </span>{" "}
+                    A través de sus charlas y podcasts, comparten herramientas
+                    sobre espiritualidad, abundancia y el dominio de la
+                    gratificación instantánea.
+                  </p>
+
+                  <p>
+                    Su enfoque busca equilibrar el rendimiento físico con los
+                    pilares mentales y espirituales que discuten en sus
+                    plataformas de contenido, promoviendo una{" "}
+                    <span className="font-semibold text-white">
+                      disciplina inquebrantable
+                    </span>
+                    .
+                  </p>
+
+                  <p>
                     No solo enseñan:{" "}
                     <span className="font-semibold text-white">
                       viven lo que predican
                     </span>
-                    . En sus redes los verás aplicando los mismos sistemas que
-                    comparten.
-                  </p>
-
-                  <p className="text-lg font-semibold text-[#00b2de] pt-3">
-                    ¡Súmate! El momento para alcanzar tu mejor versión es ahora
-                    💪
+                    . En sus redes los verás aplicando diariamente los mismos
+                    sistemas y valores que comparten en sus charlas y episodios.
                   </p>
                 </div>
               </div>

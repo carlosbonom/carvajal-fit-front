@@ -5,42 +5,42 @@ const faqs = [
   {
     question: "¿Qué incluye la membresía mensual?",
     answer:
-      "La membresía incluye acceso completo a todos los programas de entrenamiento estructurados por fases, zoom grupal semanal en vivo, grupo privado de WhatsApp con motivación diaria, tabla Excel de progreso, todos los PDFs de entrenamiento, y guías de alimentación y mentalidad.",
+      "Acceso completo al Club Carvajal Fit, que incluye entrenamientos estructurados mes a mes, biblioteca de videos (gimnasio y casa), cardio guiado, educación práctica en nutrición y mentalidad, Zoom grupales semanales y comunidad privada de apoyo.",
   },
   {
     question: "¿Puedo cancelar mi suscripción en cualquier momento?",
     answer:
-      "Sí, puedes cancelar tu suscripción en cualquier momento. No hay contratos a largo plazo ni penalizaciones por cancelación.",
+      "Sí. Puedes cancelar tu membresía cuando quieras, sin contratos ni permanencias obligatorias. Mantienes el acceso hasta el término del período ya pagado.",
   },
   {
     question: "¿Necesito experiencia previa en el gimnasio?",
     answer:
-      "No, nuestros programas están diseñados para todos los niveles, desde principiantes hasta avanzados. Comenzarás con una evaluación inicial y seguirás un plan personalizado según tu nivel.",
+      "No. El club está diseñado para principiantes, intermedios y avanzados. Cada entrenamiento tiene indicaciones claras y opciones de progresión según tu nivel.",
   },
   {
     question: "¿Puedo entrenar desde casa?",
     answer:
-      "Sí, ofrecemos planes tanto para gimnasio como para entrenar desde casa. Tendrás acceso a ambas opciones con tu membresía.",
+      "Sí. El entrenamiento está adecuado tanto para gimnasio como para casa, con alternativas según el equipamiento disponible o si prefieres entrenar sin máquinas.",
   },
   {
     question: "¿Cuánto tiempo debo dedicar al entrenamiento?",
     answer:
-      "Recomendamos entre 45-60 minutos por sesión, de 4 a 6 días por semana, dependiendo de tu fase de entrenamiento y objetivos personales.",
+      "Entre 45 y 90 minutos por sesión, dependiendo del bloque del mes. El programa está pensado para ser realista y sostenible, incluso con agendas ocupadas.",
   },
   {
     question: "¿Incluye plan de alimentación?",
     answer:
-      "Sí, incluimos guías de alimentación generales y recomendaciones nutricionales. Sin embargo, esto no reemplaza la consulta con un nutricionista profesional para planes personalizados.",
+      "Incluye educación nutricional práctica (calorías, macronutrientes, hábitos y criterio). No es una dieta rígida personalizada, sino un sistema para que aprendas a comer bien de forma sostenible y autónoma.",
   },
   {
     question: "¿Cómo funcionan los Zoom grupales?",
     answer:
-      "Todos los viernes realizamos un Zoom grupal de 1 hora donde resolvemos dudas, compartimos conocimientos nuevos y mantenemos la motivación del grupo. Es un espacio sagrado que no se falla nunca.",
+      "Se realizan todas las semanas, con temas como entrenamiento, nutrición, mentalidad y resolución de dudas. Puedes participar activamente o solo escuchar. Las sesiones quedan grabadas para quienes no puedan asistir en vivo.",
   },
   {
     question: "¿Cuándo veré resultados?",
     answer:
-      "Los primeros cambios visibles suelen aparecer entre las 4-6 semanas con constancia. Sin embargo, cada cuerpo es diferente y los resultados dependen de tu dedicación, alimentación y descanso.",
+      "La mayoría nota cambios en las primeras 3–4 semanas si sigue el programa con constancia. Los resultados dependen del compromiso, pero el sistema está diseñado para generar progreso real y mantenible.",
   },
 ];
 
@@ -114,7 +114,7 @@ export function Faq() {
               indicator={
                 <ChevronLeft className="w-4 h-4 text-primary-500 transition-transform duration-300 group-data-[open=true]:rotate-180" />
               }
-              //   className="text-lg md:text-xl lg:text-2xl text-white font-semibold"
+            //   className="text-lg md:text-xl lg:text-2xl text-white font-semibold"
             >
               <p className="text-xs md:text-sm lg:text-base text-gray-400">
                 {faq.answer}
