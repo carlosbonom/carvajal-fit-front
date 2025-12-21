@@ -75,7 +75,7 @@ export function ProductModal({ isOpen, onClose, onSuccess, product, creatorSlug 
         const usdPrice = product.prices.find(p => p.currency === "USD");
 
         // Determinar si es producto físico basado en el tipo
-        const isPhysical = product.productType === "merchandise" || product.productType === "producto";
+        const isPhysical = product.productType === "merchandise";
 
         setFormData({
           name: product.name,
@@ -96,6 +96,7 @@ export function ProductModal({ isOpen, onClose, onSuccess, product, creatorSlug 
           thumbnail: product.thumbnailUrl || "",
           banner: product.bannerUrl || "",
           productImages: product.metadata?.productImages || [],
+          productFile: null,
         });
 
         // Usar el creator del producto si existe
