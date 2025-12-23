@@ -11,6 +11,7 @@ import { setUser } from "@/lib/store/slices/userSlice";
 import { getAccessToken } from "@/lib/auth-utils";
 import { store } from "@/lib/store/store";
 import { InstallPWABanner } from "@/components/install-pwa-banner";
+import { getClubConfig, type ClubConfig } from "@/services/club-config";
 
 export default function ClubPage() {
   const dispatch = useAppDispatch();
@@ -20,6 +21,7 @@ export default function ClubPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userLoading, setUserLoading] = useState(true);
+  const [clubConfig, setClubConfig] = useState<ClubConfig | null>(null);
 
   // Obtener nombre del usuario
   const userName = user?.name || user?.email?.split("@")[0] || "Usuario";
@@ -121,8 +123,60 @@ export default function ClubPage() {
     return "";
   };
 
-  // Link de WhatsApp (esto podría venir de configuración)
-  const whatsappLink = "https://chat.whatsapp.com/your-link";
+  // Link de WhatsApp desde configuración
+  const whatsappLink = clubConfig?.whatsappLink || "https://chat.whatsapp.com/your-link";
+
+  // Función para verificar si es el momento de la reunión
+  const isMeetingTime = (): boolean => {
+    if (!clubConfig?.nextMeetingDateTime) {
+      return false;
+    }
+
+    try {
+      // Crear fecha y hora de la reunión desde el datetime
+      // El formato viene como YYYY-MM-DDTHH:mm
+      const meetingDate = new Date(clubConfig.nextMeetingDateTime);
+      
+      // Obtener fecha actual
+      const now = new Date();
+      
+      // Calcular diferencia en milisegundos
+      const diffMs = now.getTime() - meetingDate.getTime();
+      const diffHours = diffMs / (1000 * 60 * 60);
+
+      // La reunión está activa si han pasado entre 0 y 3 horas desde el inicio
+      return diffHours >= 0 && diffHours <= 3;
+    } catch (error) {
+      console.error("Error al verificar tiempo de reunión:", error);
+      return false;
+    }
+  };
+
+  // Función para formatear fecha y hora de próxima reunión
+  const formatNextMeetingDateTime = (): string | null => {
+    if (!clubConfig?.nextMeetingDateTime) {
+      return null;
+    }
+
+    try {
+      const date = new Date(clubConfig.nextMeetingDateTime);
+      const options: Intl.DateTimeFormatOptions = {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      };
+      return date.toLocaleDateString('es-CL', options);
+    } catch (error) {
+      console.error("Error al formatear fecha:", error);
+      return null;
+    }
+  };
+
+  // Link de la reunión
+  const meetingLink = clubConfig?.meetingLink || null;
 
   // Cargar usuario desde token si no está en Redux
   useEffect(() => {
@@ -158,6 +212,20 @@ export default function ClubPage() {
 
     loadUserFromToken();
   }, [dispatch]);
+
+  // Cargar configuración del club
+  useEffect(() => {
+    const loadClubConfig = async () => {
+      try {
+        const config = await getClubConfig();
+        setClubConfig(config);
+      } catch (error) {
+        console.error("Error al cargar configuración del club:", error);
+      }
+    };
+
+    loadClubConfig();
+  }, []);
 
   // Cargar cursos si tiene suscripción activa o es admin
   useEffect(() => {
@@ -265,22 +333,60 @@ export default function ClubPage() {
           </div>
 
           {/* Comunidad WhatsApp */}
-          <div className="flex items-center gap-4">
-            <div className="flex-shrink-0">
-              <MessageCircle className="w-6 h-6 text-[#00b2de]" />
+          {whatsappLink && (
+            <div className="flex items-center gap-4">
+              <div className="flex-shrink-0">
+                <MessageCircle className="w-6 h-6 text-[#00b2de]" />
+              </div>
+              <div className="flex-1">
+                <p className="text-white/60 text-sm">Comunidad WhatsApp</p>
+              </div>
+              <a
+                className="text-[#00b2de] font-medium hover:text-[#00a0c8] transition-colors flex items-center gap-1"
+                href={whatsappLink}
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                Unirse <ArrowRight className="w-4 h-4" />
+              </a>
             </div>
-            <div className="flex-1">
-              <p className="text-white/60 text-sm">Comunidad WhatsApp</p>
+          )}
+
+          {/* Próxima Reunión */}
+          {clubConfig?.nextMeetingDateTime && (
+            <div className="flex items-center gap-4">
+              <div className="flex-shrink-0">
+                <Calendar className="w-6 h-6 text-[#00b2de]" />
+              </div>
+              <div className="flex-1">
+                {isMeetingTime() ? (
+                  <>
+                    <p className="text-white/60 text-sm">Reunión en curso</p>
+                    <p className="text-white/40 text-xs">
+                      Disponible hasta 3 horas después del inicio
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-white/60 text-sm">Próxima Reunión</p>
+                    <p className="text-white/40 text-xs">
+                      {formatNextMeetingDateTime()}
+                    </p>
+                  </>
+                )}
+              </div>
+              {isMeetingTime() && meetingLink && (
+                <a
+                  className="text-[#00b2de] font-medium hover:text-[#00a0c8] transition-colors flex items-center gap-1"
+                  href={meetingLink}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  Unirse <ArrowRight className="w-4 h-4" />
+                </a>
+              )}
             </div>
-            <a
-              className="text-[#00b2de] font-medium hover:text-[#00a0c8] transition-colors flex items-center gap-1"
-              href={whatsappLink}
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              Unirse <ArrowRight className="w-4 h-4" />
-            </a>
-          </div>
+          )}
         </div>
 
         {/* Loading State */}

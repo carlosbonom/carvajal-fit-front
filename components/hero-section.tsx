@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Dumbbell, Play, Pause } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -20,6 +20,7 @@ export function HeroSection() {
   const [isDragging, setIsDragging] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
+  const isDraggingRef = useRef(false);
 
   const hasInteracted = useRef(false);
 
@@ -51,11 +52,14 @@ export function HeroSection() {
     }
   };
 
-  const handleTimeUpdate = () => {
-    if (videoRef.current && !isDragging) {
-      setCurrentTime(videoRef.current.currentTime);
+  const handleTimeUpdate = useCallback(() => {
+    if (videoRef.current && !isDraggingRef.current) {
+      const current = videoRef.current.currentTime;
+      if (isFinite(current) && !isNaN(current)) {
+        setCurrentTime(current);
+      }
     }
-  };
+  }, []);
 
   const handleLoadedMetadata = () => {
     if (videoRef.current) {
@@ -63,51 +67,69 @@ export function HeroSection() {
     }
   };
 
-  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSeek = (e: React.ChangeEvent<HTMLInputElement> | React.FormEvent<HTMLInputElement>) => {
     if (videoRef.current) {
-      const newTime = parseFloat(e.target.value);
-
-      videoRef.current.currentTime = newTime;
-
-      setCurrentTime(newTime);
+      const newTime = parseFloat((e.target as HTMLInputElement).value);
+      if (isFinite(newTime) && !isNaN(newTime)) {
+        videoRef.current.currentTime = newTime;
+        setCurrentTime(newTime);
+      }
     }
   };
 
   const handleSeekStart = () => {
     setIsDragging(true);
+    isDraggingRef.current = true;
   };
 
   const handleSeekEnd = () => {
     setIsDragging(false);
+    isDraggingRef.current = false;
+    // Asegurar que el tiempo se actualice después de soltar
+    if (videoRef.current) {
+      const current = videoRef.current.currentTime;
+      if (isFinite(current) && !isNaN(current)) {
+        setCurrentTime(current);
+      }
+    }
+  };
+
+  const formatTime = (time: number): string => {
+    if (!isFinite(time) || isNaN(time)) return "0:00";
+    const minutes = Math.floor(time / 60);
+    const seconds = Math.floor(time % 60);
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
   };
 
   useEffect(() => {
     const video = videoRef.current;
 
     if (video) {
-      video.addEventListener("timeupdate", handleTimeUpdate);
+      // Agregar listener directo para timeupdate
+      const timeUpdateHandler = () => {
+        if (!isDraggingRef.current && video) {
+          const current = video.currentTime;
+          if (isFinite(current) && !isNaN(current)) {
+            setCurrentTime(current);
+          }
+        }
+      };
 
-      video.addEventListener("loadedmetadata", handleLoadedMetadata);
+      video.addEventListener("timeupdate", timeUpdateHandler);
 
       // Intentar reproducir automáticamente cuando el video esté listo
-
       const tryAutoPlay = async () => {
         try {
           await video.play();
-
           setIsPlaying(true);
-
           hasInteracted.current = true;
         } catch (error) {
           // Si falla el autoplay, intentar cuando el usuario interactúe
-
           const handleUserInteraction = async () => {
             if (!hasInteracted.current && videoRef.current) {
               try {
                 await videoRef.current.play();
-
                 setIsPlaying(true);
-
                 hasInteracted.current = true;
               } catch (err) {
                 console.log("Error al reproducir video:", err);
@@ -131,18 +153,14 @@ export function HeroSection() {
 
       if (video.readyState >= 2) {
         // El video ya tiene metadata cargada
-
         tryAutoPlay();
       } else {
         // Esperar a que el video esté listo
-
         video.addEventListener("loadeddata", tryAutoPlay, { once: true });
       }
 
       return () => {
-        video.removeEventListener("timeupdate", handleTimeUpdate);
-
-        video.removeEventListener("loadedmetadata", handleLoadedMetadata);
+        video.removeEventListener("timeupdate", timeUpdateHandler);
       };
     }
   }, []);
@@ -191,7 +209,7 @@ export function HeroSection() {
           {/* Right Content - Video */}
 
           <div
-            className="relative aspect-video rounded-2xl overflow-hidden bg-gray-800 border border-gray-700 shadow-2xl group"
+            className="relative aspect-video rounded-2xl overflow-hidden bg-gray-800 border border-gray-700/50 shadow-2xl group transition-all duration-300 hover:border-[#00b2de]/30"
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
           >
@@ -200,68 +218,86 @@ export function HeroSection() {
               autoPlay
               loop
               playsInline
-              className="w-full h-full object-cover"
+              muted
+              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
               onLoadedMetadata={handleLoadedMetadata}
               onPause={() => setIsPlaying(false)}
               onPlay={() => setIsPlaying(true)}
               onTimeUpdate={handleTimeUpdate}
             >
               <source
-                src="https://melli.fydeli.com/carvajal-fit/club%20vienvenida.webm"
-                type="video/webm"
-              />
-              <source
-                src="https://melli.fydeli.com/carvajal-fit/club-bienvenida.mp4"
+                src="https://melli.fydeli.com/carvajal-fit/Bienvenida-carvajalfit.mp4"
                 type="video/mp4"
               />
               <track kind="captions" label="Español" srcLang="es" />
               Tu navegador no soporta la reproducción de video.
             </video>
 
-            {/* Video Controls - Only visible on hover */}
-
+            {/* Gradient Overlay - No debe bloquear eventos */}
             <div
-              className={`absolute inset-0 flex flex-col justify-between transition-opacity duration-300 ${
+              className={`absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent transition-opacity duration-300 pointer-events-none ${
+                isHovered ? "opacity-100" : "opacity-60"
+              }`}
+            />
+
+            {/* Video Controls - Only visible on hover */}
+            <div
+              className={`absolute inset-0 flex flex-col justify-between transition-all duration-300 pointer-events-none z-10 ${
                 isHovered ? "opacity-100" : "opacity-0"
               }`}
             >
               {/* Play/Pause Button - Centered */}
-
-              <div className="flex items-center justify-center flex-1 pointer-events-none">
+              <div className="flex items-center justify-center flex-1">
                 <button
                   aria-label={isPlaying ? "Pausar" : "Reproducir"}
-                  className="p-4 rounded-full bg-[#00b2de]/60 backdrop-blur-sm hover:bg-[#00b2de]/80 transition-all shadow-2xl hover:scale-110 pointer-events-auto"
+                  className="p-5 rounded-full bg-[#00b2de]/80 backdrop-blur-md hover:bg-[#00b2de] transition-all duration-300 shadow-2xl hover:scale-110 active:scale-95 pointer-events-auto border-2 border-white/20 hover:border-white/40"
                   onClick={togglePlay}
                 >
                   {isPlaying ? (
-                    <Pause className="w-8 h-8 text-white" />
+                    <Pause className="w-10 h-10 text-white" />
                   ) : (
-                    <Play className="w-8 h-8 text-white ml-1" />
+                    <Play className="w-10 h-10 text-white ml-1" />
                   )}
                 </button>
               </div>
 
-              {/* Progress Slider - Bottom */}
+              {/* Bottom Controls Bar */}
+              <div className="w-full px-5 pb-5 space-y-3 pointer-events-auto">
+                {/* Progress Slider */}
+                <div className="relative">
+                  <input
+                    className="w-full h-1.5 bg-gray-700/60 rounded-full appearance-none cursor-pointer slider-thumb hover:h-2 transition-all duration-200"
+                    max={duration || 0}
+                    min="0"
+                    step="0.1"
+                    style={{
+                      background: `linear-gradient(to right, #00b2de 0%, #00b2de ${
+                        duration ? (currentTime / duration) * 100 : 0
+                      }%, rgba(75, 85, 99, 0.6) ${duration ? (currentTime / duration) * 100 : 0}%, rgba(75, 85, 99, 0.6) 100%)`,
+                    }}
+                    type="range"
+                    value={currentTime}
+                    onChange={handleSeek}
+                    onInput={handleSeek}
+                    onMouseDown={handleSeekStart}
+                    onMouseUp={handleSeekEnd}
+                    onTouchEnd={handleSeekEnd}
+                    onTouchStart={handleSeekStart}
+                  />
+                </div>
 
-              <div className="w-full px-4 pb-4 pointer-events-auto">
-                <input
-                  className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
-                  max={duration || 0}
-                  min="0"
-                  step="0.1"
-                  style={{
-                    background: `linear-gradient(to right, #00b2de 0%, #00b2de ${
-                      duration ? (currentTime / duration) * 100 : 0
-                    }%, #4b5563 ${duration ? (currentTime / duration) * 100 : 0}%, #4b5563 100%)`,
-                  }}
-                  type="range"
-                  value={currentTime}
-                  onChange={handleSeek}
-                  onMouseDown={handleSeekStart}
-                  onMouseUp={handleSeekEnd}
-                  onTouchEnd={handleSeekEnd}
-                  onTouchStart={handleSeekStart}
-                />
+                {/* Time Display */}
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/40 backdrop-blur-sm border border-white/10">
+                    <span className="text-white font-medium tabular-nums">
+                      {formatTime(currentTime)}
+                    </span>
+                    <span className="text-gray-400">/</span>
+                    <span className="text-gray-400 tabular-nums">
+                      {formatTime(duration)}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -270,3 +306,4 @@ export function HeroSection() {
     </section>
   );
 }
+

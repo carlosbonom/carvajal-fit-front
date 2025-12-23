@@ -16,6 +16,7 @@ export const metadata: Metadata = {
   description: siteConfig.description,
   icons: {
     icon: "/favicon.ico",
+    apple: "/pwa-icon.webp",
   },
   manifest: "/manifest.json",
   appleWebApp: {

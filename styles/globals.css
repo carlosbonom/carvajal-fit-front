@@ -11,12 +11,15 @@ body {
 }
 
 /* Custom slider styles */
-input[type="range"].slider {
+input[type="range"].slider,
+input[type="range"].slider-thumb {
   -webkit-appearance: none;
   appearance: none;
+  outline: none;
 }
 
-input[type="range"].slider::-webkit-slider-thumb {
+input[type="range"].slider::-webkit-slider-thumb,
+input[type="range"].slider-thumb::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
   width: 16px;
@@ -25,27 +28,46 @@ input[type="range"].slider::-webkit-slider-thumb {
   background: #00b2de;
   cursor: pointer;
   border: 2px solid white;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 178, 222, 0.4), 0 0 0 4px rgba(0, 178, 222, 0.1);
+  transition: all 0.2s ease;
 }
 
-input[type="range"].slider::-moz-range-thumb {
+input[type="range"].slider::-moz-range-thumb,
+input[type="range"].slider-thumb::-moz-range-thumb {
   width: 16px;
   height: 16px;
   border-radius: 50%;
   background: #00b2de;
   cursor: pointer;
   border: 2px solid white;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 178, 222, 0.4), 0 0 0 4px rgba(0, 178, 222, 0.1);
+  transition: all 0.2s ease;
 }
 
-input[type="range"].slider::-webkit-slider-thumb:hover {
-  background: #00a0c8;
-  transform: scale(1.1);
+input[type="range"].slider::-webkit-slider-thumb:hover,
+input[type="range"].slider-thumb::-webkit-slider-thumb:hover {
+  background: #00d4ff;
+  transform: scale(1.15);
+  box-shadow: 0 2px 12px rgba(0, 178, 222, 0.6), 0 0 0 6px rgba(0, 178, 222, 0.15);
 }
 
-input[type="range"].slider::-moz-range-thumb:hover {
-  background: #00a0c8;
-  transform: scale(1.1);
+input[type="range"].slider::-moz-range-thumb:hover,
+input[type="range"].slider-thumb::-moz-range-thumb:hover {
+  background: #00d4ff;
+  transform: scale(1.15);
+  box-shadow: 0 2px 12px rgba(0, 178, 222, 0.6), 0 0 0 6px rgba(0, 178, 222, 0.15);
+}
+
+input[type="range"].slider::-webkit-slider-thumb:active,
+input[type="range"].slider-thumb::-webkit-slider-thumb:active {
+  transform: scale(1.2);
+  box-shadow: 0 2px 16px rgba(0, 178, 222, 0.8), 0 0 0 8px rgba(0, 178, 222, 0.2);
+}
+
+input[type="range"].slider::-moz-range-thumb:active,
+input[type="range"].slider-thumb::-moz-range-thumb:active {
+  transform: scale(1.2);
+  box-shadow: 0 2px 16px rgba(0, 178, 222, 0.8), 0 0 0 8px rgba(0, 178, 222, 0.2);
 }
 
 /* Hide scrollbar but keep functionality */

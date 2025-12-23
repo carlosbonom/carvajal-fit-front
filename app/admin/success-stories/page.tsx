@@ -1,7 +1,24 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import { Plus, Edit, Trash2, Save, X, Image as ImageIcon, Upload } from "lucide-react";
+import { useEffect, useState, useRef, useCallback } from "react";
+import { Plus, Edit, Trash2, Save, X, Image as ImageIcon, Upload, GripVertical } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 import { AdminSidebar } from "@/components/admin-sidebar";
 import {
@@ -9,6 +26,7 @@ import {
   createSuccessStory,
   updateSuccessStory,
   deleteSuccessStory,
+  updateSuccessStoryOrder,
   SuccessStory,
 } from "@/services/success-stories";
 import { uploadFile } from "@/services/files";
@@ -56,7 +74,13 @@ export default function SuccessStoriesPage() {
       setLoading(true);
       setError(null);
       const response = await getAllSuccessStories();
-      setStories(response.stories);
+      // Ordenar historias por sortOrder
+      const sortedStories = [...response.stories].sort((a, b) => {
+        const orderA = a.sortOrder ?? 999999;
+        const orderB = b.sortOrder ?? 999999;
+        return orderA - orderB;
+      });
+      setStories(sortedStories);
     } catch (error) {
       console.error("Error al cargar casos de éxito:", error);
       setError("Error al cargar los casos de éxito. Por favor, verifica la conexión con el servidor.");
@@ -106,7 +130,7 @@ export default function SuccessStoriesPage() {
         folder: "success-stories",
         isPublic: true,
       });
-      
+
       if (isCreate) {
         setFormData((prev) => ({ ...prev, imageUrl: result.url }));
       } else {
@@ -148,6 +172,182 @@ export default function SuccessStoriesPage() {
       alert("Error al eliminar el caso de éxito. Por favor, intenta nuevamente.");
     }
   };
+
+  // Estado para cambios pendientes de orden
+  const pendingOrderChanges = useRef<Map<string, number>>(new Map());
+  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+
+  // Sensores para drag and drop
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Función para enviar cambios de orden con debounce
+  const saveOrderChanges = useCallback(async () => {
+    if (pendingOrderChanges.current.size === 0) return;
+
+    const changesToSave = new Map(pendingOrderChanges.current);
+    pendingOrderChanges.current.clear();
+
+    try {
+      // Enviar todos los cambios en paralelo
+      await Promise.all(
+        Array.from(changesToSave.entries()).map(([storyId, sortOrder]) =>
+          updateSuccessStoryOrder(storyId, sortOrder)
+        )
+      );
+      // Recargar datos para asegurar sincronización
+      await loadStories();
+    } catch (error) {
+      console.error("Error al actualizar el orden:", error);
+      // Recargar datos en caso de error
+      await loadStories();
+    }
+  }, []);
+
+  // Manejar el final del drag
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      // Obtener las historias ordenadas actuales
+      const currentSorted = [...stories].sort((a, b) => {
+        const orderA = a.sortOrder ?? 999999;
+        const orderB = b.sortOrder ?? 999999;
+        return orderA - orderB;
+      });
+
+      const oldIndex = currentSorted.findIndex((item) => item.id === active.id);
+      const newIndex = currentSorted.findIndex((item) => item.id === over.id);
+
+      const newItems = arrayMove(currentSorted, oldIndex, newIndex);
+
+      // Actualizar sortOrder para todos los items afectados
+      const updatedItems = newItems.map((item, index) => {
+        const newSortOrder = index;
+        // Guardar cambio pendiente
+        pendingOrderChanges.current.set(item.id, newSortOrder);
+        return { ...item, sortOrder: newSortOrder };
+      });
+
+      // Actualizar estado inmediatamente (optimistic update)
+      setStories(updatedItems);
+
+      // Limpiar timer anterior y crear uno nuevo
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+      }
+
+      // Enviar cambios después de 500ms de inactividad
+      debounceTimer.current = setTimeout(() => {
+        saveOrderChanges();
+      }, 500);
+    }
+  };
+
+  // Limpiar timer al desmontar
+  useEffect(() => {
+    return () => {
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+      }
+    };
+  }, []);
+
+  // Componente de fila arrastrable
+  function SortableRow({
+    story,
+    handleEdit,
+    handleDelete,
+  }: {
+    story: SuccessStory;
+    handleEdit: (story: SuccessStory) => void;
+    handleDelete: (id: string) => void;
+  }) {
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      transition,
+      isDragging,
+    } = useSortable({ id: story.id });
+
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+      opacity: isDragging ? 0.5 : 1,
+    };
+
+    return (
+      <tr
+        ref={setNodeRef}
+        style={style}
+        className={`hover:bg-gray-50 transition-colors ${isDragging ? "bg-gray-100" : ""}`}
+      >
+        <td className="px-4 md:px-6 py-4 w-16">
+          <div
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 flex items-center justify-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <GripVertical className="w-5 h-5" />
+          </div>
+        </td>
+        <td className="px-4 md:px-6 py-4">
+          <div className="relative w-16 h-20 rounded-lg overflow-hidden border border-gray-300">
+            <img
+              src={story.imageUrl}
+              alt={story.name}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        </td>
+        <td className="px-4 md:px-6 py-4">
+          <div className="text-sm font-medium text-gray-900">
+            {story.name}
+          </div>
+        </td>
+        <td className="px-4 md:px-6 py-4">
+          <div className="text-sm text-gray-500 max-w-xs truncate">
+            {story.description || "Sin descripción"}
+          </div>
+        </td>
+        <td className="px-4 md:px-6 py-4">
+          <span
+            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${story.isActive
+              ? "bg-green-100 text-green-800"
+              : "bg-gray-100 text-gray-800"
+              }`}
+          >
+            {story.isActive ? "Activo" : "Inactivo"}
+          </span>
+        </td>
+        <td className="px-4 md:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+          <div className="flex items-center justify-end gap-2">
+            <button
+              onClick={() => handleEdit(story)}
+              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+              title="Editar"
+            >
+              <Edit className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => handleDelete(story.id)}
+              className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"
+              title="Eliminar"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+        </td>
+      </tr>
+    );
+  }
 
   return (
     <>
@@ -197,7 +397,7 @@ export default function SuccessStoriesPage() {
                   <h2 className="text-xl font-bold text-gray-900 mb-4">
                     {editingId ? "Editar Caso de Éxito" : "Nuevo Caso de Éxito"}
                   </h2>
-                  
+
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -346,104 +546,63 @@ export default function SuccessStoriesPage() {
                 </div>
               )}
 
-              <div className="bg-white rounded-lg shadow overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50 border-b border-gray-200">
-                      <tr>
-                        <th className="px-4 md:px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                          Imagen
-                        </th>
-                        <th className="px-4 md:px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                          Nombre
-                        </th>
-                        <th className="px-4 md:px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                          Descripción
-                        </th>
-                        <th className="px-4 md:px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                          Orden
-                        </th>
-                        <th className="px-4 md:px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                          Estado
-                        </th>
-                        <th className="px-4 md:px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                          Acciones
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {stories.length === 0 ? (
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <div className="bg-white rounded-lg shadow overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-gray-50 border-b border-gray-200">
                         <tr>
-                          <td colSpan={6} className="px-4 md:px-6 py-8 text-center text-gray-500">
-                            No hay casos de éxito configurados
-                          </td>
+                          <th className="px-4 md:px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-16">
+                            <span className="sr-only">Ordenar</span>
+                          </th>
+                          <th className="px-4 md:px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            Imagen
+                          </th>
+                          <th className="px-4 md:px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            Nombre
+                          </th>
+                          <th className="px-4 md:px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            Descripción
+                          </th>
+                          <th className="px-4 md:px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            Estado
+                          </th>
+                          <th className="px-4 md:px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            Acciones
+                          </th>
                         </tr>
-                      ) : (
-                        stories.map((story) => (
-                          <tr
-                            key={story.id}
-                            className="hover:bg-gray-50 transition-colors"
-                          >
-                            <td className="px-4 md:px-6 py-4">
-                              <div className="relative w-16 h-20 rounded-lg overflow-hidden border border-gray-300">
-                                <img
-                                  src={story.imageUrl}
-                                  alt={story.name}
-                                  className="w-full h-full object-cover"
-                                />
-                              </div>
-                            </td>
-                            <td className="px-4 md:px-6 py-4">
-                              <div className="text-sm font-medium text-gray-900">
-                                {story.name}
-                              </div>
-                            </td>
-                            <td className="px-4 md:px-6 py-4">
-                              <div className="text-sm text-gray-500 max-w-xs truncate">
-                                {story.description || "Sin descripción"}
-                              </div>
-                            </td>
-                            <td className="px-4 md:px-6 py-4">
-                              <div className="text-sm text-gray-900">
-                                {story.sortOrder}
-                              </div>
-                            </td>
-                            <td className="px-4 md:px-6 py-4">
-                              <span
-                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                  story.isActive
-                                    ? "bg-green-100 text-green-800"
-                                    : "bg-gray-100 text-gray-800"
-                                }`}
-                              >
-                                {story.isActive ? "Activo" : "Inactivo"}
-                              </span>
-                            </td>
-                            <td className="px-4 md:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                              <div className="flex items-center justify-end gap-2">
-                                <button
-                                  onClick={() => handleEdit(story)}
-                                  className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                                  title="Editar"
-                                >
-                                  <Edit className="w-4 h-4" />
-                                </button>
-                                <button
-                                  onClick={() => handleDelete(story.id)}
-                                  className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                                  title="Eliminar"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <SortableContext
+                        items={stories.map((story) => story.id)}
+                        strategy={verticalListSortingStrategy}
+                      >
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {stories.length === 0 ? (
+                            <tr>
+                              <td colSpan={7} className="px-4 md:px-6 py-8 text-center text-gray-500">
+                                No hay casos de éxito configurados
+                              </td>
+                            </tr>
+                          ) : (
+                            stories.map((story) => (
+                              <SortableRow
+                                key={story.id}
+                                story={story}
+                                handleEdit={handleEdit}
+                                handleDelete={handleDelete}
+                              />
+                            ))
+                          )}
+                        </tbody>
+                      </SortableContext>
+                    </table>
+                  </div>
                 </div>
-              </div>
+              </DndContext>
             </div>
           )}
         </div>
@@ -451,6 +610,7 @@ export default function SuccessStoriesPage() {
     </>
   );
 }
+
 
 
 

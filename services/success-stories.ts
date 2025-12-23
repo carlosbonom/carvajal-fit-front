@@ -71,6 +71,20 @@ export const deleteSuccessStory = async (id: string): Promise<void> => {
   await apiAxios.delete(`/success-stories/${id}`);
 };
 
+// PATCH /success-stories/:id/order - Actualizar orden de un caso de éxito
+export const updateSuccessStoryOrder = async (
+  id: string,
+  sortOrder: number
+): Promise<SuccessStory> => {
+  const response = await apiAxios.patch<SuccessStory>(
+    `/success-stories/${id}/order`,
+    { sortOrder }
+  );
+  return response.data;
+};
+
+
+
 
 
 

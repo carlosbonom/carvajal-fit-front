@@ -8,7 +8,7 @@ import { getAccessToken, clearTokens } from "@/lib/auth-utils";
 import { getProfile } from "@/services/auth";
 import { store } from "@/lib/store/store";
 
-export default function AdminLayout({
+export default function ClubLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -20,7 +20,7 @@ export default function AdminLayout({
 
   // Verificación inicial al montar el componente
   useEffect(() => {
-    const checkAdminAccess = async () => {
+    const checkAuth = async () => {
       try {
         // Verificar si ya hay usuario en Redux
         const currentState = store.getState();
@@ -50,33 +50,21 @@ export default function AdminLayout({
           }
         }
 
-        // Verificar si el usuario tiene rol de admin
-        if (!currentUser || currentUser.role !== "admin") {
-          // No es admin, redirigir al home
-          router.push("/");
-          return;
-        }
-
-        // Usuario es admin, permitir acceso
+        // Usuario autenticado, permitir acceso
         setIsChecking(false);
       } catch (error) {
-        console.error("Error al verificar acceso de admin:", error);
+        console.error("Error al verificar autenticación:", error);
         router.push("/");
       }
     };
 
-    checkAdminAccess();
+    checkAuth();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Verificar si el usuario cambia después de la verificación inicial
   useEffect(() => {
-    if (!isChecking && user) {
-      // Si el usuario cambió y ya no es admin, redirigir
-      if (user.role !== "admin") {
-        router.push("/");
-      }
-    } else if (!isChecking && !user) {
+    if (!isChecking && !user) {
       // Si el usuario se deslogueó, redirigir
       router.push("/");
     }
@@ -85,16 +73,15 @@ export default function AdminLayout({
   // Mostrar loading mientras se verifica el acceso
   if (isChecking) {
     return (
-      <section className="w-full min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-[#0b0b0b] text-white flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-600">Verificando acceso...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00b2de] mx-auto mb-4"></div>
+          <p className="text-white/60">Verificando acceso...</p>
         </div>
-      </section>
+      </div>
     );
   }
 
-  return (
-    <section className="w-full min-h-screen bg-gray-50">{children}</section>
-  );
+  return <>{children}</>;
 }
+

@@ -67,6 +67,14 @@ export function ProductModal({ isOpen, onClose, onSuccess, product, creatorSlug 
 
   useEffect(() => {
     if (isOpen) {
+      // Reset uploading states when modal opens
+      setUploading({
+        thumbnail: false,
+        banner: false,
+        product: false,
+      });
+      setError(null);
+
       loadCreator();
 
       if (product) {
@@ -121,6 +129,7 @@ export function ProductModal({ isOpen, onClose, onSuccess, product, creatorSlug 
         });
         setFiles({ thumbnailFile: null, bannerFile: null, productFile: null, productImageFiles: [] });
         setPreviews({ thumbnail: "", banner: "", productImages: [], productFile: null });
+        setUploading({ thumbnail: false, banner: false, product: false });
         if (productFilePreviewUrlRef.current) {
           URL.revokeObjectURL(productFilePreviewUrlRef.current);
           productFilePreviewUrlRef.current = null;
@@ -143,34 +152,21 @@ export function ProductModal({ isOpen, onClose, onSuccess, product, creatorSlug 
   }, []);
 
   const loadCreator = async () => {
-    try {
-      // Obtener productos del creator para obtener su información
-      const products = await getProductsByCreator(creatorSlug);
-      if (products.length > 0 && products[0].creator) {
-        setSelectedCreator(products[0].creator);
-      } else {
-        // Si no hay productos, crear un creator temporal (esto requerirá que el backend acepte slug)
-        const tempCreator: Creator = {
-          id: "", // El backend deberá buscar por slug si el ID está vacío
-          name: creatorSlug === "jose" ? "José Carvajal" : "Gabriel Carvajal",
-          slug: creatorSlug,
-          bio: undefined,
-          avatarUrl: undefined,
-        };
-        setSelectedCreator(tempCreator);
-      }
-    } catch (error) {
-      console.error("Error al cargar creator:", error);
-      // En caso de error, usar creator temporal
-      const tempCreator: Creator = {
-        id: "",
-        name: creatorSlug === "jose" ? "José Carvajal" : "Gabriel Carvajal",
-        slug: creatorSlug,
-        bio: undefined,
-        avatarUrl: undefined,
-      };
-      setSelectedCreator(tempCreator);
-    }
+    // Usar IDs específicos para cada creator - siempre usar estos IDs directamente
+    const creatorId = creatorSlug === "jose"
+      ? "c0dbbd6d-4e61-4288-adc5-284225b17dbd"
+      : "88ea5ed7-15ff-4228-8c80-ef6190c24599";
+
+    const creator: Creator = {
+      id: creatorId,
+      name: creatorSlug === "jose" ? "José Carvajal" : "Gabriel Carvajal",
+      slug: creatorSlug,
+      bio: undefined,
+      avatarUrl: undefined,
+    };
+
+    console.log("[ProductModal] Creator loaded:", creator);
+    setSelectedCreator(creator);
   };
 
   // Determinar si un tipo de producto requiere archivo o imágenes
@@ -622,12 +618,21 @@ export function ProductModal({ isOpen, onClose, onSuccess, product, creatorSlug 
         await updateProduct(product.id, updateData);
       } else {
         console.log("[ProductModal] Creating new product");
-        // Crear producto
+        console.log("[ProductModal] Selected creator:", selectedCreator);
+        console.log("[ProductModal] Creator slug prop:", creatorSlug);
+
+        // Determinar el creatorId - usar el ID correcto basado en el slug
+        const creatorId = creatorSlug === "jose"
+          ? "c0dbbd6d-4e61-4288-adc5-284225b17dbd"
+          : "88ea5ed7-15ff-4228-8c80-ef6190c24599";
+
+        // Crear producto - siempre usar creatorId
         const createData: CreateProductDto = {
           ...payloadCommon,
-          ...(selectedCreator.id ? { creatorId: selectedCreator.id } : { creatorSlug: selectedCreator.slug }),
+          creatorId: creatorId,
         };
 
+        console.log("[ProductModal] Create data:", createData);
         await createProduct(createData);
       }
 
@@ -857,7 +862,6 @@ export function ProductModal({ isOpen, onClose, onSuccess, product, creatorSlug 
                   id="thumbnail-file-input"
                   type="file"
                   accept="image/*"
-                  required
                   className="hidden"
                   disabled={uploading.thumbnail}
                   onChange={(e) => {
@@ -1008,12 +1012,24 @@ export function ProductModal({ isOpen, onClose, onSuccess, product, creatorSlug 
             <button
               type="submit"
               disabled={loading || uploading.thumbnail || uploading.banner || uploading.product}
+              onClick={() => {
+                console.log("[ProductModal] Button clicked. States:", {
+                  loading,
+                  uploading,
+                  isDisabled: loading || uploading.thumbnail || uploading.banner || uploading.product
+                });
+              }}
               className="px-6 py-2.5 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 font-medium shadow-sm"
             >
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
                   {product ? "Actualizando..." : "Creando..."}
+                </>
+              ) : (uploading.thumbnail || uploading.banner || uploading.product) ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Subiendo archivos...
                 </>
               ) : (
                 <>

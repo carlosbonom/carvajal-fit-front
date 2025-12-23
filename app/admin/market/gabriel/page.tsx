@@ -5,11 +5,11 @@ import { Store, Plus, Edit, Trash2, FileText, Image, Package, DollarSign, Eye, L
 
 import { AdminSidebar } from "@/components/admin-sidebar";
 import { ProductModal } from "@/components/product-modal";
-import { 
-  getProductsByCreator, 
-  deleteProduct, 
-  type Product, 
-  type ProductType 
+import {
+  getProductsByCreator,
+  deleteProduct,
+  type Product,
+  type ProductType
 } from "@/services/products";
 
 export default function MarketGabrielPage() {
@@ -62,8 +62,8 @@ export default function MarketGabrielPage() {
     setEditingProduct(null);
   };
 
-  const filteredProducts = filterType === "all" 
-    ? products 
+  const filteredProducts = filterType === "all"
+    ? products
     : products.filter(p => p.productType === filterType);
 
   const stats = {
@@ -151,7 +151,7 @@ export default function MarketGabrielPage() {
                 Gestiona los productos de la tienda de Gabriel Carvajal
               </p>
             </div>
-            <button 
+            <button
               onClick={() => setShowAddModal(true)}
               className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
             >
@@ -250,16 +250,16 @@ export default function MarketGabrielPage() {
                       </div>
                     )}
                   </div>
-                  
+
                   <div className="p-6">
                     <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-1">
                       {product.name}
                     </h3>
-                    
+
                     <p className="text-gray-600 text-sm mb-4 line-clamp-2">
                       {product.description}
                     </p>
-                    
+
                     <div className="flex items-center justify-between mb-4">
                       <div>
                         {getPrice(product) ? (
@@ -274,7 +274,7 @@ export default function MarketGabrielPage() {
                         )}
                       </div>
                     </div>
-                    
+
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleEdit(product)}
@@ -294,13 +294,13 @@ export default function MarketGabrielPage() {
                   </div>
                 </div>
               ))}
-              
+
               {filteredProducts.length === 0 && (
                 <div className="col-span-full text-center py-12">
                   <Store className="w-16 h-16 mx-auto mb-4 text-gray-300" />
                   <p className="text-gray-500 text-lg mb-2">No hay productos</p>
                   <p className="text-gray-400 text-sm">
-                    {filterType !== "all" 
+                    {filterType !== "all"
                       ? `No hay productos de tipo "${getTypeLabel(filterType as string)}"`
                       : "Crea tu primer producto para comenzar"}
                   </p>
@@ -321,6 +321,7 @@ export default function MarketGabrielPage() {
     </>
   );
 }
+
 
 
 
