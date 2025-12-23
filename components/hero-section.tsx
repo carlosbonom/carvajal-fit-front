@@ -218,7 +218,7 @@ export function HeroSection() {
               autoPlay
               loop
               playsInline
-              muted
+              // muted
               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
               onLoadedMetadata={handleLoadedMetadata}
               onPause={() => setIsPlaying(false)}
@@ -235,16 +235,14 @@ export function HeroSection() {
 
             {/* Gradient Overlay - No debe bloquear eventos */}
             <div
-              className={`absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent transition-opacity duration-300 pointer-events-none ${
-                isHovered ? "opacity-100" : "opacity-60"
-              }`}
+              className={`absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent transition-opacity duration-300 pointer-events-none ${isHovered ? "opacity-100" : "opacity-60"
+                }`}
             />
 
             {/* Video Controls - Only visible on hover */}
             <div
-              className={`absolute inset-0 flex flex-col justify-between transition-all duration-300 pointer-events-none z-10 ${
-                isHovered ? "opacity-100" : "opacity-0"
-              }`}
+              className={`absolute inset-0 flex flex-col justify-between transition-all duration-300 pointer-events-none z-10 ${isHovered ? "opacity-100" : "opacity-0"
+                }`}
             >
               {/* Play/Pause Button - Centered */}
               <div className="flex items-center justify-center flex-1">
@@ -271,9 +269,8 @@ export function HeroSection() {
                     min="0"
                     step="0.1"
                     style={{
-                      background: `linear-gradient(to right, #00b2de 0%, #00b2de ${
-                        duration ? (currentTime / duration) * 100 : 0
-                      }%, rgba(75, 85, 99, 0.6) ${duration ? (currentTime / duration) * 100 : 0}%, rgba(75, 85, 99, 0.6) 100%)`,
+                      background: `linear-gradient(to right, #00b2de 0%, #00b2de ${duration ? (currentTime / duration) * 100 : 0
+                        }%, rgba(75, 85, 99, 0.6) ${duration ? (currentTime / duration) * 100 : 0}%, rgba(75, 85, 99, 0.6) 100%)`,
                     }}
                     type="range"
                     value={currentTime}
