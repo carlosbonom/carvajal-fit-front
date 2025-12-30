@@ -10,8 +10,10 @@ export function HeroSection() {
   const router = useRouter();
 
   const [isHovered, setIsHovered] = useState(false);
-
   const [isPlaying, setIsPlaying] = useState(false);
+  const showControls = !isPlaying || isHovered;
+
+
 
   const [currentTime, setCurrentTime] = useState(0);
 
@@ -235,26 +237,28 @@ export function HeroSection() {
 
             {/* Gradient Overlay - No debe bloquear eventos */}
             <div
-              className={`absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent transition-opacity duration-300 pointer-events-none ${isHovered ? "opacity-100" : "opacity-60"
+              className={`absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent transition-opacity duration-300 pointer-events-none ${showControls ? "opacity-100" : "opacity-60"
                 }`}
             />
 
+
             {/* Video Controls - Only visible on hover */}
             <div
-              className={`absolute inset-0 flex flex-col justify-between transition-all duration-300 pointer-events-none z-10 ${isHovered ? "opacity-100" : "opacity-0"
+              className={`absolute inset-0 flex flex-col justify-between transition-all duration-300 pointer-events-none z-10 ${showControls ? "opacity-100" : "opacity-0"
                 }`}
             >
+
               {/* Play/Pause Button - Centered */}
               <div className="flex items-center justify-center flex-1">
                 <button
                   aria-label={isPlaying ? "Pausar" : "Reproducir"}
-                  className="p-5 rounded-full bg-[#00b2de]/80 backdrop-blur-md hover:bg-[#00b2de] transition-all duration-300 shadow-2xl hover:scale-110 active:scale-95 pointer-events-auto border-2 border-white/20 hover:border-white/40"
+                  className="p-4 rounded-full bg-[#00b2de]/80 backdrop-blur-lg hover:bg-[#00b2de] transition-all duration-300 shadow-2xl hover:scale-110 active:scale-95 pointer-events-auto border-2 border-white/20 hover:border-white/40"
                   onClick={togglePlay}
                 >
                   {isPlaying ? (
-                    <Pause className="w-10 h-10 text-white" />
+                    <Pause className="w-8 h-8 text-white" />
                   ) : (
-                    <Play className="w-10 h-10 text-white ml-1" />
+                    <Play className="w-8 h-8 text-white ml-1" />
                   )}
                 </button>
               </div>
@@ -284,7 +288,7 @@ export function HeroSection() {
                 </div>
 
                 {/* Time Display */}
-                <div className="flex items-center justify-between text-sm">
+                {/* <div className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/40 backdrop-blur-sm border border-white/10">
                     <span className="text-white font-medium tabular-nums">
                       {formatTime(currentTime)}
@@ -294,7 +298,7 @@ export function HeroSection() {
                       {formatTime(duration)}
                     </span>
                   </div>
-                </div>
+                </div> */}
               </div>
             </div>
           </div>

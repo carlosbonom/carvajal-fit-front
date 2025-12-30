@@ -13,6 +13,7 @@ export const SuccessStories = () => {
   );
   const [successStories, setSuccessStories] = useState<SuccessStory[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedStory, setSelectedStory] = useState<SuccessStory | null>(null);
 
   useEffect(() => {
     const loadStories = async () => {
@@ -221,16 +222,16 @@ export const SuccessStories = () => {
           (story, index) => (
             <div
               key={`${story.id}-${index}`}
-              className="flex-shrink-0 w-[200px] md:w-[230px] group"
+              className="flex-shrink-0 w-[200px] md:w-[230px] group cursor-pointer"
+              onClick={() => setSelectedStory(story)}
             >
-              <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-gray-800 border border-gray-700 shadow-lg">
+              <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-gray-800 border border-gray-700 shadow-lg transition-transform hover:scale-105">
                 <img
                   alt={story.name}
                   className="w-full h-full object-cover"
                   src={story.imageUrl || "/placeholder.svg"}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                <div className="absolute bottom-0 left-0 right-0 p-2 md:p-6 text-white">
+                <div className="absolute bottom-0 left-0 right-0 p-2 md:p-6 text-white bg-gradient-to-t from-black/60 to-transparent">
                   <h3 className="text-sm md:text-base lg:text-lg font-bold mb-1">
                     {story.name}
                   </h3>
@@ -245,6 +246,71 @@ export const SuccessStories = () => {
           ),
         )}
       </section>
+
+      {/* Modal para ver testimonio en grande */}
+      {selectedStory && (
+        <div
+          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
+          onClick={() => setSelectedStory(null)}
+        >
+          <div
+            className="relative max-w-4xl max-h-[90vh] bg-gray-900 rounded-2xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className="absolute top-4 right-4 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-colors"
+              onClick={() => setSelectedStory(null)}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+            {selectedStory.description ? (
+              <div className="flex flex-col md:flex-row">
+                <div className="md:w-1/2 relative">
+                  <img
+                    alt={selectedStory.name}
+                    className="w-full h-full object-cover"
+                    src={selectedStory.imageUrl || "/placeholder.svg"}
+                  />
+                </div>
+                <div className="md:w-1/2 p-6 md:p-8 flex flex-col justify-center">
+                  <h3 className="text-2xl md:text-3xl font-bold text-white mb-4">
+                    {selectedStory.name}
+                  </h3>
+                  <p className="text-primary text-lg md:text-xl font-semibold">
+                    {selectedStory.description}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="relative">
+                <img
+                  alt={selectedStory.name}
+                  className="w-full h-auto max-h-[90vh] object-contain"
+                  src={selectedStory.imageUrl || "/placeholder.svg"}
+                />
+                <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 to-transparent">
+                  <h3 className="text-2xl md:text-3xl font-bold text-white">
+                    {selectedStory.name}
+                  </h3>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

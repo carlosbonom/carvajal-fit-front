@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Calendar, MessageCircle, Flame, ArrowRight, Loader2, Lock } from "lucide-react";
+import { Calendar, MessageCircle, Flame, ArrowRight, Loader2, Lock, Menu } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { useAppSelector, useAppDispatch } from "@/lib/store/hooks";
@@ -12,6 +12,7 @@ import { getAccessToken } from "@/lib/auth-utils";
 import { store } from "@/lib/store/store";
 import { InstallPWABanner } from "@/components/install-pwa-banner";
 import { getClubConfig, type ClubConfig } from "@/services/club-config";
+import UserSidebar from "@/components/club/UserSidebar";
 
 export default function ClubPage() {
   const dispatch = useAppDispatch();
@@ -22,6 +23,7 @@ export default function ClubPage() {
   const [error, setError] = useState<string | null>(null);
   const [userLoading, setUserLoading] = useState(true);
   const [clubConfig, setClubConfig] = useState<ClubConfig | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Obtener nombre del usuario
   const userName = user?.name || user?.email?.split("@")[0] || "Usuario";
@@ -83,7 +85,7 @@ export default function ClubPage() {
   const getUnlockMessage = (content: SubscriptionContent): string => {
     if (content.unlockType === "immediate") return "";
     if (!hasActiveSubscription) return "Requiere suscripción activa";
-    
+
     const monthsSinceStart = calculateMonthsSinceStart();
     const daysSinceStart = calculateDaysSinceStart();
 
@@ -136,10 +138,10 @@ export default function ClubPage() {
       // Crear fecha y hora de la reunión desde el datetime
       // El formato viene como YYYY-MM-DDTHH:mm
       const meetingDate = new Date(clubConfig.nextMeetingDateTime);
-      
+
       // Obtener fecha actual
       const now = new Date();
-      
+
       // Calcular diferencia en milisegundos
       const diffMs = now.getTime() - meetingDate.getTime();
       const diffHours = diffMs / (1000 * 60 * 60);
@@ -183,7 +185,7 @@ export default function ClubPage() {
     const loadUserFromToken = async () => {
       // Verificar si ya hay usuario en Redux
       const currentState = store.getState();
-      
+
       if (currentState.user.user) {
         console.log("Usuario ya existe en Redux:", currentState.user.user);
         setUserLoading(false);
@@ -270,10 +272,10 @@ export default function ClubPage() {
             ...course,
             content: course.content
               ? [...course.content].sort((a, b) => {
-                  const orderA = a.sortOrder ?? 999999;
-                  const orderB = b.sortOrder ?? 999999;
-                  return orderA - orderB;
-                })
+                const orderA = a.sortOrder ?? 999999;
+                const orderB = b.sortOrder ?? 999999;
+                return orderA - orderB;
+              })
               : [],
           }))
           .filter((course) => course.content && course.content.length > 0); // Filtrar cursos sin contenido
@@ -298,21 +300,21 @@ export default function ClubPage() {
   // Si no tiene suscripción activa y no es admin, mostrar botón de suscripción
   if (!canAccessContent && !loading && !userLoading && user) {
     return (
-      <div className="min-h-screen bg-[#0b0b0b] text-white p-4 md:p-8">
+      <div className="min-h-screen bg-[#0b0b0b] text-white p-3 md:p-8">
         <div className="max-w-7xl mx-auto">
-          <div className="bg-[#1a1a1a] rounded-2xl p-6 md:p-8 space-y-6 text-center">
-            <h1 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              Hola, {userName}
+          <div className="bg-[#1a1a1a] rounded-xl md:rounded-2xl p-4 md:p-8 space-y-4 md:space-y-6 text-center">
+            <h1 className="text-xl sm:text-2xl md:text-4xl font-bold text-white mb-2 md:mb-4">
+              Hola {userName}
             </h1>
-            <p className="text-white/70 text-lg mb-6">
+            <p className="text-white/70 text-sm md:text-lg mb-3 md:mb-6">
               Para acceder al contenido del club, necesitas una suscripción activa.
             </p>
             <button
               onClick={() => router.push("/checkout")}
-              className="px-8 py-3 bg-[#00b2de] text-white font-semibold rounded-lg hover:bg-[#00a0c8] transition-colors inline-flex items-center gap-2"
+              className="px-4 md:px-8 py-2 md:py-3 bg-[#00b2de] text-white font-semibold rounded-md md:rounded-lg hover:bg-[#00a0c8] transition-colors inline-flex items-center gap-1.5 md:gap-2 text-xs md:text-base"
             >
               Suscribirse ahora
-              <ArrowRight className="w-5 h-5" />
+              <ArrowRight className="w-3 h-3 md:w-5 md:h-5" />
             </button>
           </div>
         </div>
@@ -321,55 +323,68 @@ export default function ClubPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0b0b0b] text-white p-4 md:p-8">
-      <div className="max-w-7xl mx-auto space-y-8">
+    <div className="min-h-screen bg-[#0b0b0b] text-white p-3 md:p-8">
+      <UserSidebar
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        userName={userName}
+        userEmail={user?.email}
+        userImage={(user as any)?.image}
+      />
+      <div className="max-w-7xl mx-auto space-y-4 md:space-y-8">
         {/* Sección Superior - Información del Usuario */}
-        <div className="bg-[#1a1a1a] rounded-2xl p-6 md:p-8 space-y-6">
-          {/* Saludo */}
-          <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
-              Hola, {userName}
+        <div className="bg-[#1a1a1a] rounded-xl md:rounded-2xl p-4 md:p-8 space-y-3 md:space-y-6">
+          {/* Saludo y Menú */}
+          <div className="flex justify-between items-start">
+            <h1 className="text-xl sm:text-2xl md:text-4xl font-bold text-white mb-1 md:mb-2">
+              Hola {userName}
             </h1>
+            <button
+              onClick={() => setIsSidebarOpen(true)}
+              className="p-2 hover:bg-white/10 rounded-full transition-colors"
+            >
+              <Menu className="w-6 h-6 md:w-8 md:h-8 text-white" />
+            </button>
           </div>
 
           {/* Comunidad WhatsApp */}
           {whatsappLink && (
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 md:gap-4">
               <div className="flex-shrink-0">
-                <MessageCircle className="w-6 h-6 text-[#00b2de]" />
+                <MessageCircle className="w-4 h-4 md:w-6 md:h-6 text-[#00b2de]" />
               </div>
-              <div className="flex-1">
-                <p className="text-white/60 text-sm">Comunidad WhatsApp</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-white/60 text-xs md:text-sm">Comunidad WhatsApp</p>
               </div>
               <a
-                className="text-[#00b2de] font-medium hover:text-[#00a0c8] transition-colors flex items-center gap-1"
+                className="text-[#00b2de] font-medium hover:text-[#00a0c8] transition-colors flex items-center gap-1 text-xs md:text-base flex-shrink-0"
                 href={whatsappLink}
                 rel="noopener noreferrer"
                 target="_blank"
               >
-                Unirse <ArrowRight className="w-4 h-4" />
+                Unirse <ArrowRight className="w-2.5 h-2.5 md:w-4 md:h-4" />
               </a>
             </div>
           )}
 
           {/* Próxima Reunión */}
           {clubConfig?.nextMeetingDateTime && (
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 md:gap-4">
               <div className="flex-shrink-0">
-                <Calendar className="w-6 h-6 text-[#00b2de]" />
+                <Calendar className="w-4 h-4 md:w-6 md:h-6 text-[#00b2de]" />
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 {isMeetingTime() ? (
                   <>
-                    <p className="text-white/60 text-sm">Reunión en curso</p>
-                    <p className="text-white/40 text-xs">
+                    <p className="text-white/60 text-xs md:text-sm">Reunión en curso</p>
+                    <p className="text-white/40 text-[10px] md:text-xs">
                       Disponible hasta 3 horas después del inicio
                     </p>
                   </>
                 ) : (
                   <>
-                    <p className="text-white/60 text-sm">Próxima Reunión</p>
-                    <p className="text-white/40 text-xs">
+                    <p className="text-white/60 text-xs md:text-sm">Próxima Reunión</p>
+                    <p className="text-white/40 text-[10px] md:text-xs break-words">
                       {formatNextMeetingDateTime()}
                     </p>
                   </>
@@ -377,12 +392,12 @@ export default function ClubPage() {
               </div>
               {isMeetingTime() && meetingLink && (
                 <a
-                  className="text-[#00b2de] font-medium hover:text-[#00a0c8] transition-colors flex items-center gap-1"
+                  className="text-[#00b2de] font-medium hover:text-[#00a0c8] transition-colors flex items-center gap-1 text-xs md:text-base flex-shrink-0"
                   href={meetingLink}
                   rel="noopener noreferrer"
                   target="_blank"
                 >
-                  Unirse <ArrowRight className="w-4 h-4" />
+                  Unirse <ArrowRight className="w-2.5 h-2.5 md:w-4 md:h-4" />
                 </a>
               )}
             </div>
@@ -405,25 +420,33 @@ export default function ClubPage() {
 
         {/* Cursos */}
         {!loading && !error && courses.length > 0 && (
-          <div className="space-y-8">
+          <div className="space-y-5 md:space-y-8">
             {courses.map((course) => (
-              <div key={course.id} className="space-y-6">
+              <div key={course.id} className="space-y-3 md:space-y-6">
                 {/* Header del Curso */}
-                <div className="space-y-2 sm:space-y-0">
-                  <div className="flex items-center justify-between gap-3 sm:gap-4">
+                <div className="space-y-1 sm:space-y-0">
+                  <div className="flex items-center justify-between gap-2 sm:gap-4">
                     <div className="flex items-center gap-2 sm:gap-3 md:gap-4 flex-1 min-w-0">
-                      <div className="flex-shrink-0">
-                        <Flame className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 text-[#00b2de]" />
-                      </div>
+                      {/* <div className="flex-shrink-0">
+                        <Flame className="w-5 h-5 sm:w-7 sm:h-7 md:w-10 md:h-10 text-[#00b2de]" />
+                      </div> */}
                       <div className="flex-1 min-w-0">
-                        <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-white truncate">
+                        <h2 className="text-lg sm:text-xl md:text-3xl font-bold text-white truncate">
                           {course.title}
                         </h2>
                       </div>
                     </div>
+                    {/* Botón para ver el curso completo - ahora en la misma línea */}
+                    <button
+                      onClick={() => router.push(`/club/${course.slug}`)}
+                      className="text-[#00b2de] hover:text-[#00a0c8] transition-colors inline-flex items-center gap-1 text-xs md:text-sm font-medium flex-shrink-0"
+                    >
+                      Ver todo
+                      <ArrowRight className="w-3 h-3 md:w-4 md:h-4" />
+                    </button>
                   </div>
                   {course.description && (
-                    <p className="text-white/70 text-sm sm:text-base leading-tight pl-8 sm:pl-11 md:pl-14">
+                    <p className="text-white/70 text-xs sm:text-sm md:text-base leading-tight pl-7 sm:pl-10 md:pl-14">
                       {course.description}
                     </p>
                   )}
@@ -432,18 +455,8 @@ export default function ClubPage() {
                 {/* Contenido del Curso */}
                 {course.content && course.content.length > 0 && (
                   <div className="relative">
-                    {/* Botón para ver el curso completo */}
-                    <div className="mb-4 flex justify-end">
-                      <button
-                        onClick={() => router.push(`/club/${course.slug}`)}
-                        className="px-6 py-2 bg-[#00b2de] text-white font-semibold rounded-lg hover:bg-[#00a0c8] transition-colors inline-flex items-center gap-2"
-                      >
-                        Ver curso completo
-                        <ArrowRight className="w-4 h-4" />
-                      </button>
-                    </div>
                     {/* Carrusel horizontal en mobile */}
-                    <div className="flex md:hidden gap-4 overflow-x-auto scrollbar-hide pb-2 -mx-4 px-4 snap-x snap-mandatory scroll-smooth">
+                    <div className="flex md:hidden gap-3 overflow-x-auto scrollbar-hide pb-2 -mx-4 px-4 snap-x snap-mandatory scroll-smooth">
                       {[...course.content]
                         .sort((a, b) => {
                           const orderA = a.sortOrder ?? 999999;
@@ -454,11 +467,11 @@ export default function ClubPage() {
                         .map((contentItem) => {
                           const isUnlocked = isContentUnlocked(contentItem);
                           const unlockMessage = getUnlockMessage(contentItem);
-                          
+
                           return (
                             <div
                               key={contentItem.id}
-                              className="flex-shrink-0 w-[85vw] max-w-[320px] bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-xl aspect-[4/3] flex items-center justify-center border border-white/10 active:border-[#00b2de]/30 transition-all duration-300 cursor-pointer group snap-start relative overflow-hidden"
+                              className="flex-shrink-0 w-[70vw] max-w-[260px] bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-lg aspect-video flex items-center justify-center border border-white/10 active:border-[#00b2de]/30 transition-all duration-300 cursor-pointer group snap-start relative overflow-hidden"
                               onClick={() =>
                                 router.push(`/club/${course.slug}`)
                               }
@@ -535,7 +548,7 @@ export default function ClubPage() {
                         .map((contentItem) => {
                           const isUnlocked = isContentUnlocked(contentItem);
                           const unlockMessage = getUnlockMessage(contentItem);
-                          
+
                           return (
                             <div
                               key={contentItem.id}

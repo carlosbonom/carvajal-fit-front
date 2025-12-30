@@ -229,29 +229,43 @@ export function MembershipCardv2() {
         <Card className="bg-[#0a0e12] border border-[#00b2de30] rounded-2xl shadow-lg">
           <div className="p-8 space-y-8">
             {/* Switch Mensual / Anual */}
-            <div className="flex items-center justify-center gap-3 pb-4 border-b border-[#00b2de20]">
+            <div
+              className="relative flex items-center justify-center gap-4 py-5 px-6 mb-6 rounded-xl backdrop-blur-sm border border-[#00b2de40] shadow-lg overflow-hidden"
+              style={{
+                background: "linear-gradient(135deg, rgba(0, 178, 222, 0.15) 0%, rgba(0, 100, 200, 0.15) 100%)",
+              }}
+            >
+              {/* Glow effect */}
+              <div
+                className="absolute inset-0 opacity-30"
+                style={{
+                  background: "radial-gradient(circle at 50% 50%, rgba(0, 178, 222, 0.3) 0%, transparent 70%)",
+                }}
+              />
+
               <span
-                className={`text-sm ${!isAnnual ? "text-white font-medium" : "text-gray-500"
+                className={`relative z-10 text-sm font-semibold transition-all duration-300 ${!isAnnual ? "text-white scale-105" : "text-gray-400"
                   }`}
               >
                 Mensual
               </span>
               <button
-                className="relative w-12 h-6 rounded-full transition-colors duration-300"
+                className="relative z-10 w-14 h-7 rounded-full transition-all duration-300 shadow-md hover:shadow-lg"
                 style={{
                   backgroundColor: isAnnual ? "#00b2de" : "#374151",
+                  boxShadow: isAnnual ? "0 0 20px rgba(0, 178, 222, 0.4)" : "none",
                 }}
                 onClick={() => setIsAnnual(!isAnnual)}
               >
                 <span
-                  className="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-300"
+                  className="absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-lg transition-all duration-300"
                   style={{
-                    transform: isAnnual ? "translateX(24px)" : "translateX(0)",
+                    transform: isAnnual ? "translateX(28px)" : "translateX(0)",
                   }}
                 />
               </button>
               <span
-                className={`text-sm ${isAnnual ? "text-white font-medium" : "text-gray-500"
+                className={`relative z-10 text-sm font-semibold transition-all duration-300 ${isAnnual ? "text-white scale-105" : "text-gray-400"
                   }`}
               >
                 Anual
