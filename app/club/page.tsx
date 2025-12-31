@@ -402,6 +402,24 @@ export default function ClubPage() {
               )}
             </div>
           )}
+
+          {/* Agendar Mentoría Semanal */}
+          <div className="flex items-center gap-2 md:gap-4">
+            <div className="flex-shrink-0">
+              <Calendar className="w-4 h-4 md:w-6 md:h-6 text-[#00b2de]" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-white/60 text-xs md:text-sm">Agendar Mentoría Semanal</p>
+            </div>
+            <a
+              className="text-[#00b2de] font-medium hover:text-[#00a0c8] transition-colors flex items-center gap-1 text-xs md:text-base flex-shrink-0"
+              href="https://calendly.com/contacto-carvajalfit/reunion-club-gabriel-fit"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              Agendar <ArrowRight className="w-2.5 h-2.5 md:w-4 md:h-4" />
+            </a>
+          </div>
         </div>
 
         {/* Loading State */}

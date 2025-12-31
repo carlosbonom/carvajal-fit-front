@@ -12,6 +12,7 @@ import { setUser } from "@/lib/store/slices/userSlice";
 import { getAccessToken } from "@/lib/auth-utils";
 import { store } from "@/lib/store/store";
 import UserSidebar from "@/components/club/UserSidebar";
+import Comments from "@/components/Comments";
 
 function CoursePageContent() {
   const dispatch = useAppDispatch();
@@ -632,6 +633,11 @@ function CoursePageContent() {
                     </div>
                   </div>
                 )}
+
+                {/* Comments */}
+                <div className="space-y-1.5 md:space-y-3 pt-4 border-t border-white/10">
+                  <Comments contentId={selectedContent.id} />
+                </div>
               </>
             ) : (
               <div className="text-center py-12">

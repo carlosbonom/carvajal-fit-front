@@ -15,6 +15,7 @@ export interface UserProfile {
   phone: string | null;
   countryCode: string | null;
   preferredCurrency: string;
+  preferredWeightUnit: string;
   role: "customer" | "admin" | "support";
   status: string;
   emailVerified: boolean;

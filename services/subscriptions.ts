@@ -161,6 +161,12 @@ export const getPlans = async (): Promise<PlansResponse> => {
   return response.data;
 };
 
+// GET /subscriptions/current - Obtener suscripción actual del usuario
+export const getUserSubscription = async (): Promise<UserSubscription | null> => {
+  const response = await apiAxios.get<UserSubscription | null>(`/subscriptions/current`);
+  return response.data;
+};
+
 // PUT /subscriptions/prices/:id - Actualizar precio
 export const updatePrice = async (
   priceId: string,

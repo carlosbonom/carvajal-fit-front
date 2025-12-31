@@ -35,7 +35,7 @@ export function Teachers() {
                   <img
                     alt="Gabriel y José Carvajal"
                     className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
-                    src="https://placehold.co/400x400/gray/white?text=Gabriel+y+José"
+                    src="https://melli.fydeli.com/carvajal-fit/Foto%20Quienes%20son%20tus%20Coaches.webp"
                   />
                 </div>
               </div>

@@ -62,25 +62,37 @@ export default function UserSidebar({
             icon: User,
             label: "Mi Perfil",
             description: "Datos personales",
-            onClick: () => console.log("Navigate to Profile"), // Placeholder
+            onClick: () => {
+                router.push("/club/profile");
+                onClose();
+            },
         },
         {
             icon: Lock,
             label: "Seguridad",
             description: "Contraseña y acceso",
-            onClick: () => console.log("Navigate to Security"), // Placeholder
+            onClick: () => {
+                router.push("/club/security");
+                onClose();
+            },
         },
         {
             icon: CreditCard,
             label: "Suscripción",
             description: "Pagos y plan actual",
-            onClick: () => console.log("Navigate to Billing"), // Placeholder
+            onClick: () => {
+                router.push("/club/subscription");
+                onClose();
+            },
         },
         {
             icon: BarChart2,
             label: "Mi Progreso",
-            description: "Estadísticas de cursos",
-            onClick: () => console.log("Navigate to Progress"), // Placeholder
+            description: "Peso y estadísticas",
+            onClick: () => {
+                router.push("/club/progress");
+                onClose();
+            },
         },
     ];
 
@@ -158,9 +170,9 @@ export default function UserSidebar({
                             <LogOut className="w-5 h-5" />
                             Cerrar Sesión
                         </button>
-                        <p className="text-center text-white/20 text-xs mt-4">
-                            Carvajal Fit Club v1.0
-                        </p>
+                    {/* <p className="text-center text-white/20 text-xs mt-4">
+                        Carvajal Fit Club v1.0
+                    </p> */}
                     </div>
                 </div>
             </div>
