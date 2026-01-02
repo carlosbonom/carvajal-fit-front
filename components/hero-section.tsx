@@ -219,13 +219,15 @@ export function HeroSection() {
               ref={videoRef}
               autoPlay
               loop
+              muted
               playsInline
-              // muted
+              preload="metadata"
               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
               onLoadedMetadata={handleLoadedMetadata}
               onPause={() => setIsPlaying(false)}
               onPlay={() => setIsPlaying(true)}
               onTimeUpdate={handleTimeUpdate}
+              style={{ WebkitPlaysinline: 'true' } as React.CSSProperties}
             >
               <source
                 src="https://melli.fydeli.com/carvajal-fit/Bienvenida-carvajalfit.mp4"

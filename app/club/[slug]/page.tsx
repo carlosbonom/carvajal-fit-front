@@ -501,6 +501,8 @@ function CoursePageContent() {
                       controlsList="nodownload"
                       poster={selectedContent.thumbnailUrl || undefined}
                       preload="metadata"
+                      playsInline
+                      style={{ WebkitPlaysinline: 'true' } as React.CSSProperties}
                     >
                       <source src={selectedContent.contentUrl} type="video/mp4" />
                       <source src={selectedContent.contentUrl} type="video/webm" />
