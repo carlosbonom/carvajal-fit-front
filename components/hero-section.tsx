@@ -107,6 +107,9 @@ export function HeroSection() {
     const video = videoRef.current;
 
     if (video) {
+      // En iOS, el atributo muted a veces se ignora o no se hidrata correctamente
+      video.muted = true;
+
       // Agregar listener directo para timeupdate
       const timeUpdateHandler = () => {
         if (!isDraggingRef.current && video) {
@@ -220,6 +223,8 @@ export function HeroSection() {
               autoPlay
               loop
               muted
+              // @ts-ignore
+              defaultMuted
               playsInline
               preload="metadata"
               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
