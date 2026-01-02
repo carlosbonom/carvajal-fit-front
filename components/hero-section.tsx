@@ -107,8 +107,13 @@ export function HeroSection() {
     const video = videoRef.current;
 
     if (video) {
-      // En iOS, el atributo muted a veces se ignora o no se hidrata correctamente
+      // Configuración agresiva para iOS
       video.muted = true;
+      video.defaultMuted = true;
+      video.setAttribute("playsinline", "true");
+      video.setAttribute("webkit-playsinline", "true");
+      video.setAttribute("muted", "true");
+      video.autoplay = true;
 
       // Agregar listener directo para timeupdate
       const timeUpdateHandler = () => {
