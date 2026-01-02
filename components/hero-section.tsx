@@ -21,6 +21,8 @@ export function HeroSection() {
 
   const [isDragging, setIsDragging] = useState(false);
 
+  const [isMounted, setIsMounted] = useState(false);
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const isDraggingRef = useRef(false);
 
@@ -104,6 +106,7 @@ export function HeroSection() {
   };
 
   useEffect(() => {
+    setIsMounted(true);
     const video = videoRef.current;
 
     if (video) {
@@ -173,7 +176,7 @@ export function HeroSection() {
         video.removeEventListener("timeupdate", timeUpdateHandler);
       };
     }
-  }, []);
+  }, [isMounted]);
 
   return (
     <section className="bg-black text-white pt-16 pb-16 md:pb-24" id="inicio">
@@ -232,7 +235,6 @@ export function HeroSection() {
               // @ts-ignore
               defaultMuted
               playsInline
-              crossOrigin="anonymous"
               preload="metadata"
               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
               onLoadedMetadata={handleLoadedMetadata}
