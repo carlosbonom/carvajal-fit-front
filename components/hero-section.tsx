@@ -21,8 +21,6 @@ export function HeroSection() {
 
   const [isDragging, setIsDragging] = useState(false);
 
-  const [isMounted, setIsMounted] = useState(false);
-
   const videoRef = useRef<HTMLVideoElement>(null);
   const isDraggingRef = useRef(false);
 
@@ -106,24 +104,9 @@ export function HeroSection() {
   };
 
   useEffect(() => {
-    setIsMounted(true);
     const video = videoRef.current;
 
     if (video) {
-      // Configuración agresiva para iOS
-      video.muted = true;
-      video.defaultMuted = true;
-      video.setAttribute("playsinline", "true");
-      video.setAttribute("webkit-playsinline", "true");
-      video.setAttribute("muted", "true");
-      video.autoplay = true;
-
-      // 2. Establecer fuente DESPUÉS de los atributos para garantizar orden correcto en Safari
-      if (!video.src) {
-        video.src = "https://melli.fydeli.com/carvajal-fit/Bienvenida-carvajalfit.mp4";
-        video.load();
-      }
-
       // Agregar listener directo para timeupdate
       const timeUpdateHandler = () => {
         if (!isDraggingRef.current && video) {
@@ -182,7 +165,7 @@ export function HeroSection() {
         video.removeEventListener("timeupdate", timeUpdateHandler);
       };
     }
-  }, [isMounted]);
+  }, []);
 
   return (
     <section className="bg-black text-white pt-16 pb-16 md:pb-24" id="inicio">
@@ -237,10 +220,8 @@ export function HeroSection() {
               autoPlay
               loop
               muted
-              // @ts-ignore
-              defaultMuted
               playsInline
-              preload="auto"
+              preload="metadata"
               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
               onLoadedMetadata={handleLoadedMetadata}
               onPause={() => setIsPlaying(false)}
@@ -248,6 +229,10 @@ export function HeroSection() {
               onTimeUpdate={handleTimeUpdate}
               style={{ WebkitPlaysinline: 'true' } as React.CSSProperties}
             >
+              <source
+                src="https://melli.fydeli.com/carvajal-fit/Bienvenida-carvajalfit.mp4"
+                type="video/mp4"
+              />
               <track kind="captions" label="Español" srcLang="es" />
               Tu navegador no soporta la reproducción de video.
             </video>
