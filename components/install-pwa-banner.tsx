@@ -11,6 +11,7 @@ interface BeforeInstallPromptEvent extends Event {
 
 export function InstallPWABanner() {
   const pathname = usePathname();
+  const [isIOS, setIsIOS] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showBanner, setShowBanner] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
@@ -19,13 +20,17 @@ export function InstallPWABanner() {
   const isClubPage = pathname?.startsWith("/club");
 
   useEffect(() => {
+    // Verificar si es iOS
+    const checkIsIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    setIsIOS(checkIsIOS);
+
     // Verificar si la app ya está instalada
     const checkIfInstalled = () => {
       // En móviles, verificar si está en modo standalone
       const isStandalone = window.matchMedia("(display-mode: standalone)").matches;
       // O si está en la pantalla de inicio (iOS)
       const isIOSStandalone = (window.navigator as any).standalone === true;
-      
+
       if (isStandalone || isIOSStandalone) {
         setIsInstalled(true);
         return true;
@@ -47,7 +52,7 @@ export function InstallPWABanner() {
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
-      
+
       // Mostrar el banner solo en /club
       if (isClubPage) {
         setShowBanner(true);
@@ -56,8 +61,8 @@ export function InstallPWABanner() {
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
 
-    // Si ya hay un prompt guardado y estamos en /club, mostrarlo
-    if (isClubPage && deferredPrompt) {
+    // Si es iOS y estamos en /club, mostrar el banner directamente
+    if (isClubPage && (deferredPrompt || checkIsIOS) && !checkIfInstalled()) {
       setShowBanner(true);
     }
 
@@ -68,7 +73,11 @@ export function InstallPWABanner() {
 
   // Mostrar/ocultar banner cuando cambia la ruta
   useEffect(() => {
-    if (isClubPage && deferredPrompt && !isInstalled) {
+    // Mostrar si: 
+    // 1. Estamos en /club
+    // 2. No está instalada
+    // 3. (Hay prompt diferido O es iOS)
+    if (isClubPage && !isInstalled && (deferredPrompt || isIOS)) {
       const dismissedInstall = localStorage.getItem("pwa-install-dismissed");
       if (!dismissedInstall) {
         setShowBanner(true);
@@ -76,30 +85,31 @@ export function InstallPWABanner() {
     } else {
       setShowBanner(false);
     }
-  }, [pathname, deferredPrompt, isInstalled, isClubPage]);
+  }, [pathname, deferredPrompt, isInstalled, isClubPage, isIOS]);
 
   const handleInstallClick = async () => {
+    // Si es iOS, mostrar instrucciones
+    if (isIOS) {
+      alert(
+        "Para instalar la app en iPhone/iPad:\n\n" +
+        "1. Toca el botón de compartir (cuadrado con flecha) en la barra inferior\n" +
+        "2. Desliza hacia abajo y selecciona 'Agregar a Inicio'\n" +
+        "3. Toca 'Agregar' arriba a la derecha"
+      );
+      return;
+    }
+
     if (!deferredPrompt) {
-      // En iOS, mostrar instrucciones
-      if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
-        alert(
-          "Para instalar la app:\n\n" +
-          "1. Toca el botón de compartir (cuadrado con flecha)\n" +
-          "2. Selecciona 'Agregar a pantalla de inicio'\n" +
-          "3. Toca 'Agregar'"
-        );
-        return;
-      }
       return;
     }
 
     try {
       // Mostrar el prompt de instalación
       await deferredPrompt.prompt();
-      
+
       // Esperar a que el usuario responda
       const { outcome } = await deferredPrompt.userChoice;
-      
+
       if (outcome === "accepted") {
         console.log("Usuario aceptó instalar la app");
         setShowBanner(false);
@@ -107,7 +117,7 @@ export function InstallPWABanner() {
       } else {
         console.log("Usuario rechazó instalar la app");
       }
-      
+
       // Limpiar el prompt
       setDeferredPrompt(null);
     } catch (error) {
@@ -138,15 +148,17 @@ export function InstallPWABanner() {
               Instalar en tu celular
             </h3>
             <p className="text-white/90 text-xs md:text-sm mb-3">
-              Instala la app para acceder más rápido y disfrutar de una mejor experiencia
+              {isIOS
+                ? "Agrega la app a tu pantalla de inicio para una mejor experiencia"
+                : "Instala la app para acceder más rápido y disfrutar de una mejor experiencia"}
             </p>
             <div className="flex items-center gap-2">
               <button
                 onClick={handleInstallClick}
-                className="flex items-center gap-2 px-4 py-2 bg-white text-[#00b2de] rounded-lg font-medium text-sm hover:bg-white/90 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-white text-[#00b2de] rounded-lg font-medium text-sm hover:bg-white/90 transition-colors shadow-lg"
               >
                 <Download className="w-4 h-4" />
-                Instalar
+                {isIOS ? "Ver cómo instalar" : "Instalar"}
               </button>
               <button
                 onClick={handleDismiss}
