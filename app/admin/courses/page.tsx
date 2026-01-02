@@ -122,7 +122,7 @@ export default function CoursesPage() {
       const newIndex = currentSorted.findIndex((item) => item.id === over.id);
 
       const newItems = arrayMove(currentSorted, oldIndex, newIndex);
-      
+
       // Actualizar sortOrder para todos los items afectados
       const updatedItems = newItems.map((item, index) => {
         const newSortOrder = index;
@@ -138,7 +138,7 @@ export default function CoursesPage() {
       if (debounceTimer.current) {
         clearTimeout(debounceTimer.current);
       }
-      
+
       // Enviar cambios después de 500ms de inactividad
       debounceTimer.current = setTimeout(() => {
         saveOrderChanges();
@@ -234,12 +234,19 @@ export default function CoursesPage() {
           className="px-6 py-4 whitespace-nowrap cursor-pointer"
           onClick={() => router.push(`/admin/courses/${course.id}/videos`)}
         >
+          <span className="text-sm text-gray-600 bg-gray-100 px-2 py-1 rounded">
+            {course.category?.name || "Sin categoría"}
+          </span>
+        </td>
+        <td
+          className="px-6 py-4 whitespace-nowrap cursor-pointer"
+          onClick={() => router.push(`/admin/courses/${course.id}/videos`)}
+        >
           <span
-            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-              course.isPublished
+            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${course.isPublished
                 ? "bg-green-100 text-green-800"
                 : "bg-gray-100 text-gray-800"
-            }`}
+              }`}
           >
             {course.isPublished ? "Publicado" : "Borrador"}
           </span>
@@ -372,6 +379,9 @@ export default function CoursesPage() {
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Curso
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Categoría
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Estado

@@ -76,14 +76,25 @@ export function MembershipCardv2() {
   const displayPrice = isAnnual ? annualPriceCLP : monthlyPriceCLP;
   const displayPriceUSD = isAnnual ? annualPriceUSD : monthlyPriceUSD;
 
-  const benefits = plan?.features || [
-    "Ruta de entrenamiento estructurada por fases (definición, mantenimiento, volumen)",
-    "Guía completa de cardio optimizada",
-    "Zoom grupal en vivo todos los viernes",
-    "Grupo privado de WhatsApp con mensaje diario 5:00 AM",
-    "Tabla Excel profesional de progreso con gráficos automáticos",
-    "Acceso inmediato a todos los planes PDF disponibles",
+  // Beneficios específicos para plan mensual
+  const monthlyBenefits = [
+    "Protocolo de Entrenamiento CarvajalFit: Ruta estructurada por fases (Definición, Mantenimiento y Volumen) diseñada por ambos hermanos.",
+    "Mentoría de Mentalidad y Abundancia (Martes): Sesión en vivo para dominar la gratificación instantánea y programar tu mente para el éxito.",
+    "Sesión de Mentoría Fitness y Nutrición (Viernes): 1 hora en vivo para resolver dudas y ajustar tu plan en tiempo real conmigo y Gabriel.",
+    "Programa de Transformación Mental (6 meses): Acceso a la sección exclusiva de videos sobre mentalidad inquebrantable.",
+    "Comunidad privada: Grupo de WhatsApp: Motivación diaria y retroalimentación constante de la hermandad.",
   ];
+
+  // Beneficios para plan anual
+  const annualBenefits = [
+    "Acceso Total por un año Asegurado. Estarás 52 semanas seguidas con nosotros para asegurar el Cambio por completo de tu mentalidad y obtener grandes resultados físicos.",
+    "Acceso Total a la Biblioteca de Mentalidad y Fitness: Grabaciones históricas de todas las sesiones de los martes sobre abundancia y disciplina desde el inicio del Club. hasta la fecha.",
+    "Ciclo Completo de Transformación (12 Meses): Dos vueltas completas al protocolo de Definición, Mantenimiento y Volumen para consolidar tu físico.",
+    "Mentoría de Mentalidad y Abundancia (Martes): Participación en vivo en todas las sesiones del año para reprogramar tu éxito financiero y personal.",
+  ];
+
+  // Seleccionar beneficios según el ciclo de facturación
+  const benefits = isAnnual ? annualBenefits : monthlyBenefits;
 
   const features = [
     {

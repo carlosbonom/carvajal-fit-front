@@ -15,9 +15,16 @@ export interface CreateCourseDto {
   isPublished?: boolean;
   sortOrder?: number;
   creatorId?: string;
+  categoryId?: string;
 }
 
 export interface Creator {
+  id: string;
+  name: string;
+  slug: string;
+}
+
+export interface CourseCategory {
   id: string;
   name: string;
   slug: string;
@@ -37,6 +44,7 @@ export interface Course {
   sortOrder: number | null;
   metadata: Record<string, any> | null;
   creator: Creator;
+  category: CourseCategory | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -154,6 +162,7 @@ export const createCourse = async (
     durationMinutes: data.durationMinutes,
     isPublished: data.isPublished,
     sortOrder: data.sortOrder,
+    categoryId: data.categoryId,
   };
 
   const response = await apiAxios.post<Course>("/courses", courseData);
@@ -277,7 +286,7 @@ export const updateCourseContent = async (
   if (file) {
     const formData = new FormData();
     formData.append("file", file);
-    
+
     // Agregar otros campos al FormData
     Object.entries(normalizedData).forEach(([key, value]) => {
       if (key === "file") return; // Ya agregado
@@ -381,6 +390,11 @@ export interface CourseWithSubscriptionContent {
     name: string;
     slug: string;
   } | null;
+  category: {
+    id: string;
+    name: string;
+    slug: string;
+  } | null;
   createdAt: string;
   updatedAt: string;
   content: SubscriptionContent[];
@@ -407,6 +421,7 @@ export interface UpdateCourseDto {
   isPublished?: boolean;
   sortOrder?: number | null;
   creatorId?: string | null;
+  categoryId?: string | null;
   metadata?: Record<string, any>;
   thumbnailFile?: File;
   trailerFile?: File;
@@ -451,6 +466,7 @@ export const updateCourse = async (
     ...requestData,
     thumbnailUrl: thumbnailUrl && thumbnailUrl.trim() !== "" ? thumbnailUrl : undefined,
     trailerUrl: trailerUrl && trailerUrl.trim() !== "" ? trailerUrl : undefined,
+    categoryId: data.categoryId,
   };
 
   const response = await apiAxios.patch<Course>(`/courses/${courseId}`, courseData);

@@ -437,209 +437,324 @@ export default function ClubPage() {
         )}
 
         {/* Cursos */}
-        {!loading && !error && courses.length > 0 && (
-          <div className="space-y-5 md:space-y-8">
-            {courses.map((course) => (
-              <div key={course.id} className="space-y-3 md:space-y-6">
-                {/* Header del Curso */}
-                <div className="space-y-1 sm:space-y-0">
-                  <div className="flex items-center justify-between gap-2 sm:gap-4">
-                    <div className="flex items-center gap-2 sm:gap-3 md:gap-4 flex-1 min-w-0">
-                      {/* <div className="flex-shrink-0">
-                        <Flame className="w-5 h-5 sm:w-7 sm:h-7 md:w-10 md:h-10 text-[#00b2de]" />
-                      </div> */}
-                      <div className="flex-1 min-w-0">
-                        <h2 className="text-lg sm:text-xl md:text-3xl font-bold text-white truncate">
-                          {course.title}
-                        </h2>
+        {!loading && !error && courses.length > 0 && (() => {
+          // Agrupar cursos por categoría
+          const coursesWithCategory = courses.filter((c) => c.category);
+          const coursesWithoutCategory = courses.filter((c) => !c.category);
+
+          // Agrupar por categoría
+          const categoryMap = new Map<string, typeof coursesWithCategory>();
+          coursesWithCategory.forEach((course) => {
+            if (course.category) {
+              const categoryId = course.category.id;
+              if (!categoryMap.has(categoryId)) {
+                categoryMap.set(categoryId, []);
+              }
+              categoryMap.get(categoryId)!.push(course);
+            }
+          });
+
+          // Obtener primera categoría para ordenar (si tienen sortOrder, ordenar por eso)
+          const categoriesArray = Array.from(categoryMap.entries()).map(([categoryId, courses]) => ({
+            category: courses[0].category!,
+            courses,
+          }));
+
+          return (
+            <div className="space-y-5 md:space-y-8">
+              {/* Cursos agrupados por categoría */}
+              {categoriesArray.map(({ category, courses: categoryCourses }) => {
+                return (
+                  <div key={category.id} className="space-y-4 md:space-y-6">
+                    {/* Título de Categoría */}
+                    <h2 className="text-xl sm:text-2xl md:text-4xl font-bold text-white">
+                      {category.name}
+                    </h2>
+
+                    {/* Grid de Cursos con Portadas */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                      {categoryCourses.map((course) => {
+                        // Priorizar la miniatura del propio curso
+                        const coverThumbnail = course.thumbnailUrl || course.content?.[0]?.thumbnailUrl;
+                        const coverVideoUrl = !course.thumbnailUrl && course.content?.[0]?.contentType === "video" ? course.content?.[0]?.contentUrl : null;
+
+                        // Verificar si el curso está bloqueado (100% del contenido bloqueado)
+                        const isCourseLocked = course.content && course.content.length > 0
+                          ? course.content.every(contentItem => !isContentUnlocked(contentItem))
+                          : false;
+
+                        return (
+                          <div
+                            key={course.id}
+                            className={`bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-xl aspect-[4/3] flex items-center justify-center border border-white/10 ${!isCourseLocked ? "hover:border-[#00b2de]/30 cursor-pointer" : "cursor-default"} transition-all duration-300 group relative overflow-hidden`}
+                            onClick={() => {
+                              if (!isCourseLocked) {
+                                router.push(`/club/${course.slug}`);
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              if (!isCourseLocked && (e.key === "Enter" || e.key === " ")) {
+                                e.preventDefault();
+                                router.push(`/club/${course.slug}`);
+                              }
+                            }}
+                            role="button"
+                            tabIndex={isCourseLocked ? -1 : 0}
+                          >
+                            {coverThumbnail ? (
+                              <img
+                                src={coverThumbnail}
+                                alt={course.title}
+                                className={`w-full h-full object-cover transition-all duration-300 ${isCourseLocked ? "blur-sm opacity-40" : ""}`}
+                              />
+                            ) : coverVideoUrl ? (
+                              <video
+                                src={coverVideoUrl}
+                                className={`w-full h-full object-cover transition-all duration-300 ${isCourseLocked ? "blur-sm opacity-40" : ""}`}
+                                preload="metadata"
+                                muted
+                                playsInline
+                              />
+                            ) : (
+                              <div className={`text-center space-y-2 transition-all duration-300 ${isCourseLocked ? "blur-sm opacity-20" : "opacity-40 group-hover:opacity-60"}`}>
+                                <svg
+                                  className="w-16 h-16 mx-auto text-white/50"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={1.5}
+                                  />
+                                </svg>
+                                <p className="text-white/50 text-sm px-4">{course.title}</p>
+                              </div>
+                            )}
+
+                            {/* Overlay de Bloqueado */}
+                            {isCourseLocked && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                                <div className="text-center space-y-2">
+                                  <Lock className="w-10 h-10 mx-auto text-white/70" />
+                                  <p className="text-white/80 text-xs font-semibold uppercase tracking-wider">Bloqueado</p>
+                                </div>
+                              </div>
+                            )}
+
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/0 to-black/0 flex items-end p-4">
+                              <p className={`text-white font-medium text-sm ${isCourseLocked ? "opacity-60" : ""}`}>{course.title}</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Cursos sin categoría - mostrar como antes */}
+              {coursesWithoutCategory.map((course) => (
+                <div key={course.id} className="space-y-3 md:space-y-6">
+                  {/* Header del Curso */}
+                  <div className="space-y-1 sm:space-y-0">
+                    <div className="flex items-center justify-between gap-2 sm:gap-4">
+                      <div className="flex items-center gap-2 sm:gap-3 md:gap-4 flex-1 min-w-0">
+                        <div className="flex-1 min-w-0">
+                          <h2 className="text-lg sm:text-xl md:text-3xl font-bold text-white truncate">
+                            {course.title}
+                          </h2>
+                        </div>
+                      </div>
+                      {/* Botón para ver el curso completo - ahora en la misma línea */}
+                      <button
+                        onClick={() => router.push(`/club/${course.slug}`)}
+                        className="text-[#00b2de] hover:text-[#00a0c8] transition-colors inline-flex items-center gap-1 text-xs md:text-sm font-medium flex-shrink-0"
+                      >
+                        Ver todo
+                        <ArrowRight className="w-3 h-3 md:w-4 md:h-4" />
+                      </button>
+                    </div>
+                    {course.description && (
+                      <p className="text-white/70 text-xs sm:text-sm md:text-base leading-tight pl-7 sm:pl-10 md:pl-14">
+                        {course.description}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Contenido del Curso */}
+                  {course.content && course.content.length > 0 && (
+                    <div className="relative">
+                      {/* Carrusel horizontal en mobile */}
+                      <div className="flex md:hidden gap-3 overflow-x-auto scrollbar-hide pb-2 -mx-4 px-4 snap-x snap-mandatory scroll-smooth">
+                        {[...course.content]
+                          .sort((a, b) => {
+                            const orderA = a.sortOrder ?? 999999;
+                            const orderB = b.sortOrder ?? 999999;
+                            return orderA - orderB;
+                          })
+                          .slice(0, 3)
+                          .map((contentItem) => {
+                            const isUnlocked = isContentUnlocked(contentItem);
+                            const unlockMessage = getUnlockMessage(contentItem);
+
+                            return (
+                              <div
+                                key={contentItem.id}
+                                className="flex-shrink-0 w-[70vw] max-w-[260px] bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-lg aspect-video flex items-center justify-center border border-white/10 active:border-[#00b2de]/30 transition-all duration-300 cursor-pointer group snap-start relative overflow-hidden"
+                                onClick={() =>
+                                  router.push(`/club/${course.slug}`)
+                                }
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter" || e.key === " ") {
+                                    e.preventDefault();
+                                    router.push(`/club/${course.slug}`);
+                                  }
+                                }}
+                                role="button"
+                                tabIndex={0}
+                              >
+                                {contentItem.thumbnailUrl ? (
+                                  <img
+                                    src={contentItem.thumbnailUrl}
+                                    alt={contentItem.title}
+                                    className={`w-full h-full object-cover ${!isUnlocked ? "blur-sm opacity-50" : ""}`}
+                                  />
+                                ) : contentItem.contentType === "video" && contentItem.contentUrl ? (
+                                  <video
+                                    src={contentItem.contentUrl}
+                                    className={`w-full h-full object-cover ${!isUnlocked ? "blur-sm opacity-50" : ""}`}
+                                    preload="metadata"
+                                    muted
+                                    playsInline
+                                  />
+                                ) : (
+                                  <div className="text-center space-y-2 opacity-40 group-hover:opacity-60 transition-opacity">
+                                    <svg
+                                      className="w-16 h-16 mx-auto text-white/50"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={1.5}
+                                      />
+                                    </svg>
+                                    <p className="text-white/50 text-sm px-4">{contentItem.title}</p>
+                                  </div>
+                                )}
+                                {!isUnlocked && (
+                                  <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+                                    <div className="text-center space-y-3 px-4">
+                                      <Lock className="w-12 h-12 mx-auto text-white/70" />
+                                      {unlockMessage && (
+                                        <p className="text-white/80 text-sm font-medium">
+                                          {unlockMessage}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/0 to-black/0 flex items-end p-4">
+                                  <p className="text-white font-medium text-sm">{contentItem.title}</p>
+                                </div>
+                              </div>
+                            );
+                          })}
+                      </div>
+
+                      {/* Grid en desktop */}
+                      <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                        {[...course.content]
+                          .sort((a, b) => {
+                            const orderA = a.sortOrder ?? 999999;
+                            const orderB = b.sortOrder ?? 999999;
+                            return orderA - orderB;
+                          })
+                          .slice(0, 3)
+                          .map((contentItem) => {
+                            const isUnlocked = isContentUnlocked(contentItem);
+                            const unlockMessage = getUnlockMessage(contentItem);
+
+                            return (
+                              <div
+                                key={contentItem.id}
+                                className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-xl aspect-[4/3] flex items-center justify-center border border-white/10 hover:border-[#00b2de]/30 transition-all duration-300 cursor-pointer group relative overflow-hidden"
+                                onClick={() =>
+                                  router.push(`/club/${course.slug}`)
+                                }
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter" || e.key === " ") {
+                                    e.preventDefault();
+                                    router.push(`/club/${course.slug}`);
+                                  }
+                                }}
+                                role="button"
+                                tabIndex={0}
+                              >
+                                {contentItem.thumbnailUrl ? (
+                                  <img
+                                    src={contentItem.thumbnailUrl}
+                                    alt={contentItem.title}
+                                    className={`w-full h-full object-cover ${!isUnlocked ? "blur-sm opacity-50" : ""}`}
+                                  />
+                                ) : contentItem.contentType === "video" && contentItem.contentUrl ? (
+                                  <video
+                                    src={contentItem.contentUrl}
+                                    className={`w-full h-full object-cover ${!isUnlocked ? "blur-sm opacity-50" : ""}`}
+                                    preload="metadata"
+                                    muted
+                                    playsInline
+                                  />
+                                ) : (
+                                  <div className="text-center space-y-2 opacity-40 group-hover:opacity-60 transition-opacity">
+                                    <svg
+                                      className="w-16 h-16 mx-auto text-white/50"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={1.5}
+                                      />
+                                    </svg>
+                                    <p className="text-white/50 text-sm px-4">{contentItem.title}</p>
+                                  </div>
+                                )}
+                                {!isUnlocked && (
+                                  <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+                                    <div className="text-center space-y-3 px-4">
+                                      <Lock className="w-12 h-12 mx-auto text-white/70" />
+                                      {unlockMessage && (
+                                        <p className="text-white/80 text-sm font-medium">
+                                          {unlockMessage}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/0 to-black/0 flex items-end p-4">
+                                  <p className="text-white font-medium text-sm">{contentItem.title}</p>
+                                </div>
+                              </div>
+                            );
+                          })}
                       </div>
                     </div>
-                    {/* Botón para ver el curso completo - ahora en la misma línea */}
-                    <button
-                      onClick={() => router.push(`/club/${course.slug}`)}
-                      className="text-[#00b2de] hover:text-[#00a0c8] transition-colors inline-flex items-center gap-1 text-xs md:text-sm font-medium flex-shrink-0"
-                    >
-                      Ver todo
-                      <ArrowRight className="w-3 h-3 md:w-4 md:h-4" />
-                    </button>
-                  </div>
-                  {course.description && (
-                    <p className="text-white/70 text-xs sm:text-sm md:text-base leading-tight pl-7 sm:pl-10 md:pl-14">
-                      {course.description}
-                    </p>
                   )}
                 </div>
-
-                {/* Contenido del Curso */}
-                {course.content && course.content.length > 0 && (
-                  <div className="relative">
-                    {/* Carrusel horizontal en mobile */}
-                    <div className="flex md:hidden gap-3 overflow-x-auto scrollbar-hide pb-2 -mx-4 px-4 snap-x snap-mandatory scroll-smooth">
-                      {[...course.content]
-                        .sort((a, b) => {
-                          const orderA = a.sortOrder ?? 999999;
-                          const orderB = b.sortOrder ?? 999999;
-                          return orderA - orderB;
-                        })
-                        .slice(0, 3)
-                        .map((contentItem) => {
-                          const isUnlocked = isContentUnlocked(contentItem);
-                          const unlockMessage = getUnlockMessage(contentItem);
-
-                          return (
-                            <div
-                              key={contentItem.id}
-                              className="flex-shrink-0 w-[70vw] max-w-[260px] bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-lg aspect-video flex items-center justify-center border border-white/10 active:border-[#00b2de]/30 transition-all duration-300 cursor-pointer group snap-start relative overflow-hidden"
-                              onClick={() =>
-                                router.push(`/club/${course.slug}`)
-                              }
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter" || e.key === " ") {
-                                  e.preventDefault();
-                                  router.push(`/club/${course.slug}`);
-                                }
-                              }}
-                              role="button"
-                              tabIndex={0}
-                            >
-                              {contentItem.thumbnailUrl ? (
-                                <img
-                                  src={contentItem.thumbnailUrl}
-                                  alt={contentItem.title}
-                                  className={`w-full h-full object-cover ${!isUnlocked ? "blur-sm opacity-50" : ""}`}
-                                />
-                              ) : contentItem.contentType === "video" && contentItem.contentUrl ? (
-                                <video
-                                  src={contentItem.contentUrl}
-                                  className={`w-full h-full object-cover ${!isUnlocked ? "blur-sm opacity-50" : ""}`}
-                                  preload="metadata"
-                                  muted
-                                  playsInline
-                                />
-                              ) : (
-                                <div className="text-center space-y-2 opacity-40 group-hover:opacity-60 transition-opacity">
-                                  <svg
-                                    className="w-16 h-16 mx-auto text-white/50"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={1.5}
-                                    />
-                                  </svg>
-                                  <p className="text-white/50 text-sm px-4">{contentItem.title}</p>
-                                </div>
-                              )}
-                              {!isUnlocked && (
-                                <div className="absolute inset-0 flex items-center justify-center bg-black/60">
-                                  <div className="text-center space-y-3 px-4">
-                                    <Lock className="w-12 h-12 mx-auto text-white/70" />
-                                    {unlockMessage && (
-                                      <p className="text-white/80 text-sm font-medium">
-                                        {unlockMessage}
-                                      </p>
-                                    )}
-                                  </div>
-                                </div>
-                              )}
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/0 to-black/0 flex items-end p-4">
-                                <p className="text-white font-medium text-sm">{contentItem.title}</p>
-                              </div>
-                            </div>
-                          );
-                        })}
-                    </div>
-
-                    {/* Grid en desktop */}
-                    <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                      {[...course.content]
-                        .sort((a, b) => {
-                          const orderA = a.sortOrder ?? 999999;
-                          const orderB = b.sortOrder ?? 999999;
-                          return orderA - orderB;
-                        })
-                        .slice(0, 3)
-                        .map((contentItem) => {
-                          const isUnlocked = isContentUnlocked(contentItem);
-                          const unlockMessage = getUnlockMessage(contentItem);
-
-                          return (
-                            <div
-                              key={contentItem.id}
-                              className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-xl aspect-[4/3] flex items-center justify-center border border-white/10 hover:border-[#00b2de]/30 transition-all duration-300 cursor-pointer group relative overflow-hidden"
-                              onClick={() =>
-                                router.push(`/club/${course.slug}`)
-                              }
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter" || e.key === " ") {
-                                  e.preventDefault();
-                                  router.push(`/club/${course.slug}`);
-                                }
-                              }}
-                              role="button"
-                              tabIndex={0}
-                            >
-                              {contentItem.thumbnailUrl ? (
-                                <img
-                                  src={contentItem.thumbnailUrl}
-                                  alt={contentItem.title}
-                                  className={`w-full h-full object-cover ${!isUnlocked ? "blur-sm opacity-50" : ""}`}
-                                />
-                              ) : contentItem.contentType === "video" && contentItem.contentUrl ? (
-                                <video
-                                  src={contentItem.contentUrl}
-                                  className={`w-full h-full object-cover ${!isUnlocked ? "blur-sm opacity-50" : ""}`}
-                                  preload="metadata"
-                                  muted
-                                  playsInline
-                                />
-                              ) : (
-                                <div className="text-center space-y-2 opacity-40 group-hover:opacity-60 transition-opacity">
-                                  <svg
-                                    className="w-16 h-16 mx-auto text-white/50"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={1.5}
-                                    />
-                                  </svg>
-                                  <p className="text-white/50 text-sm px-4">{contentItem.title}</p>
-                                </div>
-                              )}
-                              {!isUnlocked && (
-                                <div className="absolute inset-0 flex items-center justify-center bg-black/60">
-                                  <div className="text-center space-y-3 px-4">
-                                    <Lock className="w-12 h-12 mx-auto text-white/70" />
-                                    {unlockMessage && (
-                                      <p className="text-white/80 text-sm font-medium">
-                                        {unlockMessage}
-                                      </p>
-                                    )}
-                                  </div>
-                                </div>
-                              )}
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/0 to-black/0 flex items-end p-4">
-                                <p className="text-white font-medium text-sm">{contentItem.title}</p>
-                              </div>
-                            </div>
-                          );
-                        })}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          );
+        })()}
 
         {/* Sin cursos */}
         {!loading && !error && courses.length === 0 && (

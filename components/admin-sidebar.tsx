@@ -298,6 +298,22 @@ const ClubConfigIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
+const FolderTreeIcon = ({ className }: { className?: string }) => (
+  <svg
+    className={className}
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+  >
+    <path
+      d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+    />
+  </svg>
+);
+
 interface MenuItem {
   label: string;
   icon: React.FC<{ className?: string }>;
@@ -320,6 +336,7 @@ const menuSections: MenuSection[] = [
     title: "El club",
     items: [
       { label: "Cursos", icon: BookOpenIcon, path: "/admin/courses" },
+      { label: "Categorías", icon: FolderTreeIcon, path: "/admin/course-categories" },
       // { label: "Videos", icon: VideoIcon, path: "/admin/videos" },
       // { label: "Desbloqueos", icon: LockIcon, path: "/admin/unlocks" },
       { label: "Miembros", icon: UsersIcon, path: "/admin/members" },
