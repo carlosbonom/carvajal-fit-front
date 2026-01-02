@@ -225,12 +225,14 @@ export function HeroSection() {
           >
             <video
               ref={videoRef}
+              src="https://melli.fydeli.com/carvajal-fit/Bienvenida-carvajalfit.mp4"
               autoPlay
               loop
               muted
               // @ts-ignore
               defaultMuted
               playsInline
+              crossOrigin="anonymous"
               preload="metadata"
               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
               onLoadedMetadata={handleLoadedMetadata}
@@ -239,10 +241,6 @@ export function HeroSection() {
               onTimeUpdate={handleTimeUpdate}
               style={{ WebkitPlaysinline: 'true' } as React.CSSProperties}
             >
-              <source
-                src="https://melli.fydeli.com/carvajal-fit/Bienvenida-carvajalfit.mp4"
-                type="video/mp4"
-              />
               <track kind="captions" label="Español" srcLang="es" />
               Tu navegador no soporta la reproducción de video.
             </video>
