@@ -118,6 +118,12 @@ export function HeroSection() {
       video.setAttribute("muted", "true");
       video.autoplay = true;
 
+      // 2. Establecer fuente DESPUÉS de los atributos para garantizar orden correcto en Safari
+      if (!video.src) {
+        video.src = "https://melli.fydeli.com/carvajal-fit/Bienvenida-carvajalfit.mp4";
+        video.load();
+      }
+
       // Agregar listener directo para timeupdate
       const timeUpdateHandler = () => {
         if (!isDraggingRef.current && video) {
@@ -228,14 +234,13 @@ export function HeroSection() {
           >
             <video
               ref={videoRef}
-              src="https://melli.fydeli.com/carvajal-fit/Bienvenida-carvajalfit.mp4"
               autoPlay
               loop
               muted
               // @ts-ignore
               defaultMuted
               playsInline
-              preload="metadata"
+              preload="auto"
               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
               onLoadedMetadata={handleLoadedMetadata}
               onPause={() => setIsPlaying(false)}
