@@ -13,6 +13,164 @@ import { store } from "@/lib/store/store";
 import { InstallPWABanner } from "@/components/install-pwa-banner";
 import { getClubConfig, type ClubConfig } from "@/services/club-config";
 import UserSidebar from "@/components/club/UserSidebar";
+import { getCourseCategories, type CourseCategory } from "@/services/course-categories";
+
+// Tipo para los elementos de la grilla (Cursos o Categorías)
+type GridItem =
+  | { type: 'course'; data: CourseWithSubscriptionContent }
+  | { type: 'category'; data: CourseCategory; thumbnail?: string | null };
+
+// Sub-componente para renderizar una grilla universal (Cursos y/o Categorías)
+const UniversalGrid = ({
+  items,
+  router,
+  isContentUnlocked
+}: {
+  items: GridItem[];
+  router: any;
+  isContentUnlocked: (content: SubscriptionContent) => boolean;
+}) => {
+  return (
+    <div className="relative">
+      {/* Carrusel horizontal en mobile */}
+      <div className="flex md:hidden gap-3 overflow-x-auto scrollbar-hide pb-2 -mx-4 px-4 snap-x snap-mandatory scroll-smooth">
+        {items.map((item, idx) => {
+          if (item.type === 'course') {
+            const course = item.data;
+            const coverThumbnail = course.thumbnailUrl || course.content?.[0]?.thumbnailUrl;
+            const coverVideoUrl = !course.thumbnailUrl && course.content?.[0]?.contentType === "video" ? course.content?.[0]?.contentUrl : null;
+            const isCourseLocked = course.content && course.content.length > 0
+              ? course.content.every(contentItem => !isContentUnlocked(contentItem))
+              : false;
+
+            return (
+              <div
+                key={`course-${course.id}`}
+                className={`flex-shrink-0 w-[70vw] max-w-[260px] bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-lg aspect-video flex items-center justify-center border border-white/10 ${!isCourseLocked ? "active:border-[#00b2de]/30 cursor-pointer" : "cursor-default"} transition-all duration-300 group snap-start relative overflow-hidden`}
+                onClick={() => {
+                  if (!isCourseLocked) {
+                    router.push(`/club/${course.slug}`);
+                  }
+                }}
+              >
+                {coverThumbnail ? (
+                  <img src={coverThumbnail} alt={course.title} className={`w-full h-full object-cover ${isCourseLocked ? "blur-sm opacity-50" : ""}`} />
+                ) : coverVideoUrl ? (
+                  <video src={coverVideoUrl} className={`w-full h-full object-cover ${isCourseLocked ? "blur-sm opacity-50" : ""}`} preload="metadata" muted playsInline />
+                ) : (
+                  <div className="text-center space-y-2 opacity-40">
+                    <p className="text-white/50 text-xs px-4">{course.title}</p>
+                  </div>
+                )}
+                {isCourseLocked && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+                    <Lock className="w-8 h-8 text-white/70" />
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/0 to-black/0 flex items-end p-3">
+                  <p className="text-white font-medium text-xs truncate">{course.title}</p>
+                </div>
+              </div>
+            );
+          } else {
+            // Es una Categoría
+            const category = item.data;
+            return (
+              <div
+                key={`category-${category.id}`}
+                className="flex-shrink-0 w-[70vw] max-w-[260px] bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-lg aspect-video flex items-center justify-center border border-white/10 active:border-[#00b2de]/30 cursor-pointer transition-all duration-300 group snap-start relative overflow-hidden"
+                onClick={() => router.push(`/club/category/${category.slug}`)}
+              >
+                {item.thumbnail ? (
+                  <img src={item.thumbnail} alt={category.name} className="w-full h-full object-cover transition-all duration-300" />
+                ) : (
+                  <div className="text-center space-y-2 opacity-40">
+                    <div className="w-10 h-10 mx-auto rounded-full bg-white/10 flex items-center justify-center">
+                      <ArrowRight className="w-5 h-5 text-white/70" />
+                    </div>
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/0 to-black/0 flex items-end p-3">
+                  <p className="text-white font-medium text-xs truncate">{category.name}</p>
+                </div>
+              </div>
+            );
+          }
+        })}
+      </div>
+
+      {/* Grid en desktop */}
+      <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+        {items.map((item, idx) => {
+          if (item.type === 'course') {
+            const course = item.data;
+            const coverThumbnail = course.thumbnailUrl || course.content?.[0]?.thumbnailUrl;
+            const coverVideoUrl = !course.thumbnailUrl && course.content?.[0]?.contentType === "video" ? course.content?.[0]?.contentUrl : null;
+            const isCourseLocked = course.content && course.content.length > 0
+              ? course.content.every(contentItem => !isContentUnlocked(contentItem))
+              : false;
+
+            return (
+              <div
+                key={`course-${course.id}`}
+                className={`bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-xl aspect-video flex items-center justify-center border border-white/10 ${!isCourseLocked ? "hover:border-[#00b2de]/30 cursor-pointer" : "cursor-default"} transition-all duration-300 group relative overflow-hidden`}
+                onClick={() => {
+                  if (!isCourseLocked) {
+                    router.push(`/club/${course.slug}`);
+                  }
+                }}
+              >
+                {coverThumbnail ? (
+                  <img src={coverThumbnail} alt={course.title} className={`w-full h-full object-cover transition-all duration-300 ${isCourseLocked ? "blur-sm opacity-40" : ""}`} />
+                ) : coverVideoUrl ? (
+                  <video src={coverVideoUrl} className={`w-full h-full object-cover transition-all duration-300 ${isCourseLocked ? "blur-sm opacity-40" : ""}`} preload="metadata" muted playsInline />
+                ) : (
+                  <div className={`text-center space-y-2 transition-all duration-300 ${isCourseLocked ? "blur-sm opacity-20" : "opacity-40"}`}>
+                    <p className="text-white/50 text-sm px-4">{course.title}</p>
+                  </div>
+                )}
+                {isCourseLocked && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                    <div className="text-center">
+                      <Lock className="w-10 h-10 mx-auto text-white/70" />
+                      <p className="text-white/80 text-xs font-semibold uppercase mt-2">Bloqueado</p>
+                    </div>
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/0 to-black/0 flex items-end p-4">
+                  <p className={`text-white font-medium text-sm ${isCourseLocked ? "opacity-60" : ""}`}>{course.title}</p>
+                </div>
+              </div>
+            );
+          } else {
+            // Es una Categoría (Desktop)
+            const category = item.data;
+            return (
+              <div
+                key={`category-${category.id}`}
+                className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-xl aspect-video flex items-center justify-center border border-white/10 hover:border-[#00b2de]/30 cursor-pointer transition-all duration-300 group relative overflow-hidden"
+                onClick={() => router.push(`/club/category/${category.slug}`)}
+              >
+                {item.thumbnail ? (
+                  <img src={item.thumbnail} alt={category.name} className="w-full h-full object-cover transition-all duration-300" />
+                ) : (
+                  <div className="text-center space-y-2 opacity-30 group-hover:opacity-50 transition-opacity">
+                    <div className="w-16 h-16 mx-auto rounded-full bg-white/10 flex items-center justify-center">
+                      <ArrowRight className="w-8 h-8 text-[#00b2de]" />
+                    </div>
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/0 to-black/0 flex items-end p-4">
+                  <p className="text-white font-medium text-sm">{category.name}</p>
+                </div>
+              </div>
+            );
+          }
+        })}
+      </div>
+    </div>
+  );
+};
 
 export default function ClubPage() {
   const dispatch = useAppDispatch();
@@ -24,6 +182,7 @@ export default function ClubPage() {
   const [userLoading, setUserLoading] = useState(true);
   const [clubConfig, setClubConfig] = useState<ClubConfig | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [allCategories, setAllCategories] = useState<CourseCategory[]>([]);
 
   // Obtener nombre del usuario
   const userName = user?.name || user?.email?.split("@")[0] || "Usuario";
@@ -50,26 +209,20 @@ export default function ClubPage() {
     if (!hasActiveSubscription) return false;
 
     const monthsSinceStart = calculateMonthsSinceStart();
-    let unlockThreshold = 0;
+    const daysSinceStart = calculateDaysSinceStart();
 
     switch (content.unlockType) {
       case "day":
-        unlockThreshold = Math.floor(content.unlockValue / 30);
-        break;
+        return daysSinceStart >= content.unlockValue;
       case "week":
-        unlockThreshold = Math.floor(content.unlockValue / 4);
-        break;
+        return Math.floor(daysSinceStart / 7) >= content.unlockValue;
       case "month":
-        unlockThreshold = content.unlockValue;
-        break;
+        return monthsSinceStart >= content.unlockValue;
       case "year":
-        unlockThreshold = content.unlockValue * 12;
-        break;
+        return Math.floor(monthsSinceStart / 12) >= content.unlockValue;
       default:
         return true;
     }
-
-    return monthsSinceStart >= unlockThreshold;
   };
 
   // Calcular días desde el inicio de la suscripción
@@ -227,6 +380,20 @@ export default function ClubPage() {
     };
 
     loadClubConfig();
+  }, []);
+
+  // Cargar todas las categorías
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const categories = await getCourseCategories();
+        setAllCategories(categories);
+      } catch (error) {
+        console.error("Error al cargar categorías:", error);
+      }
+    };
+
+    loadCategories();
   }, []);
 
   // Cargar cursos si tiene suscripción activa o es admin
@@ -438,403 +605,113 @@ export default function ClubPage() {
 
         {/* Cursos */}
         {!loading && !error && courses.length > 0 && (() => {
-          // Agrupar cursos por categoría
+          // 1. Separar cursos por si tienen categoría o no
           const coursesWithCategory = courses.filter((c) => c.category);
           const coursesWithoutCategory = courses.filter((c) => !c.category);
 
-          // Agrupar por categoría
-          const categoryMap = new Map<string, typeof coursesWithCategory>();
+          // 2. Agrupar cursos por su categoría ID inmediata
+          const coursesByCategoryMap = new Map<string, typeof coursesWithCategory>();
           coursesWithCategory.forEach((course) => {
             if (course.category) {
-              const categoryId = course.category.id;
-              if (!categoryMap.has(categoryId)) {
-                categoryMap.set(categoryId, []);
+              const catId = course.category.id;
+              if (!coursesByCategoryMap.has(catId)) {
+                coursesByCategoryMap.set(catId, []);
               }
-              categoryMap.get(categoryId)!.push(course);
+              coursesByCategoryMap.get(catId)!.push(course);
             }
           });
 
-          // Obtener primera categoría para ordenar (si tienen sortOrder, ordenar por eso)
-          const categoriesArray = Array.from(categoryMap.entries()).map(([categoryId, courses]) => ({
-            category: courses[0].category!,
-            courses,
-          }));
+          // 3. Identificar categorías raíz (sin parentId) que tienen contenido
+          const rootGroups = allCategories
+            .filter((cat) => !cat.parentId)
+            .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+            .map((parent) => {
+              // 1. Obtener Subcategorías
+              const subcategories = allCategories
+                .filter((cat) => cat.parentId === parent.id)
+                .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+
+              // 2. Obtener Cursos Directos
+              const directCourses = coursesByCategoryMap.get(parent.id) || [];
+
+              // 3. Crear el set de "Tiles" (Subcategorías y Cursos)
+              const tiles: GridItem[] = [];
+
+              // Agregar subcategorías como Tiles
+              subcategories.forEach(sub => {
+                const subcourses = coursesByCategoryMap.get(sub.id) || [];
+                if (subcourses.length > 0) {
+                  // Buscar miniatura: prioridad miniatura de su primer curso
+                  const thumbnail = subcourses[0].thumbnailUrl || subcourses[0].content?.[0]?.thumbnailUrl;
+                  tiles.push({
+                    type: 'category',
+                    data: sub,
+                    thumbnail
+                  });
+                }
+              });
+
+              // Agregar cursos directos como Tiles
+              directCourses.forEach(course => {
+                tiles.push({
+                  type: 'course',
+                  data: course
+                });
+              });
+
+              return {
+                parent,
+                tiles,
+                hasContent: tiles.length > 0
+              };
+            })
+            .filter(group => group.hasContent);
 
           return (
-            <div className="space-y-5 md:space-y-8">
-              {/* Cursos agrupados por categoría */}
-              {categoriesArray.map(({ category, courses: categoryCourses }) => {
-                return (
-                  <div key={category.id} className="space-y-3 md:space-y-6">
-                    {/* Título de Categoría */}
-                    <h2 className="text-xl sm:text-2xl md:text-4xl font-bold text-white">
-                      {category.name}
+            <div className="space-y-8 md:space-y-12">
+              {/* Cursos y Subcategorías agrupados por Categoría Padre */}
+              {rootGroups.map(({ parent, tiles }) => (
+                <div key={parent.id} className="space-y-6 md:space-y-8">
+                  {/* Título de Categoría Padre - Clickeable */}
+                  <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                    <h2
+                      className="text-2xl sm:text-3xl md:text-5xl font-extrabold text-white hover:text-[#00b2de] transition-colors cursor-pointer tracking-tight"
+                      onClick={() => router.push(`/club/category/${parent.slug}`)}
+                    >
+                      {parent.name}
                     </h2>
-
-                    <div className="relative">
-                      {/* Carrusel horizontal en mobile */}
-                      <div className="flex md:hidden gap-3 overflow-x-auto scrollbar-hide pb-2 -mx-4 px-4 snap-x snap-mandatory scroll-smooth">
-                        {categoryCourses.map((course) => {
-                          // Priorizar la miniatura del propio curso
-                          const coverThumbnail = course.thumbnailUrl || course.content?.[0]?.thumbnailUrl;
-                          const coverVideoUrl = !course.thumbnailUrl && course.content?.[0]?.contentType === "video" ? course.content?.[0]?.contentUrl : null;
-
-                          // Verificar si el curso está bloqueado (100% del contenido bloqueado)
-                          const isCourseLocked = course.content && course.content.length > 0
-                            ? course.content.every(contentItem => !isContentUnlocked(contentItem))
-                            : false;
-
-                          return (
-                            <div
-                              key={course.id}
-                              className={`flex-shrink-0 w-[70vw] max-w-[260px] bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-lg aspect-video flex items-center justify-center border border-white/10 ${!isCourseLocked ? "active:border-[#00b2de]/30 cursor-pointer" : "cursor-default"} transition-all duration-300 group snap-start relative overflow-hidden`}
-                              onClick={() => {
-                                if (!isCourseLocked) {
-                                  router.push(`/club/${course.slug}`);
-                                }
-                              }}
-                              onKeyDown={(e) => {
-                                if (!isCourseLocked && (e.key === "Enter" || e.key === " ")) {
-                                  e.preventDefault();
-                                  router.push(`/club/${course.slug}`);
-                                }
-                              }}
-                              role="button"
-                              tabIndex={isCourseLocked ? -1 : 0}
-                            >
-                              {coverThumbnail ? (
-                                <img
-                                  src={coverThumbnail}
-                                  alt={course.title}
-                                  className={`w-full h-full object-cover ${isCourseLocked ? "blur-sm opacity-50" : ""}`}
-                                />
-                              ) : coverVideoUrl ? (
-                                <video
-                                  src={coverVideoUrl}
-                                  className={`w-full h-full object-cover ${isCourseLocked ? "blur-sm opacity-50" : ""}`}
-                                  preload="metadata"
-                                  muted
-                                  playsInline
-                                />
-                              ) : (
-                                <div className="text-center space-y-2 opacity-40 group-hover:opacity-60 transition-opacity">
-                                  <svg
-                                    className="w-16 h-16 mx-auto text-white/50"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={1.5}
-                                    />
-                                  </svg>
-                                  <p className="text-white/50 text-sm px-4">{course.title}</p>
-                                </div>
-                              )}
-
-                              {/* Overlay de Bloqueado */}
-                              {isCourseLocked && (
-                                <div className="absolute inset-0 flex items-center justify-center bg-black/60">
-                                  <div className="text-center space-y-2">
-                                    <Lock className="w-10 h-10 mx-auto text-white/70" />
-                                    <p className="text-white/80 text-xs font-semibold uppercase tracking-wider">Bloqueado</p>
-                                  </div>
-                                </div>
-                              )}
-
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/0 to-black/0 flex items-end p-4">
-                                <p className="text-white font-medium text-sm">{course.title}</p>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      {/* Grid en desktop */}
-                      <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                        {categoryCourses.map((course) => {
-                          // Priorizar la miniatura del propio curso
-                          const coverThumbnail = course.thumbnailUrl || course.content?.[0]?.thumbnailUrl;
-                          const coverVideoUrl = !course.thumbnailUrl && course.content?.[0]?.contentType === "video" ? course.content?.[0]?.contentUrl : null;
-
-                          // Verificar si el curso está bloqueado (100% del contenido bloqueado)
-                          const isCourseLocked = course.content && course.content.length > 0
-                            ? course.content.every(contentItem => !isContentUnlocked(contentItem))
-                            : false;
-
-                          return (
-                            <div
-                              key={course.id}
-                              className={`bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-xl aspect-[4/3] flex items-center justify-center border border-white/10 ${!isCourseLocked ? "hover:border-[#00b2de]/30 cursor-pointer" : "cursor-default"} transition-all duration-300 group relative overflow-hidden`}
-                              onClick={() => {
-                                if (!isCourseLocked) {
-                                  router.push(`/club/${course.slug}`);
-                                }
-                              }}
-                              onKeyDown={(e) => {
-                                if (!isCourseLocked && (e.key === "Enter" || e.key === " ")) {
-                                  e.preventDefault();
-                                  router.push(`/club/${course.slug}`);
-                                }
-                              }}
-                              role="button"
-                              tabIndex={isCourseLocked ? -1 : 0}
-                            >
-                              {coverThumbnail ? (
-                                <img
-                                  src={coverThumbnail}
-                                  alt={course.title}
-                                  className={`w-full h-full object-cover transition-all duration-300 ${isCourseLocked ? "blur-sm opacity-40" : ""}`}
-                                />
-                              ) : coverVideoUrl ? (
-                                <video
-                                  src={coverVideoUrl}
-                                  className={`w-full h-full object-cover transition-all duration-300 ${isCourseLocked ? "blur-sm opacity-40" : ""}`}
-                                  preload="metadata"
-                                  muted
-                                  playsInline
-                                />
-                              ) : (
-                                <div className={`text-center space-y-2 transition-all duration-300 ${isCourseLocked ? "blur-sm opacity-20" : "opacity-40 group-hover:opacity-60"}`}>
-                                  <svg
-                                    className="w-16 h-16 mx-auto text-white/50"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={1.5}
-                                    />
-                                  </svg>
-                                  <p className="text-white/50 text-sm px-4">{course.title}</p>
-                                </div>
-                              )}
-
-                              {/* Overlay de Bloqueado */}
-                              {isCourseLocked && (
-                                <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                                  <div className="text-center space-y-2">
-                                    <Lock className="w-10 h-10 mx-auto text-white/70" />
-                                    <p className="text-white/80 text-xs font-semibold uppercase tracking-wider">Bloqueado</p>
-                                  </div>
-                                </div>
-                              )}
-
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/0 to-black/0 flex items-end p-4">
-                                <p className={`text-white font-medium text-sm ${isCourseLocked ? "opacity-60" : ""}`}>{course.title}</p>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-
-              {/* Cursos sin categoría - mostrar como antes */}
-              {coursesWithoutCategory.map((course) => (
-                <div key={course.id} className="space-y-3 md:space-y-6">
-                  {/* Header del Curso */}
-                  <div className="space-y-1 sm:space-y-0">
-                    <div className="flex items-center justify-between gap-2 sm:gap-4">
-                      <div className="flex items-center gap-2 sm:gap-3 md:gap-4 flex-1 min-w-0">
-                        <div className="flex-1 min-w-0">
-                          <h2 className="text-lg sm:text-xl md:text-3xl font-bold text-white truncate">
-                            {course.title}
-                          </h2>
-                        </div>
-                      </div>
-                      {/* Botón para ver el curso completo - ahora en la misma línea */}
-                      <button
-                        onClick={() => router.push(`/club/${course.slug}`)}
-                        className="text-[#00b2de] hover:text-[#00a0c8] transition-colors inline-flex items-center gap-1 text-xs md:text-sm font-medium flex-shrink-0"
-                      >
-                        Ver todo
-                        <ArrowRight className="w-3 h-3 md:w-4 md:h-4" />
-                      </button>
-                    </div>
-                    {course.description && (
-                      <p className="text-white/70 text-xs sm:text-sm md:text-base leading-tight pl-7 sm:pl-10 md:pl-14">
-                        {course.description}
-                      </p>
-                    )}
+                    <button
+                      onClick={() => router.push(`/club/category/${parent.slug}`)}
+                      className="text-[#00b2de] hover:text-[#00a0c8] transition-colors text-sm md:text-base font-semibold flex items-center gap-1.5"
+                    >
+                      Ver todo
+                      <ArrowRight className="w-4 h-4 md:w-5 md:h-5" />
+                    </button>
                   </div>
 
-                  {/* Contenido del Curso */}
-                  {course.content && course.content.length > 0 && (
-                    <div className="relative">
-                      {/* Carrusel horizontal en mobile */}
-                      <div className="flex md:hidden gap-3 overflow-x-auto scrollbar-hide pb-2 -mx-4 px-4 snap-x snap-mandatory scroll-smooth">
-                        {[...course.content]
-                          .sort((a, b) => {
-                            const orderA = a.sortOrder ?? 999999;
-                            const orderB = b.sortOrder ?? 999999;
-                            return orderA - orderB;
-                          })
-                          .slice(0, 3)
-                          .map((contentItem) => {
-                            const isUnlocked = isContentUnlocked(contentItem);
-                            const unlockMessage = getUnlockMessage(contentItem);
-
-                            return (
-                              <div
-                                key={contentItem.id}
-                                className="flex-shrink-0 w-[70vw] max-w-[260px] bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-lg aspect-video flex items-center justify-center border border-white/10 active:border-[#00b2de]/30 transition-all duration-300 cursor-pointer group snap-start relative overflow-hidden"
-                                onClick={() =>
-                                  router.push(`/club/${course.slug}`)
-                                }
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter" || e.key === " ") {
-                                    e.preventDefault();
-                                    router.push(`/club/${course.slug}`);
-                                  }
-                                }}
-                                role="button"
-                                tabIndex={0}
-                              >
-                                {contentItem.thumbnailUrl ? (
-                                  <img
-                                    src={contentItem.thumbnailUrl}
-                                    alt={contentItem.title}
-                                    className={`w-full h-full object-cover ${!isUnlocked ? "blur-sm opacity-50" : ""}`}
-                                  />
-                                ) : contentItem.contentType === "video" && contentItem.contentUrl ? (
-                                  <video
-                                    src={contentItem.contentUrl}
-                                    className={`w-full h-full object-cover ${!isUnlocked ? "blur-sm opacity-50" : ""}`}
-                                    preload="metadata"
-                                    muted
-                                    playsInline
-                                  />
-                                ) : (
-                                  <div className="text-center space-y-2 opacity-40 group-hover:opacity-60 transition-opacity">
-                                    <svg
-                                      className="w-16 h-16 mx-auto text-white/50"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <path
-                                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={1.5}
-                                      />
-                                    </svg>
-                                    <p className="text-white/50 text-sm px-4">{contentItem.title}</p>
-                                  </div>
-                                )}
-                                {!isUnlocked && (
-                                  <div className="absolute inset-0 flex items-center justify-center bg-black/60">
-                                    <div className="text-center space-y-3 px-4">
-                                      <Lock className="w-12 h-12 mx-auto text-white/70" />
-                                      {unlockMessage && (
-                                        <p className="text-white/80 text-sm font-medium">
-                                          {unlockMessage}
-                                        </p>
-                                      )}
-                                    </div>
-                                  </div>
-                                )}
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/0 to-black/0 flex items-end p-4">
-                                  <p className="text-white font-medium text-sm">{contentItem.title}</p>
-                                </div>
-                              </div>
-                            );
-                          })}
-                      </div>
-
-                      {/* Grid en desktop */}
-                      <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                        {[...course.content]
-                          .sort((a, b) => {
-                            const orderA = a.sortOrder ?? 999999;
-                            const orderB = b.sortOrder ?? 999999;
-                            return orderA - orderB;
-                          })
-                          .slice(0, 3)
-                          .map((contentItem) => {
-                            const isUnlocked = isContentUnlocked(contentItem);
-                            const unlockMessage = getUnlockMessage(contentItem);
-
-                            return (
-                              <div
-                                key={contentItem.id}
-                                className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-xl aspect-[4/3] flex items-center justify-center border border-white/10 hover:border-[#00b2de]/30 transition-all duration-300 cursor-pointer group relative overflow-hidden"
-                                onClick={() =>
-                                  router.push(`/club/${course.slug}`)
-                                }
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter" || e.key === " ") {
-                                    e.preventDefault();
-                                    router.push(`/club/${course.slug}`);
-                                  }
-                                }}
-                                role="button"
-                                tabIndex={0}
-                              >
-                                {contentItem.thumbnailUrl ? (
-                                  <img
-                                    src={contentItem.thumbnailUrl}
-                                    alt={contentItem.title}
-                                    className={`w-full h-full object-cover ${!isUnlocked ? "blur-sm opacity-50" : ""}`}
-                                  />
-                                ) : contentItem.contentType === "video" && contentItem.contentUrl ? (
-                                  <video
-                                    src={contentItem.contentUrl}
-                                    className={`w-full h-full object-cover ${!isUnlocked ? "blur-sm opacity-50" : ""}`}
-                                    preload="metadata"
-                                    muted
-                                    playsInline
-                                  />
-                                ) : (
-                                  <div className="text-center space-y-2 opacity-40 group-hover:opacity-60 transition-opacity">
-                                    <svg
-                                      className="w-16 h-16 mx-auto text-white/50"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <path
-                                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={1.5}
-                                      />
-                                    </svg>
-                                    <p className="text-white/50 text-sm px-4">{contentItem.title}</p>
-                                  </div>
-                                )}
-                                {!isUnlocked && (
-                                  <div className="absolute inset-0 flex items-center justify-center bg-black/60">
-                                    <div className="text-center space-y-3 px-4">
-                                      <Lock className="w-12 h-12 mx-auto text-white/70" />
-                                      {unlockMessage && (
-                                        <p className="text-white/80 text-sm font-medium">
-                                          {unlockMessage}
-                                        </p>
-                                      )}
-                                    </div>
-                                  </div>
-                                )}
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/0 to-black/0 flex items-end p-4">
-                                  <p className="text-white font-medium text-sm">{contentItem.title}</p>
-                                </div>
-                              </div>
-                            );
-                          })}
-                      </div>
-                    </div>
-                  )}
+                  <div className="pl-0 md:pl-4">
+                    <UniversalGrid items={tiles} router={router} isContentUnlocked={isContentUnlocked} />
+                  </div>
                 </div>
               ))}
+
+              {/* Cursos sin ninguna categoría */}
+              {coursesWithoutCategory.length > 0 && (
+                <div className="space-y-6 pt-4">
+                  <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                    <h2 className="text-2xl sm:text-3xl md:text-5xl font-extrabold text-white tracking-tight">
+                      Más Cursos
+                    </h2>
+                  </div>
+                  <div className="pl-0 md:pl-4">
+                    <UniversalGrid
+                      items={coursesWithoutCategory.map(c => ({ type: 'course', data: c }))}
+                      router={router}
+                      isContentUnlocked={isContentUnlocked}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           );
         })()}
@@ -847,6 +724,6 @@ export default function ClubPage() {
         )}
       </div>
       <InstallPWABanner />
-    </div>
+    </div >
   );
 }

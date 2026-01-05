@@ -28,6 +28,7 @@ export interface CourseCategory {
   id: string;
   name: string;
   slug: string;
+  parentId?: string | null;
 }
 
 export interface Course {
@@ -394,6 +395,7 @@ export interface CourseWithSubscriptionContent {
     id: string;
     name: string;
     slug: string;
+    parentId?: string | null;
   } | null;
   createdAt: string;
   updatedAt: string;

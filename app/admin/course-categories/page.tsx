@@ -325,6 +325,7 @@ export default function CourseCategoriesPage() {
           onClose={() => setIsCreateModalOpen(false)}
           onSave={handleCreate}
           saving={saving}
+          categories={categories}
         />
       )}
 
@@ -339,6 +340,7 @@ export default function CourseCategoriesPage() {
           onSave={handleUpdate}
           category={selectedCategory}
           saving={saving}
+          categories={categories}
         />
       )}
 
@@ -418,17 +420,20 @@ function CategoryModal({
   onSave,
   category,
   saving,
+  categories,
 }: {
   isOpen: boolean;
   onClose: () => void;
   onSave: (data: CreateCourseCategoryDto | UpdateCourseCategoryDto) => Promise<void>;
   category?: CourseCategory;
   saving: boolean;
+  categories: CourseCategory[];
 }) {
   const [name, setName] = useState(category?.name || "");
   const [slug, setSlug] = useState(category?.slug || "");
   const [description, setDescription] = useState(category?.description || "");
   const [isActive, setIsActive] = useState(category?.isActive ?? true);
+  const [parentId, setParentId] = useState<string | null>(category?.parentId || null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -437,11 +442,13 @@ function CategoryModal({
       setSlug(category.slug);
       setDescription(category.description || "");
       setIsActive(category.isActive);
+      setParentId(category.parentId || null);
     } else {
       setName("");
       setSlug("");
       setDescription("");
       setIsActive(true);
+      setParentId(null);
     }
     setErrors({});
   }, [category, isOpen]);
@@ -488,6 +495,7 @@ function CategoryModal({
         slug: slug.trim(),
         description: description.trim() || undefined,
         isActive,
+        parentId: parentId || undefined,
       };
       await onSave(data);
     } catch (error: any) {
@@ -543,6 +551,27 @@ function CategoryModal({
               rows={3}
               disabled={saving}
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Categoría Padre (Opcional)
+            </label>
+            <select
+              value={parentId || ""}
+              onChange={(e) => setParentId(e.target.value || null)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+              disabled={saving}
+            >
+              <option value="">Sin categoría padre (Categoría principal)</option>
+              {categories
+                .filter((cat) => cat.id !== category?.id) // No permitir que sea su propio padre
+                .map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+            </select>
           </div>
 
           <div>

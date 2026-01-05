@@ -7,6 +7,9 @@ export interface CourseCategory {
   description: string | null;
   sortOrder: number;
   isActive: boolean;
+  parentId: string | null;
+  parent?: CourseCategory;
+  subcategories?: CourseCategory[];
   createdAt: string;
   updatedAt: string;
 }
@@ -16,6 +19,7 @@ export interface CreateCourseCategoryDto {
   slug: string;
   description?: string;
   isActive?: boolean;
+  parentId?: string;
 }
 
 export interface UpdateCourseCategoryDto {
@@ -23,6 +27,7 @@ export interface UpdateCourseCategoryDto {
   slug?: string;
   description?: string;
   isActive?: boolean;
+  parentId?: string | null;
 }
 
 // GET /course-categories - Obtener todas las categorías
@@ -34,6 +39,12 @@ export const getCourseCategories = async (): Promise<CourseCategory[]> => {
 // GET /course-categories/:id - Obtener una categoría por ID
 export const getCourseCategoryById = async (id: string): Promise<CourseCategory> => {
   const response = await apiAxios.get<CourseCategory>(`/course-categories/${id}`);
+  return response.data;
+};
+
+// GET /course-categories/slug/:slug - Obtener una categoría por slug
+export const getCourseCategoryBySlug = async (slug: string): Promise<CourseCategory> => {
+  const response = await apiAxios.get<CourseCategory>(`/course-categories/slug/${slug}`);
   return response.data;
 };
 
@@ -69,4 +80,3 @@ export const updateCourseCategoryOrder = async (
 export const deleteCourseCategory = async (id: string): Promise<void> => {
   await apiAxios.delete(`/course-categories/${id}`);
 };
-

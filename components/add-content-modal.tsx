@@ -17,7 +17,7 @@ interface AddContentModalProps {
 // Función para detectar el tipo de contenido basado en el tipo de archivo
 const detectContentType = (file: File): AddCourseContentDto["contentType"] => {
   const mimeType = file.type;
-  
+
   if (mimeType.startsWith("video/")) {
     return "video";
   } else if (mimeType.startsWith("image/")) {
@@ -80,6 +80,8 @@ export function AddContentModal({
   const [isAvailableImmediately, setIsAvailableImmediately] = useState(true);
   const [unlockValue, setUnlockValue] = useState(1);
   const [unlockType, setUnlockType] = useState<"immediate" | "day" | "week" | "month" | "year">("month");
+  const [useFileUpload, setUseFileUpload] = useState(true); // true = subir archivo, false = pegar link
+  const [contentUrl, setContentUrl] = useState(""); // URL del contenido cuando se usa link
   const [formData, setFormData] = useState<Omit<AddCourseContentDto, "file">>({
     title: "",
     slug: "",
@@ -117,23 +119,23 @@ export function AddContentModal({
         setError("El archivo no puede ser mayor a 2GB");
         return;
       }
-      
+
       // Limpiar preview anterior si existe
       if (filePreviewUrlRef.current) {
         URL.revokeObjectURL(filePreviewUrlRef.current);
         filePreviewUrlRef.current = null;
       }
-      
+
       // Detectar tipo de contenido automáticamente
       const detectedType = detectContentType(file);
-      
+
       setSelectedFile(file);
       setFormData({
         ...formData,
         contentType: detectedType,
       });
       setError(null);
-      
+
       // Crear preview usando createObjectURL para archivos grandes (más eficiente)
       if (file.type.startsWith("image/") || file.type.startsWith("video/")) {
         const objectUrl = URL.createObjectURL(file);
@@ -153,15 +155,15 @@ export function AddContentModal({
         setError("El archivo de miniatura debe ser una imagen");
         return;
       }
-      
+
       // Limpiar preview anterior si existe
       if (thumbnailPreviewUrlRef.current) {
         URL.revokeObjectURL(thumbnailPreviewUrlRef.current);
         thumbnailPreviewUrlRef.current = null;
       }
-      
+
       setThumbnailFile(file);
-      
+
       // Crear preview usando createObjectURL
       const objectUrl = URL.createObjectURL(file);
       thumbnailPreviewUrlRef.current = objectUrl;
@@ -178,9 +180,17 @@ export function AddContentModal({
       return;
     }
 
-    if (!selectedFile) {
-      setError("Debes seleccionar un archivo");
-      return;
+    // Validar según el modo seleccionado
+    if (useFileUpload) {
+      if (!selectedFile) {
+        setError("Debes seleccionar un archivo");
+        return;
+      }
+    } else {
+      if (!contentUrl || contentUrl.trim() === "") {
+        setError("Debes ingresar una URL de contenido");
+        return;
+      }
     }
 
     try {
@@ -188,7 +198,7 @@ export function AddContentModal({
       onLoadingChange?.(true);
       setUploadProgress(0);
       onUploadProgressChange?.(0);
-      
+
       // Subir miniatura primero si existe
       let thumbnailUrl: string | undefined = undefined;
       if (thumbnailFile) {
@@ -211,22 +221,32 @@ export function AddContentModal({
       const finalUnlockType = isAvailableImmediately ? "immediate" : unlockType;
       const finalAvailabilityType = isAvailableImmediately ? "none" : formData.availabilityType;
 
-      await addCourseContent(courseId, {
+      // Preparar datos según el modo
+      const contentData: AddCourseContentDto = {
         ...formData,
         unlockValue: finalUnlockValue,
         unlockType: finalUnlockType,
         availabilityType: finalAvailabilityType,
         thumbnailUrl,
-        file: selectedFile,
-      });
+      };
+
+      if (useFileUpload) {
+        // Modo: Subir archivo
+        contentData.file = selectedFile!;
+      } else {
+        // Modo: URL
+        contentData.contentUrl = contentUrl.trim();
+      }
+
+      await addCourseContent(courseId, contentData);
       onSuccess();
       resetForm();
       onClose();
     } catch (err: any) {
       setError(
         err.response?.data?.message ||
-          err.message ||
-          "Error al agregar contenido"
+        err.message ||
+        "Error al agregar contenido"
       );
     } finally {
       setLoading(false);
@@ -235,6 +255,7 @@ export function AddContentModal({
       onUploadProgressChange?.(null);
     }
   };
+
 
   const resetForm = () => {
     // Limpiar URLs blob
@@ -246,7 +267,7 @@ export function AddContentModal({
       URL.revokeObjectURL(thumbnailPreviewUrlRef.current);
       thumbnailPreviewUrlRef.current = null;
     }
-    
+
     setFormData({
       title: "",
       slug: "",
@@ -264,6 +285,8 @@ export function AddContentModal({
     setFilePreview(null);
     setThumbnailFile(null);
     setThumbnailPreview(null);
+    setContentUrl("");
+    setUseFileUpload(true);
     setError(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -343,93 +366,179 @@ export function AddContentModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-3">
               Contenido <span className="text-red-500">*</span>
             </label>
-            <div className="space-y-2">
-              <label className={`flex flex-col items-center justify-center w-full h-40 border-2 border-gray-300 border-dashed rounded-lg bg-gray-50 transition-colors ${loading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-gray-100'}`}>
-                {filePreview ? (
-                  <div className="relative w-full h-full">
-                    {formData.contentType === "image" ? (
-                      <img
-                        src={filePreview}
-                        alt="Preview"
-                        className="w-full h-full object-cover rounded-lg"
-                      />
-                    ) : formData.contentType === "video" ? (
-                      <video
-                        src={filePreview}
-                        className="w-full h-full object-cover rounded-lg"
-                        controls
-                      />
-                    ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center">
-                        {(() => {
-                          const Icon = getContentIcon(formData.contentType);
-                          return <Icon className="w-12 h-12 text-gray-400 mb-2" />;
-                        })()}
-                        <p className="text-sm text-gray-600 font-medium">{selectedFile?.name}</p>
-                        <p className="text-xs text-gray-500">
-                          {(selectedFile ? selectedFile.size / 1024 / 1024 : 0).toFixed(2)} MB
-                        </p>
-                      </div>
-                    )}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        if (loading) return;
-                        // Limpiar URL blob
-                        if (filePreviewUrlRef.current) {
-                          URL.revokeObjectURL(filePreviewUrlRef.current);
-                          filePreviewUrlRef.current = null;
-                        }
-                        setSelectedFile(null);
-                        setFilePreview(null);
-                        setFormData({ ...formData, contentType: "video" });
-                        if (fileInputRef.current) {
-                          fileInputRef.current.value = "";
-                        }
-                      }}
-                      disabled={loading}
-                      className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                    <Upload className="w-10 h-10 mb-3 text-gray-400" />
-                    <p className="mb-2 text-sm text-gray-500">
-                      <span className="font-semibold">Click para subir</span> o arrastra y suelta
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      Video, Imagen, PDF, Documento, Audio (máx. 2GB)
-                    </p>
-                  </div>
-                )}
+
+            {/* Switch para elegir modo */}
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg mb-3">
+              <div>
+                <div className="text-sm font-medium text-gray-900">
+                  {useFileUpload ? "Subir archivo" : "Pegar URL"}
+                </div>
+                <div className="text-xs text-gray-500 mt-1">
+                  {useFileUpload
+                    ? "Sube un archivo desde tu computadora"
+                    : "Ingresa la URL del contenido"}
+                </div>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
                 <input
-                  ref={fileInputRef}
-                  type="file"
-                  className="hidden"
-                  accept="video/*,image/*,application/pdf,.doc,.docx,audio/*"
-                  onChange={handleFileChange}
+                  type="checkbox"
+                  checked={!useFileUpload}
+                  onChange={(e) => {
+                    const useUrl = e.target.checked;
+                    setUseFileUpload(!useUrl);
+                    // Limpiar datos al cambiar de modo
+                    if (useUrl) {
+                      setSelectedFile(null);
+                      setFilePreview(null);
+                      if (filePreviewUrlRef.current) {
+                        URL.revokeObjectURL(filePreviewUrlRef.current);
+                        filePreviewUrlRef.current = null;
+                      }
+                      if (fileInputRef.current) {
+                        fileInputRef.current.value = "";
+                      }
+                    } else {
+                      setContentUrl("");
+                    }
+                  }}
+                  className="sr-only peer"
                   disabled={loading}
                 />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
               </label>
-              {selectedFile && (
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <span className="font-medium">Tipo detectado:</span>
-                  <span className="px-2 py-1 bg-primary/10 text-primary rounded text-xs font-medium capitalize">
-                    {formData.contentType === "video" && "Video"}
-                    {formData.contentType === "image" && "Imagen"}
-                    {formData.contentType === "pdf" && "PDF"}
-                    {formData.contentType === "document" && "Documento"}
-                    {formData.contentType === "audio" && "Audio"}
-                  </span>
-                </div>
-              )}
             </div>
+
+            {/* Modo: Subir archivo */}
+            {useFileUpload ? (
+              <div className="space-y-2">
+                <label className={`flex flex-col items-center justify-center w-full h-40 border-2 border-gray-300 border-dashed rounded-lg bg-gray-50 transition-colors ${loading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-gray-100'}`}>
+                  {filePreview ? (
+                    <div className="relative w-full h-full">
+                      {formData.contentType === "image" ? (
+                        <img
+                          src={filePreview}
+                          alt="Preview"
+                          className="w-full h-full object-cover rounded-lg"
+                        />
+                      ) : formData.contentType === "video" ? (
+                        <video
+                          src={filePreview}
+                          className="w-full h-full object-cover rounded-lg"
+                          controls
+                        />
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center">
+                          {(() => {
+                            const Icon = getContentIcon(formData.contentType);
+                            return <Icon className="w-12 h-12 text-gray-400 mb-2" />;
+                          })()}
+                          <p className="text-sm text-gray-600 font-medium">{selectedFile?.name}</p>
+                          <p className="text-xs text-gray-500">
+                            {(selectedFile ? selectedFile.size / 1024 / 1024 : 0).toFixed(2)} MB
+                          </p>
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (loading) return;
+                          // Limpiar URL blob
+                          if (filePreviewUrlRef.current) {
+                            URL.revokeObjectURL(filePreviewUrlRef.current);
+                            filePreviewUrlRef.current = null;
+                          }
+                          setSelectedFile(null);
+                          setFilePreview(null);
+                          setFormData({ ...formData, contentType: "video" });
+                          if (fileInputRef.current) {
+                            fileInputRef.current.value = "";
+                          }
+                        }}
+                        disabled={loading}
+                        className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <Upload className="w-10 h-10 mb-3 text-gray-400" />
+                      <p className="mb-2 text-sm text-gray-500">
+                        <span className="font-semibold">Click para subir</span> o arrastra y suelta
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Video, Imagen, PDF, Documento, Audio (máx. 2GB)
+                      </p>
+                    </div>
+                  )}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    className="hidden"
+                    accept="video/*,image/*,application/pdf,.doc,.docx,audio/*"
+                    onChange={handleFileChange}
+                    disabled={loading}
+                  />
+                </label>
+                {selectedFile && (
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <span className="font-medium">Tipo detectado:</span>
+                    <span className="px-2 py-1 bg-primary/10 text-primary rounded text-xs font-medium capitalize">
+                      {formData.contentType === "video" && "Video"}
+                      {formData.contentType === "image" && "Imagen"}
+                      {formData.contentType === "pdf" && "PDF"}
+                      {formData.contentType === "document" && "Documento"}
+                      {formData.contentType === "audio" && "Audio"}
+                    </span>
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* Modo: Pegar URL */
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    URL del contenido <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="url"
+                    value={contentUrl}
+                    onChange={(e) => setContentUrl(e.target.value)}
+                    placeholder="https://ejemplo.com/video.mp4"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                    required={!useFileUpload}
+                    disabled={loading}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Pega la URL directa del video, imagen, PDF u otro contenido
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Tipo de contenido <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={formData.contentType}
+                    onChange={(e) => setFormData({ ...formData, contentType: e.target.value as AddCourseContentDto["contentType"] })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                    required
+                    disabled={loading}
+                  >
+                    <option value="video">Video</option>
+                    <option value="image">Imagen</option>
+                    <option value="pdf">PDF</option>
+                    <option value="document">Documento</option>
+                    <option value="audio">Audio</option>
+                    <option value="link">Enlace</option>
+                  </select>
+                </div>
+              </div>
+            )}
           </div>
 
           <div>
@@ -475,7 +584,7 @@ export function AddContentModal({
                   <p className="text-xs text-gray-500 mb-4">
                     El contenido se desbloqueará después del tiempo especificado desde la suscripción del usuario
                   </p>
-                  
+
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-medium text-gray-700 mb-1">

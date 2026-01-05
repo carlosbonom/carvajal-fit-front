@@ -334,26 +334,20 @@ function CoursePageContent() {
     if (!hasActiveSubscription) return false;
 
     const monthsSinceStart = calculateMonthsSinceStart();
-    let unlockThreshold = 0;
+    const daysSinceStart = calculateDaysSinceStart();
 
     switch (content.unlockType) {
       case "day":
-        unlockThreshold = Math.floor(content.unlockValue / 30);
-        break;
+        return daysSinceStart >= content.unlockValue;
       case "week":
-        unlockThreshold = Math.floor(content.unlockValue / 4);
-        break;
+        return Math.floor(daysSinceStart / 7) >= content.unlockValue;
       case "month":
-        unlockThreshold = content.unlockValue;
-        break;
+        return monthsSinceStart >= content.unlockValue;
       case "year":
-        unlockThreshold = content.unlockValue * 12;
-        break;
+        return Math.floor(monthsSinceStart / 12) >= content.unlockValue;
       default:
         return true;
     }
-
-    return monthsSinceStart >= unlockThreshold;
   };
 
   // Formatear mensaje de desbloqueo
