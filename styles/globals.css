@@ -3,10 +3,10 @@
 @import "tailwindcss";
 
 body {
-  background-color: #0b0b0b; 
-  background-image: 
+  background-color: #0b0b0b;
+  background-image:
     linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px); 
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
   background-size: 30px 30px;
 }
 
@@ -72,12 +72,15 @@ input[type="range"].slider-thumb::-moz-range-thumb:active {
 
 /* Hide scrollbar but keep functionality */
 .scrollbar-hide {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
 }
 
 .scrollbar-hide::-webkit-scrollbar {
-  display: none;  /* Chrome, Safari and Opera */
+  display: none;
+  /* Chrome, Safari and Opera */
 }
 
 /* Variables CSS personalizadas para react-phone-number-input */
@@ -332,60 +335,40 @@ select.PhoneInputCountrySelect::-webkit-scrollbar-thumb {
   color: white !important;
 }
 
-/* Estilos específicos para inputs en rutas admin - texto negro */
-section[class*="bg-gray-50"] input[type="text"],
-section[class*="bg-gray-50"] input[type="password"],
-section[class*="bg-gray-50"] input[type="number"],
-section[class*="bg-gray-50"] input[type="email"],
-section[class*="bg-gray-50"] input[type="search"],
-section[class*="bg-gray-50"] input:not([type]),
-main[class*="bg-gray-50"] input[type="text"],
-main[class*="bg-gray-50"] input[type="password"],
-main[class*="bg-gray-50"] input[type="number"],
-main[class*="bg-gray-50"] input[type="email"],
-main[class*="bg-gray-50"] input[type="search"],
-main[class*="bg-gray-50"] input:not([type]),
-main[class*="bg-gradient-to-br"] input[type="text"],
-main[class*="bg-gradient-to-br"] input[type="password"],
-main[class*="bg-gradient-to-br"] input[type="number"],
-main[class*="bg-gradient-to-br"] input[type="email"],
-main[class*="bg-gradient-to-br"] input[type="search"],
-main[class*="bg-gradient-to-br"] input:not([type]) {
-  color: #000000 !important;
+/* Estilos específicos para inputs y editores en rutas admin - texto gris oscuro suavizado */
+.admin-scope input,
+.admin-scope textarea,
+.admin-scope [contenteditable="true"] {
+  color: #111827 !important;
+  /* gray-900 */
 }
 
-section[class*="bg-gray-50"] input[type="text"]::placeholder,
-section[class*="bg-gray-50"] input[type="password"]::placeholder,
-section[class*="bg-gray-50"] input[type="number"]::placeholder,
-section[class*="bg-gray-50"] input[type="email"]::placeholder,
-section[class*="bg-gray-50"] input[type="search"]::placeholder,
-section[class*="bg-gray-50"] input:not([type])::placeholder,
-main[class*="bg-gray-50"] input[type="text"]::placeholder,
-main[class*="bg-gray-50"] input[type="password"]::placeholder,
-main[class*="bg-gray-50"] input[type="number"]::placeholder,
-main[class*="bg-gray-50"] input[type="email"]::placeholder,
-main[class*="bg-gray-50"] input[type="search"]::placeholder,
-main[class*="bg-gray-50"] input:not([type])::placeholder,
-main[class*="bg-gradient-to-br"] input[type="text"]::placeholder,
-main[class*="bg-gradient-to-br"] input[type="password"]::placeholder,
-main[class*="bg-gradient-to-br"] input[type="number"]::placeholder,
-main[class*="bg-gradient-to-br"] input[type="email"]::placeholder,
-main[class*="bg-gradient-to-br"] input[type="search"]::placeholder,
-main[class*="bg-gradient-to-br"] input:not([type])::placeholder {
-  color: #9ca3af !important;
+.admin-scope input::placeholder,
+.admin-scope textarea::placeholder {
+  color: #6b7280 !important;
+  /* gray-500 */
 }
 
-/* Estilos específicos para selects en rutas admin - texto negro */
-section[class*="bg-gray-50"] select,
-main[class*="bg-gray-50"] select,
-main[class*="bg-gradient-to-br"] select {
-  color: #000000 !important;
+/* Estilos específicos para selects en rutas admin */
+.admin-scope select {
+  color: #111827 !important;
+  /* gray-900 */
   background-color: #ffffff !important;
 }
 
-section[class*="bg-gray-50"] select option,
-main[class*="bg-gray-50"] select option,
-main[class*="bg-gradient-to-br"] select option {
-  color: #000000 !important;
+.admin-scope select option {
+  color: #111827 !important;
+  /* gray-900 */
   background-color: #ffffff !important;
+}
+
+/* Estilos para botones en admin para mejorar contraste */
+.admin-scope button:not(.bg-primary):not(.bg-red-600) {
+  color: #374151;
+  /* gray-700 */
+}
+
+.admin-scope button:not(.bg-primary):not(.bg-red-600):hover {
+  color: #111827;
+  /* gray-900 */
 }

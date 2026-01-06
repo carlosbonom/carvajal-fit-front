@@ -30,6 +30,7 @@ import {
   SuccessStory,
 } from "@/services/success-stories";
 import { uploadFile } from "@/services/files";
+import { ConfirmModal } from "@/components/confirm-modal";
 
 export default function SuccessStoriesPage() {
   const [isOpen, setIsOpen] = useState(false);
@@ -56,6 +57,50 @@ export default function SuccessStoriesPage() {
     isActive: true,
     sortOrder: 0,
   });
+
+  // Modal de alerta/confirmación
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalConfig, setModalConfig] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    type: "danger" | "warning" | "success" | "info";
+    isConfirm: boolean;
+    confirmText?: string;
+  }>({
+    title: "",
+    message: "",
+    onConfirm: () => { },
+    type: "info",
+    isConfirm: false,
+  });
+
+  const showAlert = (title: string, message: string, type: "danger" | "warning" | "success" | "info" = "info") => {
+    setModalConfig({
+      title,
+      message,
+      onConfirm: () => setModalOpen(false),
+      type,
+      isConfirm: false,
+      confirmText: "Aceptar"
+    });
+    setModalOpen(true);
+  };
+
+  const showConfirm = (title: string, message: string, onConfirmAction: () => void, type: "danger" | "warning" | "success" | "info" = "warning") => {
+    setModalConfig({
+      title,
+      message,
+      onConfirm: () => {
+        onConfirmAction();
+        setModalOpen(false);
+      },
+      type,
+      isConfirm: true,
+      confirmText: "Confirmar"
+    });
+    setModalOpen(true);
+  };
 
   useEffect(() => {
     const handleResize = () => {
@@ -138,7 +183,7 @@ export default function SuccessStoriesPage() {
       }
     } catch (error) {
       console.error("Error al subir imagen:", error);
-      alert("Error al subir la imagen. Por favor, intenta nuevamente.");
+      showAlert("Error", "Error al subir la imagen. Por favor, intenta nuevamente.", "danger");
     } finally {
       setUploadingImage(false);
     }
@@ -155,22 +200,25 @@ export default function SuccessStoriesPage() {
       handleCancel();
     } catch (error) {
       console.error("Error al guardar caso de éxito:", error);
-      alert("Error al guardar el caso de éxito. Por favor, intenta nuevamente.");
+      showAlert("Error", "Error al guardar el caso de éxito. Por favor, intenta nuevamente.", "danger");
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("¿Estás seguro de que deseas eliminar este caso de éxito?")) {
-      return;
-    }
-
-    try {
-      await deleteSuccessStory(id);
-      await loadStories();
-    } catch (error) {
-      console.error("Error al eliminar caso de éxito:", error);
-      alert("Error al eliminar el caso de éxito. Por favor, intenta nuevamente.");
-    }
+    showConfirm(
+      "Confirmar eliminación",
+      "¿Estás seguro de que deseas eliminar este caso de éxito? Esta acción no se puede deshacer.",
+      async () => {
+        try {
+          await deleteSuccessStory(id);
+          await loadStories();
+        } catch (error) {
+          console.error("Error al eliminar caso de éxito:", error);
+          showAlert("Error", "Error al eliminar el caso de éxito. Por favor, intenta nuevamente.", "danger");
+        }
+      },
+      "danger"
+    );
   };
 
   // Estado para cambios pendientes de orden
@@ -607,6 +655,17 @@ export default function SuccessStoriesPage() {
           )}
         </div>
       </main>
+
+      <ConfirmModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onConfirm={modalConfig.onConfirm}
+        title={modalConfig.title}
+        message={modalConfig.message}
+        type={modalConfig.type}
+        isConfirm={modalConfig.isConfirm}
+        confirmText={modalConfig.confirmText}
+      />
     </>
   );
 }

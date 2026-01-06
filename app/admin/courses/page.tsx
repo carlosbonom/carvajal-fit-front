@@ -25,6 +25,7 @@ import { AdminSidebar } from "@/components/admin-sidebar";
 import { CreateCourseModal } from "@/components/create-course-modal";
 import { EditCourseModal } from "@/components/edit-course-modal";
 import { getCourses, updateCourseOrder, deleteCourse, type Course } from "@/services/courses";
+import { ConfirmModal } from "@/components/confirm-modal";
 
 export default function CoursesPage() {
   const [isOpen, setIsOpen] = useState(false);
@@ -39,6 +40,35 @@ export default function CoursesPage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [courseToDelete, setCourseToDelete] = useState<Course | null>(null);
   const router = useRouter();
+
+  // Modal de alerta/confirmación
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalConfig, setModalConfig] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    type: "danger" | "warning" | "success" | "info";
+    isConfirm: boolean;
+    confirmText?: string;
+  }>({
+    title: "",
+    message: "",
+    onConfirm: () => { },
+    type: "info",
+    isConfirm: false,
+  });
+
+  const showAlert = (title: string, message: string, type: "danger" | "warning" | "success" | "info" = "info") => {
+    setModalConfig({
+      title,
+      message,
+      onConfirm: () => setModalOpen(false),
+      type,
+      isConfirm: false,
+      confirmText: "Aceptar"
+    });
+    setModalOpen(true);
+  };
 
   useEffect(() => {
     setIsMobile(window.innerWidth < 768);
@@ -244,8 +274,8 @@ export default function CoursesPage() {
         >
           <span
             className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${course.isPublished
-                ? "bg-green-100 text-green-800"
-                : "bg-gray-100 text-gray-800"
+              ? "bg-green-100 text-green-800"
+              : "bg-gray-100 text-gray-800"
               }`}
           >
             {course.isPublished ? "Publicado" : "Borrador"}
@@ -442,89 +472,45 @@ export default function CoursesPage() {
         courseId={selectedCourseId}
       />
 
-      {isDeleteModalOpen && courseToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Eliminar curso
-              </h2>
-              <button
-                onClick={() => {
-                  if (deletingCourseId) return;
-                  setIsDeleteModalOpen(false);
-                  setCourseToDelete(null);
-                }}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={!!deletingCourseId}
-              >
-                <X className="w-4 h-4 text-gray-500" />
-              </button>
-            </div>
-            <div className="px-6 py-5 space-y-3">
-              <p className="text-sm text-gray-700">
-                ¿Estás seguro de que deseas eliminar este curso?
-              </p>
-              <div className="p-3 bg-gray-50 rounded-md border border-gray-100">
-                <p className="text-sm font-medium text-gray-900">
-                  {courseToDelete.title}
-                </p>
-                {courseToDelete.description && (
-                  <p className="mt-1 text-xs text-gray-500 line-clamp-2">
-                    {courseToDelete.description}
-                  </p>
-                )}
-              </div>
-              <p className="text-xs text-red-600">
-                Esta acción no se puede deshacer.
-              </p>
-            </div>
-            <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  if (deletingCourseId) return;
-                  setIsDeleteModalOpen(false);
-                  setCourseToDelete(null);
-                }}
-                className="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={!!deletingCourseId}
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={async () => {
-                  if (!courseToDelete) return;
-                  try {
-                    setDeletingCourseId(courseToDelete.id);
-                    await deleteCourse(courseToDelete.id);
-                    await loadCourses();
-                    setIsDeleteModalOpen(false);
-                    setCourseToDelete(null);
-                  } catch (error) {
-                    console.error("Error al eliminar curso:", error);
-                    alert("No se pudo eliminar el curso. Verifica si tiene contenidos o relaciones asociadas.");
-                  } finally {
-                    setDeletingCourseId(null);
-                  }
-                }}
-                className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                disabled={!!deletingCourseId}
-              >
-                {deletingCourseId ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Eliminando...
-                  </>
-                ) : (
-                  "Eliminar"
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          if (deletingCourseId) return;
+          setIsDeleteModalOpen(false);
+          setCourseToDelete(null);
+        }}
+        onConfirm={async () => {
+          if (!courseToDelete) return;
+          try {
+            setDeletingCourseId(courseToDelete.id);
+            await deleteCourse(courseToDelete.id);
+            await loadCourses();
+            setIsDeleteModalOpen(false);
+            setCourseToDelete(null);
+          } catch (error) {
+            console.error("Error al eliminar curso:", error);
+            showAlert("Error", "No se pudo eliminar el curso. Verifica si tiene contenidos o relaciones asociadas.", "danger");
+          } finally {
+            setDeletingCourseId(null);
+          }
+        }}
+        title="Eliminar curso"
+        message={`¿Estás seguro de que deseas eliminar el curso "${courseToDelete?.title}"? Esta acción no se puede deshacer.`}
+        type="danger"
+        confirmText="Eliminar"
+        loading={!!deletingCourseId}
+      />
+
+      <ConfirmModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onConfirm={modalConfig.onConfirm}
+        title={modalConfig.title}
+        message={modalConfig.message}
+        type={modalConfig.type}
+        isConfirm={modalConfig.isConfirm}
+        confirmText={modalConfig.confirmText}
+      />
     </>
   );
 }

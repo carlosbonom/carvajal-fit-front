@@ -29,6 +29,7 @@ import {
   Link2,
 } from "lucide-react";
 import * as XLSX from "xlsx";
+import { ConfirmModal } from "@/components/confirm-modal";
 
 import { AdminSidebar } from "@/components/admin-sidebar";
 import {
@@ -77,6 +78,50 @@ export default function MarketingPage() {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+
+  // Modal genérico para alertas y confirmaciones
+  const [genericModalOpen, setGenericModalOpen] = useState(false);
+  const [genericModalConfig, setGenericModalConfig] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    type: "danger" | "warning" | "success" | "info";
+    isConfirm: boolean;
+    confirmText?: string;
+  }>({
+    title: "",
+    message: "",
+    onConfirm: () => { },
+    type: "info",
+    isConfirm: false,
+  });
+
+  const showAlert = (title: string, message: string, type: "danger" | "warning" | "success" | "info" = "info") => {
+    setGenericModalConfig({
+      title,
+      message,
+      onConfirm: () => setGenericModalOpen(false),
+      type,
+      isConfirm: false,
+      confirmText: "Aceptar"
+    });
+    setGenericModalOpen(true);
+  };
+
+  const showConfirm = (title: string, message: string, onConfirmAction: () => void, type: "danger" | "warning" | "success" | "info" = "warning") => {
+    setGenericModalConfig({
+      title,
+      message,
+      onConfirm: () => {
+        onConfirmAction();
+        setGenericModalOpen(false);
+      },
+      type,
+      isConfirm: true,
+      confirmText: "Confirmar"
+    });
+    setGenericModalOpen(true);
+  };
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [loading, setLoading] = useState(false);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
@@ -123,7 +168,7 @@ export default function MarketingPage() {
   const [colorPickerOpen, setColorPickerOpen] = useState<'bg' | 'text' | null>(null);
   const [textColorPickerOpen, setTextColorPickerOpen] = useState(false);
   const [textColorValue, setTextColorValue] = useState('#000000');
-  
+
   const editorRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const excelInputRef = useRef<HTMLInputElement>(null);
@@ -137,7 +182,7 @@ export default function MarketingPage() {
 
   useEffect(() => {
     setIsMobile(window.innerWidth < 768);
-    
+
     // Verificar autenticación antes de cargar
     const token = getAccessToken();
     if (!token) {
@@ -145,7 +190,7 @@ export default function MarketingPage() {
       router.push("/login");
       return;
     }
-    
+
     loadTemplates();
   }, [router]);
 
@@ -153,19 +198,19 @@ export default function MarketingPage() {
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!resizingImage || !editorRef.current) return;
-      
+
       // Obtener el ancho máximo disponible del editor
       const editorWidth = editorRef.current.offsetWidth - 48; // Restar padding (24px cada lado)
       const maxWidth = Math.min(editorWidth, 2000);
-      
+
       const deltaX = e.clientX - resizeStartX;
       const newWidth = Math.max(100, Math.min(maxWidth, resizeStartWidth + deltaX));
-      
+
       if (resizingImage) {
         resizingImage.style.width = `${newWidth}px`;
         resizingImage.style.maxWidth = `${newWidth}px`;
         resizingImage.setAttribute('data-width', newWidth.toString());
-        
+
         // Actualizar el wrapper para que coincida con el tamaño de la imagen
         const wrapper = resizingImage.parentElement;
         if (wrapper && wrapper.classList.contains('image-wrapper')) {
@@ -174,7 +219,7 @@ export default function MarketingPage() {
             wrapper.style.width = `${newWidth}px`;
             wrapper.style.height = `${imgHeight}px`;
           }
-          
+
           // Reposicionar el handle en la esquina inferior derecha
           const resizeHandle = wrapper.querySelector('.resize-handle') as HTMLElement;
           if (resizeHandle) {
@@ -196,7 +241,7 @@ export default function MarketingPage() {
             wrapper.style.width = `${imgWidth}px`;
             wrapper.style.height = `${imgHeight}px`;
           }
-          
+
           // Reposicionar el handle
           const resizeHandle = wrapper.querySelector('.resize-handle') as HTMLElement;
           if (resizeHandle) {
@@ -204,7 +249,7 @@ export default function MarketingPage() {
             resizeHandle.style.right = '4px';
           }
         }
-        
+
         // Actualizar el contenido del editor
         const currentContent = editorRef.current.innerHTML;
         setTemplateForm(prev => ({
@@ -238,7 +283,7 @@ export default function MarketingPage() {
       if (resizingButton) {
         const deltaX = e.clientX - resizeStartX;
         const newWidth = Math.max(100, Math.min(500, resizeStartWidth + deltaX * 1.5));
-        
+
         const link = resizingButton.querySelector('a') as HTMLAnchorElement;
         if (link) {
           link.style.width = `${newWidth}px`;
@@ -251,11 +296,11 @@ export default function MarketingPage() {
         if (draggedElement) {
           const deltaX = e.clientX - dragStartX;
           const deltaY = e.clientY - dragStartY;
-          
+
           draggedElement.style.left = `${dragStartLeft + deltaX}px`;
           draggedElement.style.top = `${dragStartTop + deltaY}px`;
         }
-        
+
         // Obtener la posición del cursor en el editor
         let range: Range | null = null;
         try {
@@ -276,16 +321,16 @@ export default function MarketingPage() {
             range = selection.getRangeAt(0);
           }
         }
-        
+
         if (range && editorRef.current.contains(range.commonAncestorContainer) && dragPlaceholder && (draggingButton || draggingImage)) {
           // Encontrar el nodo donde insertar
           let insertNode = range.commonAncestorContainer;
-          
+
           // Si es un nodo de texto, usar el padre
           if (insertNode.nodeType === Node.TEXT_NODE) {
             insertNode = insertNode.parentNode as Node;
           }
-          
+
           // Buscar un nodo válido para insertar (no el elemento arrastrado ni su contenido)
           const draggedElement = draggingButton || draggingImage;
           while (insertNode && insertNode !== editorRef.current) {
@@ -300,13 +345,13 @@ export default function MarketingPage() {
                 // Determinar si insertar antes o después basado en la posición Y
                 const elementRect = element.getBoundingClientRect();
                 const shouldInsertBefore = e.clientY < elementRect.top + elementRect.height / 2;
-                
+
                 try {
                   // Remover placeholder de su posición actual
                   if (dragPlaceholder.parentNode) {
                     dragPlaceholder.parentNode.removeChild(dragPlaceholder);
                   }
-                  
+
                   // Insertar en la nueva posición
                   if (shouldInsertBefore && element.parentNode) {
                     element.parentNode.insertBefore(dragPlaceholder, element);
@@ -325,7 +370,7 @@ export default function MarketingPage() {
             }
             insertNode = insertNode.parentNode as Node;
           }
-          
+
           // Si llegamos al editor, insertar al final
           if (insertNode === editorRef.current && dragPlaceholder.parentNode !== editorRef.current) {
             try {
@@ -350,7 +395,7 @@ export default function MarketingPage() {
             htmlContent: currentContent,
           }));
         }
-        
+
         // Limpiar estilos visuales y mover el elemento a la posición final
         if (draggingButton) {
           draggingButton.style.opacity = '1';
@@ -359,13 +404,13 @@ export default function MarketingPage() {
           draggingButton.style.top = '';
           draggingButton.style.margin = '';
           draggingButton.style.zIndex = '';
-          
+
           const link = draggingButton.querySelector('a') as HTMLAnchorElement;
           if (link) {
             link.style.outline = 'none';
             link.style.pointerEvents = 'auto';
           }
-          
+
           // Si hay un placeholder, mover el botón ahí y eliminar el placeholder
           if (dragPlaceholder && dragPlaceholder.parentNode) {
             const placeholderParent = dragPlaceholder.parentNode;
@@ -374,7 +419,7 @@ export default function MarketingPage() {
             setDragPlaceholder(null);
           }
         }
-        
+
         if (draggingImage) {
           draggingImage.style.opacity = '1';
           draggingImage.style.position = '';
@@ -382,12 +427,12 @@ export default function MarketingPage() {
           draggingImage.style.top = '';
           draggingImage.style.margin = '';
           draggingImage.style.zIndex = '';
-          
+
           const img = draggingImage.querySelector('img') as HTMLImageElement;
           if (img) {
             img.style.outline = 'none';
           }
-          
+
           // Si hay un placeholder, mover la imagen ahí y eliminar el placeholder
           if (dragPlaceholder && dragPlaceholder.parentNode) {
             const placeholderParent = dragPlaceholder.parentNode;
@@ -405,7 +450,7 @@ export default function MarketingPage() {
           (resizingButton as any).__isResizing = false;
         }
       }
-      
+
       setResizingButton(null);
       setDraggingButton(null);
       setDraggingImage(null);
@@ -449,7 +494,7 @@ export default function MarketingPage() {
         wrapper.style.display = 'inline-block';
         wrapper.style.maxWidth = '100%';
         wrapper.style.overflow = 'visible'; // Asegurar que el handle sea visible
-        
+
         // Ajustar el wrapper para que coincida con el tamaño de la imagen
         const adjustWrapperSize = () => {
           if (img.offsetWidth > 0 && img.offsetHeight > 0) {
@@ -457,7 +502,7 @@ export default function MarketingPage() {
             wrapper.style.height = `${img.offsetHeight}px`;
           }
         };
-        
+
         if (img.complete) {
           setTimeout(adjustWrapperSize, 0);
         } else {
@@ -471,13 +516,13 @@ export default function MarketingPage() {
         // Estilos de la imagen - siempre ajustarse al ancho del editor
         const editorWidth = editorRef.current?.offsetWidth || 600;
         const maxEditorWidth = editorWidth - 48; // Restar padding
-        
+
         img.style.display = 'block';
         img.style.position = 'relative';
         img.style.height = 'auto';
         img.style.cursor = 'default';
         img.style.userSelect = 'none';
-        
+
         // Ajustar el ancho de la imagen al editor si es necesario
         const currentWidthValue = parseInt(img.style.width) || img.offsetWidth || 600;
         const finalWidth = Math.min(currentWidthValue, maxEditorWidth);
@@ -505,7 +550,7 @@ export default function MarketingPage() {
         resizeHandle.style.userSelect = 'none';
         resizeHandle.style.webkitUserSelect = 'none';
         resizeHandle.title = 'Arrastra para redimensionar';
-        
+
         // Prevenir eventos de texto y teclado en el handle
         resizeHandle.addEventListener('keydown', (e) => {
           e.preventDefault();
@@ -527,20 +572,20 @@ export default function MarketingPage() {
           e.preventDefault();
           e.stopPropagation();
         });
-        
+
         // Función para actualizar la posición del handle
         const updateHandlePosition = () => {
           adjustWrapperSize();
           resizeHandle.style.bottom = '4px';
           resizeHandle.style.right = '4px';
         };
-        
+
         // Actualizar tamaño del wrapper cuando la imagen carga
         if (img.complete) {
           setTimeout(adjustWrapperSize, 0);
         } else {
           const originalOnload = img.onload;
-          img.onload = function(e) {
+          img.onload = function (e) {
             if (originalOnload) originalOnload.call(this, e);
             adjustWrapperSize();
           };
@@ -604,7 +649,7 @@ export default function MarketingPage() {
             color: #6b7280;
           `;
           btn.title = title;
-          
+
           const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
           svg.setAttribute("width", "16");
           svg.setAttribute("height", "16");
@@ -614,7 +659,7 @@ export default function MarketingPage() {
           svg.setAttribute("stroke-width", "2");
           svg.setAttribute("stroke-linecap", "round");
           svg.setAttribute("stroke-linejoin", "round");
-          
+
           const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
           if (icon === "left") {
             path.setAttribute("d", "M21 10H7m14-4H3m18 8H7m14 4H3");
@@ -640,11 +685,11 @@ export default function MarketingPage() {
           btn.onclick = (e) => {
             e.preventDefault();
             e.stopPropagation();
-            
+
             // Guardar el tamaño actual ANTES de hacer cualquier cambio
             const savedWidth = img.style.width || img.getAttribute('data-width') || '';
             const widthValue = savedWidth ? (savedWidth.includes('px') ? savedWidth : `${savedWidth}px`) : '';
-            
+
             if (align === "full") {
               // Full width: cambiar a 100%
               wrapper.style.width = "100%";
@@ -659,7 +704,7 @@ export default function MarketingPage() {
               wrapper.style.display = "block";
               wrapper.style.textAlign = align;
               img.style.display = "inline-block";
-              
+
               // Restaurar el tamaño original si existe (NO cambiar a 100%)
               if (widthValue && widthValue !== '100%') {
                 img.style.width = widthValue;
@@ -677,7 +722,7 @@ export default function MarketingPage() {
                 }
               }
             }
-            
+
             // Actualizar handle después de un pequeño delay
             setTimeout(() => {
               const resizeHandle = wrapper.querySelector('.resize-handle') as HTMLElement;
@@ -702,7 +747,7 @@ export default function MarketingPage() {
                 }
               }
             }, 10);
-            
+
             if (editorRef.current) {
               setTemplateForm(prev => ({
                 ...prev,
@@ -725,9 +770,9 @@ export default function MarketingPage() {
 
         const hideToolbar = (e?: MouseEvent) => {
           const relatedTarget = e?.relatedTarget as HTMLElement;
-          if (resizingImage !== img && 
-              !relatedTarget?.closest('.image-align-toolbar') &&
-              !relatedTarget?.classList.contains('resize-handle')) {
+          if (resizingImage !== img &&
+            !relatedTarget?.closest('.image-align-toolbar') &&
+            !relatedTarget?.classList.contains('resize-handle')) {
             alignToolbar.style.opacity = '0';
             resizeHandle.style.opacity = '0';
             img.style.outline = 'none';
@@ -738,7 +783,7 @@ export default function MarketingPage() {
         wrapper.addEventListener('mouseleave', hideToolbar);
         alignToolbar.addEventListener('mouseenter', showToolbar);
         alignToolbar.addEventListener('mouseleave', hideToolbar);
-        
+
         // Mantener visible el handle cuando se hace hover sobre él
         resizeHandle.addEventListener('mouseenter', () => {
           resizeHandle.style.opacity = '1';
@@ -764,40 +809,40 @@ export default function MarketingPage() {
         let isDragging = false;
         let mouseMoveHandler: ((e: MouseEvent) => void) | null = null;
         let mouseUpHandler: (() => void) | null = null;
-        
+
         const handleDragMouseDown = (e: MouseEvent) => {
           const target = e.target as HTMLElement;
-          
+
           // No arrastrar si se hace click en el handle de redimensionamiento, toolbar o si ya se está redimensionando
-          if (target.classList.contains('resize-handle') || 
-              target.closest('.resize-handle') ||
-              target.closest('.image-align-toolbar') ||
-              resizingImage === img) {
+          if (target.classList.contains('resize-handle') ||
+            target.closest('.resize-handle') ||
+            target.closest('.image-align-toolbar') ||
+            resizingImage === img) {
             return;
           }
-          
+
           // Guardar posición inicial
           dragStartPos = { x: e.clientX, y: e.clientY };
           isDragging = false;
-          
+
           const rect = wrapper.getBoundingClientRect();
           const editorRect = editorRef.current?.getBoundingClientRect();
-          
+
           if (editorRect && editorRef.current) {
             // Asegurar que el editor tenga position relative
             if (getComputedStyle(editorRef.current).position === 'static') {
               editorRef.current.style.position = 'relative';
             }
-            
+
             // Detectar movimiento para iniciar arrastre
             mouseMoveHandler = (moveEvent: MouseEvent) => {
               const deltaX = Math.abs(moveEvent.clientX - dragStartPos.x);
               const deltaY = Math.abs(moveEvent.clientY - dragStartPos.y);
-              
+
               // Si el mouse se movió más de 5px, iniciar arrastre
               if ((deltaX > 5 || deltaY > 5) && !isDragging) {
                 isDragging = true;
-                
+
                 // Crear placeholder en la posición actual
                 const placeholder = document.createElement('div');
                 placeholder.className = 'drag-placeholder';
@@ -807,13 +852,13 @@ export default function MarketingPage() {
                 placeholder.style.borderRadius = '4px';
                 placeholder.style.margin = '10px 0';
                 placeholder.style.opacity = '0.5';
-                
+
                 // Insertar placeholder donde está la imagen
                 if (wrapper.parentNode) {
                   wrapper.parentNode.insertBefore(placeholder, wrapper);
                   setDragPlaceholder(placeholder);
                 }
-                
+
                 // Hacer la imagen flotante para arrastrar
                 const currentRect = wrapper.getBoundingClientRect();
                 wrapper.style.position = 'fixed';
@@ -822,18 +867,18 @@ export default function MarketingPage() {
                 wrapper.style.margin = '0';
                 wrapper.style.zIndex = '10000';
                 wrapper.style.pointerEvents = 'none';
-                
+
                 setDraggingImage(wrapper);
                 setDragStartX(moveEvent.clientX);
                 setDragStartY(moveEvent.clientY);
                 setDragStartLeft(currentRect.left);
                 setDragStartTop(currentRect.top);
-                
+
                 wrapper.style.opacity = '0.8';
                 img.style.outline = '2px solid #00b2de';
               }
             };
-            
+
             mouseUpHandler = () => {
               if (mouseMoveHandler) {
                 document.removeEventListener('mousemove', mouseMoveHandler);
@@ -844,7 +889,7 @@ export default function MarketingPage() {
               mouseMoveHandler = null;
               mouseUpHandler = null;
             };
-            
+
             document.addEventListener('mousemove', mouseMoveHandler);
             document.addEventListener('mouseup', mouseUpHandler);
           }
@@ -899,11 +944,11 @@ export default function MarketingPage() {
       // Buscar todos los divs que contienen botones (links con estilos de botón)
       const buttonWrappers = editorRef.current?.querySelectorAll('div.button-wrapper') as NodeListOf<HTMLDivElement>;
       const links = editorRef.current?.querySelectorAll('a[style*="padding"]') as NodeListOf<HTMLAnchorElement>;
-      
+
       links?.forEach((link) => {
         // Evitar procesar botones que ya tienen wrapper
         if (link.parentElement?.classList.contains('button-wrapper')) return;
-        
+
         // Verificar si es un botón (tiene padding y background color)
         const hasButtonStyle = link.style.padding && link.style.backgroundColor;
         if (!hasButtonStyle) return;
@@ -955,12 +1000,12 @@ export default function MarketingPage() {
         const handleMouseLeave = (e: MouseEvent) => {
           // No ocultar si el mouse está sobre el handle
           if (resizingButton !== wrapper && draggingButton !== wrapper &&
-              !(e.relatedTarget as HTMLElement)?.classList.contains('button-resize-handle')) {
+            !(e.relatedTarget as HTMLElement)?.classList.contains('button-resize-handle')) {
             resizeHandle.style.opacity = '0';
             link.style.outline = 'none';
           }
         };
-        
+
         // Mantener visible el handle cuando se hace hover sobre él
         resizeHandle.addEventListener('mouseenter', () => {
           resizeHandle.style.opacity = '1';
@@ -1008,7 +1053,7 @@ export default function MarketingPage() {
             color: #6b7280;
           `;
           btn.title = title;
-          
+
           // Crear SVG del icono
           const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
           svg.setAttribute("width", "16");
@@ -1019,7 +1064,7 @@ export default function MarketingPage() {
           svg.setAttribute("stroke-width", "2");
           svg.setAttribute("stroke-linecap", "round");
           svg.setAttribute("stroke-linejoin", "round");
-          
+
           const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
           if (icon === "left") {
             path.setAttribute("d", "M21 10H7m14-4H3m18 8H7m14 4H3");
@@ -1045,7 +1090,7 @@ export default function MarketingPage() {
           btn.onclick = (e) => {
             e.preventDefault();
             e.stopPropagation();
-            
+
             if (align === "full") {
               wrapper.style.width = "100%";
               wrapper.style.display = "block";
@@ -1059,7 +1104,7 @@ export default function MarketingPage() {
               link.style.display = "inline-block";
               wrapper.style.textAlign = align;
             }
-            
+
             // Actualizar contenido
             if (editorRef.current) {
               setTemplateForm(prev => ({
@@ -1083,9 +1128,9 @@ export default function MarketingPage() {
 
         const hideToolbar = (e?: MouseEvent) => {
           const relatedTarget = e?.relatedTarget as HTMLElement;
-          if (resizingButton !== wrapper && draggingButton !== wrapper && 
-              !relatedTarget?.closest('.button-align-toolbar') &&
-              !relatedTarget?.classList.contains('button-resize-handle')) {
+          if (resizingButton !== wrapper && draggingButton !== wrapper &&
+            !relatedTarget?.closest('.button-align-toolbar') &&
+            !relatedTarget?.classList.contains('button-resize-handle')) {
             alignToolbar.style.opacity = '0';
             resizeHandle.style.opacity = '0';
             link.style.outline = 'none';
@@ -1102,21 +1147,21 @@ export default function MarketingPage() {
           e.preventDefault();
           e.stopPropagation();
           e.stopImmediatePropagation();
-          
+
           // Marcar que estamos redimensionando para evitar que se active el arrastre
           (wrapper as any).__isResizing = true;
-          
+
           setResizingButton(wrapper);
           setResizeStartX(e.clientX);
           const currentWidth = link.offsetWidth || parseInt(link.style.width) || 200;
           setResizeStartWidth(currentWidth);
           resizeHandle.style.opacity = '1';
           link.style.outline = '2px solid #00b2de';
-          
+
           // Prevenir que el arrastre se active
           return false;
         };
-        
+
         // Desactivar clicks en el link durante la edición
         link.addEventListener('click', (e) => {
           e.preventDefault();
@@ -1131,45 +1176,45 @@ export default function MarketingPage() {
         let isDragging = false;
         let mouseMoveHandler: ((e: MouseEvent) => void) | null = null;
         let mouseUpHandler: (() => void) | null = null;
-        
+
         const handleDragMouseDown = (e: MouseEvent) => {
           const target = e.target as HTMLElement;
-          
+
           // No arrastrar si se hace click en el handle de redimensionamiento, toolbar o si ya se está redimensionando
-          if (target.classList.contains('button-resize-handle') || 
-              target.closest('.button-resize-handle') ||
-              target.closest('.button-align-toolbar') ||
-              (wrapper as any).__isResizing) {
+          if (target.classList.contains('button-resize-handle') ||
+            target.closest('.button-resize-handle') ||
+            target.closest('.button-align-toolbar') ||
+            (wrapper as any).__isResizing) {
             return;
           }
-          
+
           // Guardar posición inicial
           dragStartPos = { x: e.clientX, y: e.clientY };
           isDragging = false;
-          
+
           // Si es click en el link, prevenir el comportamiento por defecto temporalmente
           if (target.tagName === 'A') {
             e.preventDefault();
           }
-          
+
           const rect = wrapper.getBoundingClientRect();
           const editorRect = editorRef.current?.getBoundingClientRect();
-          
+
           if (editorRect && editorRef.current) {
             // Asegurar que el editor tenga position relative
             if (getComputedStyle(editorRef.current).position === 'static') {
               editorRef.current.style.position = 'relative';
             }
-            
+
             // Detectar movimiento para iniciar arrastre
             mouseMoveHandler = (moveEvent: MouseEvent) => {
               const deltaX = Math.abs(moveEvent.clientX - dragStartPos.x);
               const deltaY = Math.abs(moveEvent.clientY - dragStartPos.y);
-              
+
               // Si el mouse se movió más de 5px, iniciar arrastre
               if ((deltaX > 5 || deltaY > 5) && !isDragging) {
                 isDragging = true;
-                
+
                 // Crear placeholder en la posición actual
                 const placeholder = document.createElement('div');
                 placeholder.className = 'drag-placeholder';
@@ -1179,13 +1224,13 @@ export default function MarketingPage() {
                 placeholder.style.borderRadius = '4px';
                 placeholder.style.margin = '10px 0';
                 placeholder.style.opacity = '0.5';
-                
+
                 // Insertar placeholder donde está el botón
                 if (wrapper.parentNode) {
                   wrapper.parentNode.insertBefore(placeholder, wrapper);
                   setDragPlaceholder(placeholder);
                 }
-                
+
                 // Hacer el botón flotante para arrastrar
                 const currentRect = wrapper.getBoundingClientRect();
                 wrapper.style.position = 'fixed';
@@ -1194,19 +1239,19 @@ export default function MarketingPage() {
                 wrapper.style.margin = '0';
                 wrapper.style.zIndex = '10000';
                 wrapper.style.pointerEvents = 'none';
-                
+
                 setDraggingButton(wrapper);
                 setDragStartX(moveEvent.clientX);
                 setDragStartY(moveEvent.clientY);
                 setDragStartLeft(currentRect.left);
                 setDragStartTop(currentRect.top);
-                
+
                 wrapper.style.opacity = '0.8';
                 link.style.outline = '2px solid #00b2de';
                 link.style.pointerEvents = 'none';
               }
             };
-            
+
             mouseUpHandler = () => {
               if (mouseMoveHandler) {
                 document.removeEventListener('mousemove', mouseMoveHandler);
@@ -1217,7 +1262,7 @@ export default function MarketingPage() {
               mouseMoveHandler = null;
               mouseUpHandler = null;
             };
-            
+
             document.addEventListener('mousemove', mouseMoveHandler);
             document.addEventListener('mouseup', mouseUpHandler);
           }
@@ -1239,7 +1284,7 @@ export default function MarketingPage() {
         wrapper.addEventListener('mouseup', handleDragEnd);
 
         link.appendChild(resizeHandle); // El handle debe estar dentro del link para posicionarse relativo a él
-        
+
         // Verificar si ya tiene toolbar, si no, agregarlo
         if (!wrapper.querySelector('.button-align-toolbar')) {
           // Crear toolbar de alineación si no existe
@@ -1283,7 +1328,7 @@ export default function MarketingPage() {
               color: #6b7280;
             `;
             btn.title = title;
-            
+
             const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
             svg.setAttribute("width", "16");
             svg.setAttribute("height", "16");
@@ -1293,7 +1338,7 @@ export default function MarketingPage() {
             svg.setAttribute("stroke-width", "2");
             svg.setAttribute("stroke-linecap", "round");
             svg.setAttribute("stroke-linejoin", "round");
-            
+
             const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
             if (icon === "left") {
               path.setAttribute("d", "M21 10H7m14-4H3m18 8H7m14 4H3");
@@ -1319,10 +1364,10 @@ export default function MarketingPage() {
             btn.onclick = (e) => {
               e.preventDefault();
               e.stopPropagation();
-              
+
               const buttonLink = wrapper.querySelector('a') as HTMLAnchorElement;
               if (!buttonLink) return;
-              
+
               if (align === "full") {
                 wrapper.style.width = "100%";
                 wrapper.style.display = "block";
@@ -1352,7 +1397,7 @@ export default function MarketingPage() {
                 buttonLink.style.display = "inline-block";
                 buttonLink.style.textAlign = "center";
               }
-              
+
               if (editorRef.current) {
                 setTemplateForm(prev => ({
                   ...prev,
@@ -1372,9 +1417,9 @@ export default function MarketingPage() {
 
           wrapper.addEventListener('mouseleave', (e) => {
             const relatedTarget = e.relatedTarget as HTMLElement;
-            if (resizingButton !== wrapper && draggingButton !== wrapper && 
-                !relatedTarget?.closest('.button-align-toolbar') &&
-                !relatedTarget?.classList.contains('button-resize-handle')) {
+            if (resizingButton !== wrapper && draggingButton !== wrapper &&
+              !relatedTarget?.closest('.button-align-toolbar') &&
+              !relatedTarget?.classList.contains('button-resize-handle')) {
               existingAlignToolbar.style.opacity = '0';
             }
           });
@@ -1419,27 +1464,27 @@ export default function MarketingPage() {
     try {
       setLoading(true);
       const token = getAccessToken();
-      
+
       if (!token) {
         console.error("No hay token de autenticación");
         router.push("/login");
         return;
       }
-      
+
       console.log("Token presente, cargando plantillas...");
       const data = await getEmailTemplates();
       setTemplates(data);
     } catch (error: any) {
       console.error("Error al cargar plantillas:", error);
-      
+
       // Si es un error 401, redirigir al login
       if (error.response?.status === 401) {
-        alert("Tu sesión ha expirado. Por favor, inicia sesión nuevamente.");
+        showAlert("Sesión expirada", "Tu sesión ha expirado. Por favor, inicia sesión nuevamente.", "warning");
         router.push("/login");
         return;
       }
-      
-      alert("Error al cargar las plantillas. Por favor, recarga la página.");
+
+      showAlert("Error", "Error al cargar las plantillas. Por favor, recarga la página.", "danger");
     } finally {
       setLoading(false);
     }
@@ -1483,14 +1528,14 @@ export default function MarketingPage() {
 
   const handleSaveTemplate = async () => {
     if (!templateForm.name || !templateForm.subject) {
-      alert("El nombre y el asunto son requeridos");
+      showAlert("Campos requeridos", "El nombre y el asunto son requeridos", "warning");
       return;
     }
 
     try {
       setLoading(true);
       const htmlContent = editorRef.current?.innerHTML || templateForm.htmlContent;
-      
+
       if (editingTemplate) {
         // Actualizar template existente
         const updated = await updateEmailTemplate(editingTemplate.id, {
@@ -1498,7 +1543,7 @@ export default function MarketingPage() {
           subject: templateForm.subject,
           htmlContent: htmlContent,
         });
-        setTemplates(templates.map(t => 
+        setTemplates(templates.map(t =>
           t.id === editingTemplate.id ? updated : t
         ));
       } else {
@@ -1510,32 +1555,35 @@ export default function MarketingPage() {
         });
         setTemplates([...templates, newTemplate]);
       }
-      
+
       setShowTemplateModal(false);
       setEditingTemplate(null);
     } catch (error) {
       console.error("Error al guardar plantilla:", error);
-      alert("Error al guardar la plantilla");
+      showAlert("Error", "Error al guardar la plantilla", "danger");
     } finally {
       setLoading(false);
     }
   };
 
   const handleDeleteTemplate = async (id: string) => {
-    if (!confirm("¿Estás seguro de que quieres eliminar esta plantilla?")) {
-      return;
-    }
-
-    try {
-      setLoading(true);
-      await deleteEmailTemplate(id);
-      setTemplates(templates.filter(t => t.id !== id));
-    } catch (error) {
-      console.error("Error al eliminar plantilla:", error);
-      alert("Error al eliminar la plantilla");
-    } finally {
-      setLoading(false);
-    }
+    showConfirm(
+      "Confirmar eliminación",
+      "¿Estás seguro de que quieres eliminar esta plantilla?",
+      async () => {
+        try {
+          setLoading(true);
+          await deleteEmailTemplate(id);
+          setTemplates(templates.filter(t => t.id !== id));
+        } catch (error) {
+          console.error("Error al eliminar plantilla:", error);
+          showAlert("Error", "Error al eliminar la plantilla", "danger");
+        } finally {
+          setLoading(false);
+        }
+      },
+      "danger"
+    );
   };
 
   const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1543,26 +1591,26 @@ export default function MarketingPage() {
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
-      alert("Por favor selecciona un archivo de imagen");
+      showAlert("Archivo inválido", "Por favor selecciona un archivo de imagen", "warning");
       return;
     }
 
     try {
       setUploadingImage(true);
       setShowImageModal(true); // Mostrar modal inmediatamente con el indicador de carga
-      
+
       // Subir la imagen inmediatamente
       const response = await uploadFile(file, {
         folder: "marketing",
         isPublic: true,
       });
-      
+
       const imageUrl = response.url;
-      
+
       // Crear preview con la URL subida
       setImagePreview(imageUrl);
       setImageFile(file);
-      
+
       // Obtener dimensiones originales
       const img = new Image();
       img.onload = () => {
@@ -1573,7 +1621,7 @@ export default function MarketingPage() {
       img.src = imageUrl;
     } catch (error) {
       console.error("Error al subir imagen:", error);
-      alert("Error al subir la imagen. Por favor, intenta de nuevo.");
+      showAlert("Error", "Error al subir la imagen. Por favor, intenta de nuevo.", "danger");
       setShowImageModal(false);
       setImagePreview(null);
       setImageFile(null);
@@ -1599,11 +1647,11 @@ export default function MarketingPage() {
       if (editorRef.current) {
         // Asegurar que el editor tenga foco
         editorRef.current.focus();
-        
+
         // Intentar obtener la selección, pero si no hay, crear un rango al final
         let range: Range | null = null;
         try {
-        const selection = window.getSelection();
+          const selection = window.getSelection();
           if (selection && selection.rangeCount > 0) {
             const tempRange = selection.getRangeAt(0);
             // Verificar que el rango esté dentro del editor
@@ -1615,14 +1663,14 @@ export default function MarketingPage() {
           // Si hay error, continuar sin rango
           console.log('Error obteniendo selección:', error);
         }
-        
+
         // Si no hay rango válido, crear uno al final del editor
         if (!range) {
           range = document.createRange();
           range.selectNodeContents(editorRef.current);
           range.collapse(false); // Colapsar al final
         }
-        
+
         // Crear wrapper para la imagen
         const wrapper = document.createElement("div");
         wrapper.className = "image-wrapper relative inline-block my-2 group";
@@ -1631,7 +1679,7 @@ export default function MarketingPage() {
         wrapper.style.maxWidth = "100%";
         wrapper.style.margin = "10px auto";
         wrapper.style.overflow = "visible"; // Asegurar que el handle sea visible
-        
+
         // Ajustar el wrapper para que coincida con el tamaño de la imagen
         const adjustWrapperSize = () => {
           if (img.offsetWidth > 0 && img.offsetHeight > 0) {
@@ -1639,12 +1687,12 @@ export default function MarketingPage() {
             wrapper.style.height = `${img.offsetHeight}px`;
           }
         };
-        
+
         // Obtener el ancho máximo disponible del editor
         const editorWidth = editorRef.current?.offsetWidth || 600;
         const maxEditorWidth = editorWidth - 48; // Restar padding (24px cada lado)
         const finalImageWidth = Math.min(imageWidth, maxEditorWidth);
-        
+
         const img = document.createElement("img");
         img.src = finalUrl;
         img.style.maxWidth = `${finalImageWidth}px`;
@@ -1656,7 +1704,7 @@ export default function MarketingPage() {
         img.style.userSelect = "none";
         img.style.overflow = "visible"; // Asegurar que el handle sea visible
         img.setAttribute('data-width', finalImageWidth.toString());
-        
+
         // Crear handle de redimensionamiento - posicionado relativo al wrapper
         const resizeHandle = document.createElement("div");
         resizeHandle.className = "resize-handle";
@@ -1679,7 +1727,7 @@ export default function MarketingPage() {
         resizeHandle.title = "Arrastra para redimensionar";
         resizeHandle.style.bottom = "4px";
         resizeHandle.style.right = "4px";
-        
+
         // Prevenir eventos de texto y teclado en el handle
         resizeHandle.addEventListener('keydown', (e) => {
           e.preventDefault();
@@ -1701,7 +1749,7 @@ export default function MarketingPage() {
           e.preventDefault();
           e.stopPropagation();
         });
-        
+
         // Actualizar tamaño del wrapper cuando la imagen carga
         if (img.complete) {
           setTimeout(adjustWrapperSize, 0);
@@ -1750,7 +1798,7 @@ export default function MarketingPage() {
             color: #6b7280;
           `;
           btn.title = title;
-          
+
           const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
           svg.setAttribute("width", "16");
           svg.setAttribute("height", "16");
@@ -1760,7 +1808,7 @@ export default function MarketingPage() {
           svg.setAttribute("stroke-width", "2");
           svg.setAttribute("stroke-linecap", "round");
           svg.setAttribute("stroke-linejoin", "round");
-          
+
           const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
           if (icon === "left") {
             path.setAttribute("d", "M21 10H7m14-4H3m18 8H7m14 4H3");
@@ -1786,11 +1834,11 @@ export default function MarketingPage() {
           btn.onclick = (e) => {
             e.preventDefault();
             e.stopPropagation();
-            
+
             // Guardar el tamaño actual ANTES de hacer cualquier cambio
             const savedWidth = img.style.width || img.getAttribute('data-width') || '';
             const widthValue = savedWidth ? (savedWidth.includes('px') ? savedWidth : `${savedWidth}px`) : '';
-            
+
             if (align === "full") {
               // Full width: cambiar a 100%
               wrapper.style.width = "100%";
@@ -1805,7 +1853,7 @@ export default function MarketingPage() {
               wrapper.style.display = "block";
               wrapper.style.textAlign = align;
               img.style.display = "inline-block";
-              
+
               // Restaurar el tamaño original si existe (NO cambiar a 100%)
               if (widthValue && widthValue !== '100%') {
                 img.style.width = widthValue;
@@ -1823,7 +1871,7 @@ export default function MarketingPage() {
                 }
               }
             }
-            
+
             // Actualizar handle después de un pequeño delay
             setTimeout(() => {
               const resizeHandle = wrapper.querySelector('.resize-handle') as HTMLElement;
@@ -1848,7 +1896,7 @@ export default function MarketingPage() {
                 }
               }
             }, 10);
-            
+
             if (editorRef.current) {
               setTemplateForm(prev => ({
                 ...prev,
@@ -1871,9 +1919,9 @@ export default function MarketingPage() {
 
         const hideToolbar = (e?: MouseEvent) => {
           const relatedTarget = e?.relatedTarget as HTMLElement;
-          if (!resizingImage && 
-              !relatedTarget?.closest('.image-align-toolbar') &&
-              !relatedTarget?.classList.contains('resize-handle')) {
+          if (!resizingImage &&
+            !relatedTarget?.closest('.image-align-toolbar') &&
+            !relatedTarget?.classList.contains('resize-handle')) {
             alignToolbar.style.opacity = '0';
             resizeHandle.style.opacity = '0';
             img.style.outline = 'none';
@@ -1884,7 +1932,7 @@ export default function MarketingPage() {
         wrapper.addEventListener('mouseleave', hideToolbar);
         alignToolbar.addEventListener('mouseenter', showToolbar);
         alignToolbar.addEventListener('mouseleave', hideToolbar);
-        
+
         // Mantener visible el handle cuando se hace hover sobre él
         resizeHandle.addEventListener('mouseenter', () => {
           resizeHandle.style.opacity = '1';
@@ -1908,40 +1956,40 @@ export default function MarketingPage() {
         let isDragging = false;
         let mouseMoveHandler: ((e: MouseEvent) => void) | null = null;
         let mouseUpHandler: (() => void) | null = null;
-        
+
         const handleDragMouseDown = (e: MouseEvent) => {
           const target = e.target as HTMLElement;
-          
+
           // No arrastrar si se hace click en el handle de redimensionamiento, toolbar o si ya se está redimensionando
-          if (target.classList.contains('resize-handle') || 
-              target.closest('.resize-handle') ||
-              target.closest('.image-align-toolbar') ||
-              resizingImage === img) {
+          if (target.classList.contains('resize-handle') ||
+            target.closest('.resize-handle') ||
+            target.closest('.image-align-toolbar') ||
+            resizingImage === img) {
             return;
           }
-          
+
           // Guardar posición inicial
           dragStartPos = { x: e.clientX, y: e.clientY };
           isDragging = false;
-          
+
           const rect = wrapper.getBoundingClientRect();
           const editorRect = editorRef.current?.getBoundingClientRect();
-          
+
           if (editorRect && editorRef.current) {
             // Asegurar que el editor tenga position relative
             if (getComputedStyle(editorRef.current).position === 'static') {
               editorRef.current.style.position = 'relative';
             }
-            
+
             // Detectar movimiento para iniciar arrastre
             mouseMoveHandler = (moveEvent: MouseEvent) => {
               const deltaX = Math.abs(moveEvent.clientX - dragStartPos.x);
               const deltaY = Math.abs(moveEvent.clientY - dragStartPos.y);
-              
+
               // Si el mouse se movió más de 5px, iniciar arrastre
               if ((deltaX > 5 || deltaY > 5) && !isDragging) {
                 isDragging = true;
-                
+
                 // Crear placeholder en la posición actual
                 const placeholder = document.createElement('div');
                 placeholder.className = 'drag-placeholder';
@@ -1951,13 +1999,13 @@ export default function MarketingPage() {
                 placeholder.style.borderRadius = '4px';
                 placeholder.style.margin = '10px 0';
                 placeholder.style.opacity = '0.5';
-                
+
                 // Insertar placeholder donde está la imagen
                 if (wrapper.parentNode) {
                   wrapper.parentNode.insertBefore(placeholder, wrapper);
                   setDragPlaceholder(placeholder);
                 }
-                
+
                 // Hacer la imagen flotante para arrastrar
                 const currentRect = wrapper.getBoundingClientRect();
                 wrapper.style.position = 'fixed';
@@ -1966,18 +2014,18 @@ export default function MarketingPage() {
                 wrapper.style.margin = '0';
                 wrapper.style.zIndex = '10000';
                 wrapper.style.pointerEvents = 'none';
-                
+
                 setDraggingImage(wrapper);
                 setDragStartX(moveEvent.clientX);
                 setDragStartY(moveEvent.clientY);
                 setDragStartLeft(currentRect.left);
                 setDragStartTop(currentRect.top);
-                
+
                 wrapper.style.opacity = '0.8';
                 img.style.outline = '2px solid #00b2de';
               }
             };
-            
+
             mouseUpHandler = () => {
               if (mouseMoveHandler) {
                 document.removeEventListener('mousemove', mouseMoveHandler);
@@ -1988,7 +2036,7 @@ export default function MarketingPage() {
               mouseMoveHandler = null;
               mouseUpHandler = null;
             };
-            
+
             document.addEventListener('mousemove', mouseMoveHandler);
             document.addEventListener('mouseup', mouseUpHandler);
           }
@@ -2011,10 +2059,10 @@ export default function MarketingPage() {
         wrapper.appendChild(img);
         wrapper.appendChild(resizeHandle); // El handle está en el wrapper pero se posiciona relativo a la imagen
         wrapper.appendChild(alignToolbar);
-        
+
         // Insertar el wrapper en el rango (siempre hay un rango válido ahora)
         range.insertNode(wrapper);
-        
+
         // Colocar el cursor después de la imagen
         range.setStartAfter(wrapper);
         range.collapse(true);
@@ -2023,7 +2071,7 @@ export default function MarketingPage() {
           finalSelection.removeAllRanges();
           finalSelection.addRange(range);
         }
-        
+
         // Actualizar contenido
         if (editorRef.current) {
           setTemplateForm({
@@ -2040,7 +2088,7 @@ export default function MarketingPage() {
       setImageWidth(600);
     } catch (error) {
       console.error("Error al subir imagen:", error);
-      alert("Error al procesar la imagen");
+      showAlert("Error", "Error al procesar la imagen", "danger");
     } finally {
       setUploadingImage(false);
     }
@@ -2089,7 +2137,7 @@ export default function MarketingPage() {
     try {
       setLoadingRecipients(true);
       const response = await getMembers();
-      
+
       // Convertir miembros a EmailRecipient
       const dbRecipients: EmailRecipient[] = response.members
         .filter((member) => member.email) // Solo usuarios con email
@@ -2100,10 +2148,10 @@ export default function MarketingPage() {
         }));
 
       setRecipients(dbRecipients);
-      alert(`Se cargaron ${dbRecipients.length} destinatarios desde la base de datos`);
+      showAlert("Carga exitosa", `Se cargaron ${dbRecipients.length} destinatarios desde la base de datos`, "success");
     } catch (error) {
       console.error("Error al cargar desde la base de datos:", error);
-      alert("Error al cargar los destinatarios desde la base de datos");
+      showAlert("Error", "Error al cargar los destinatarios desde la base de datos", "danger");
     } finally {
       setLoadingRecipients(false);
     }
@@ -2111,7 +2159,7 @@ export default function MarketingPage() {
 
   const handleAddManualRecipient = () => {
     if (!manualEmail || !manualEmail.includes("@")) {
-      alert("Por favor ingresa un email válido");
+      showAlert("Email inválido", "Por favor ingresa un email válido", "warning");
       return;
     }
 
@@ -2122,7 +2170,7 @@ export default function MarketingPage() {
 
     // Verificar que no esté duplicado
     if (recipients.some((r) => r.email.toLowerCase() === newRecipient.email.toLowerCase())) {
-      alert("Este email ya está en la lista");
+      showAlert("Email duplicado", "Este email ya está en la lista", "warning");
       return;
     }
 
@@ -2166,10 +2214,10 @@ export default function MarketingPage() {
       }).filter((r) => r.email && r.email.includes("@")); // Filtrar filas sin email válido
 
       setRecipients(parsedRecipients);
-      alert(`Se cargaron ${parsedRecipients.length} destinatarios desde el archivo Excel`);
+      showAlert("Carga exitosa", `Se cargaron ${parsedRecipients.length} destinatarios desde el archivo Excel`, "success");
     } catch (error) {
       console.error("Error al leer Excel:", error);
-      alert("Error al leer el archivo Excel. Por favor, verifica el formato del archivo.");
+      showAlert("Error", "Error al leer el archivo Excel. Por favor, verifica el formato del archivo.", "danger");
     } finally {
       setLoadingRecipients(false);
       if (excelInputRef.current) {
@@ -2180,14 +2228,14 @@ export default function MarketingPage() {
 
   const handleSendEmails = async (templateId: string) => {
     if (recipients.length === 0) {
-      alert("Debes cargar al menos un destinatario");
+      showAlert("Sin destinatarios", "Debes cargar al menos un destinatario", "warning");
       return;
     }
 
     // Validar que todos los emails sean válidos
     const invalidEmails = recipients.filter((r) => !r.email || !r.email.includes("@"));
     if (invalidEmails.length > 0) {
-      alert(`Hay ${invalidEmails.length} email(s) inválido(s). Por favor, corrígelos antes de enviar.`);
+      showAlert("Emails inválidos", `Hay ${invalidEmails.length} email(s) inválido(s). Por favor, corrígelos antes de enviar.`, "warning");
       return;
     }
 
@@ -2202,7 +2250,7 @@ export default function MarketingPage() {
     try {
       setSending(true);
       setShowConfirmModal(false);
-      
+
       const result = await sendBulkEmails({
         templateId: pendingTemplateId,
         recipients,
@@ -2215,7 +2263,7 @@ export default function MarketingPage() {
         errors: result.errors || [],
       });
       setShowResultModal(true);
-      
+
       // Cerrar modal de envío y limpiar
       setShowSendModal(false);
       setRecipients([]);
@@ -2223,7 +2271,7 @@ export default function MarketingPage() {
     } catch (error: any) {
       console.error("Error al enviar correos:", error);
       const errorMessage = error.response?.data?.message || error.message || "Error al enviar los correos";
-      
+
       // Mostrar error en modal también
       setSendResult({
         success: 0,
@@ -2231,7 +2279,7 @@ export default function MarketingPage() {
         errors: [errorMessage],
       });
       setShowResultModal(true);
-      
+
       setShowSendModal(false);
       setPendingTemplateId(null);
     } finally {
@@ -2241,16 +2289,16 @@ export default function MarketingPage() {
 
   const insertTextAtCursor = (text: string) => {
     if (!editorRef.current) return;
-    
+
     // Verificar que el editor tenga el foco o dárselo
     if (document.activeElement !== editorRef.current) {
       editorRef.current.focus();
     }
-    
+
     // Verificar que la selección esté dentro del editor
     const selection = window.getSelection();
     if (!selection) return;
-    
+
     let range: Range | null = null;
     try {
       if (selection.rangeCount > 0) {
@@ -2263,14 +2311,14 @@ export default function MarketingPage() {
     } catch (error) {
       // Si hay error, crear un rango al final del editor
     }
-    
+
     // Si no hay rango válido, crear uno al final del editor
     if (!range) {
       range = document.createRange();
       range.selectNodeContents(editorRef.current);
       range.collapse(false); // Colapsar al final
     }
-    
+
     // Insertar el texto
     range.deleteContents();
     const textNode = document.createTextNode(text);
@@ -2279,7 +2327,7 @@ export default function MarketingPage() {
     range.collapse(true);
     selection.removeAllRanges();
     selection.addRange(range);
-    
+
     // Actualizar el contenido
     setTemplateForm(prev => ({
       ...prev,
@@ -2289,7 +2337,7 @@ export default function MarketingPage() {
 
   const handleInsertButton = () => {
     if (!buttonConfig.text || !buttonConfig.url) {
-      alert("El texto y la URL son requeridos");
+      showAlert("Campos requeridos", "El texto y la URL son requeridos", "warning");
       return;
     }
 
@@ -2325,7 +2373,7 @@ export default function MarketingPage() {
     buttonWrapper.style.textAlign = "center";
     buttonWrapper.style.margin = "15px 0";
     buttonWrapper.style.cursor = "move";
-    
+
     const link = document.createElement("a");
     link.href = buttonConfig.url;
     link.target = "_blank";
@@ -2344,14 +2392,14 @@ export default function MarketingPage() {
     link.style.boxShadow = "0 2px 4px rgba(0,0,0,0.1)";
     link.style.minWidth = "120px";
     link.textContent = buttonConfig.text;
-    
+
     // Desactivar clicks en el link durante la edición
     link.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
       return false;
     });
-    
+
     // Efecto hover del botón
     link.onmouseenter = () => {
       if (!draggingButton && !resizingButton) {
@@ -2370,7 +2418,7 @@ export default function MarketingPage() {
         link.style.boxShadow = "0 2px 4px rgba(0,0,0,0.1)";
       }
     };
-    
+
     // Handle de redimensionamiento - posicionado relativo al link
     const resizeHandle = document.createElement("div");
     resizeHandle.className = "button-resize-handle";
@@ -2400,13 +2448,13 @@ export default function MarketingPage() {
 
     buttonWrapper.addEventListener('mouseleave', (e) => {
       // No ocultar si el mouse está sobre el handle
-      if (!resizingButton && !draggingButton && 
-          !(e.relatedTarget as HTMLElement)?.classList.contains('button-resize-handle')) {
+      if (!resizingButton && !draggingButton &&
+        !(e.relatedTarget as HTMLElement)?.classList.contains('button-resize-handle')) {
         resizeHandle.style.opacity = '0';
         link.style.outline = 'none';
       }
     });
-    
+
     // Mantener visible el handle cuando se hace hover sobre él
     resizeHandle.addEventListener('mouseenter', () => {
       resizeHandle.style.opacity = '1';
@@ -2454,7 +2502,7 @@ export default function MarketingPage() {
         color: #6b7280;
       `;
       btn.title = title;
-      
+
       // Crear SVG del icono
       const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
       svg.setAttribute("width", "16");
@@ -2465,7 +2513,7 @@ export default function MarketingPage() {
       svg.setAttribute("stroke-width", "2");
       svg.setAttribute("stroke-linecap", "round");
       svg.setAttribute("stroke-linejoin", "round");
-      
+
       const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
       if (icon === "left") {
         path.setAttribute("d", "M21 10H7m14-4H3m18 8H7m14 4H3");
@@ -2491,7 +2539,7 @@ export default function MarketingPage() {
       btn.onclick = (e) => {
         e.preventDefault();
         e.stopPropagation();
-        
+
         if (align === "full") {
           buttonWrapper.style.width = "100%";
           buttonWrapper.style.display = "block";
@@ -2521,7 +2569,7 @@ export default function MarketingPage() {
           link.style.display = "inline-block";
           link.style.textAlign = "center";
         }
-        
+
         // Actualizar contenido
         if (editorRef.current) {
           setTemplateForm(prev => ({
@@ -2543,9 +2591,9 @@ export default function MarketingPage() {
 
     buttonWrapper.addEventListener('mouseleave', (e) => {
       const relatedTarget = e.relatedTarget as HTMLElement;
-      if (!resizingButton && !draggingButton && 
-          !relatedTarget?.closest('.button-align-toolbar') &&
-          !relatedTarget?.classList.contains('button-resize-handle')) {
+      if (!resizingButton && !draggingButton &&
+        !relatedTarget?.closest('.button-align-toolbar') &&
+        !relatedTarget?.classList.contains('button-resize-handle')) {
         alignToolbar.style.opacity = '0';
       }
     });
@@ -2565,157 +2613,157 @@ export default function MarketingPage() {
       e.preventDefault();
       e.stopPropagation();
       e.stopImmediatePropagation();
-      
+
       // Marcar que estamos redimensionando para evitar que se active el arrastre
       (buttonWrapper as any).__isResizing = true;
-      
+
       setResizingButton(buttonWrapper);
       setResizeStartX(e.clientX);
       const currentWidth = link.offsetWidth || parseInt(link.style.width) || 200;
       setResizeStartWidth(currentWidth);
       resizeHandle.style.opacity = '1';
       link.style.outline = '2px solid #00b2de';
-      
+
       // Prevenir que el arrastre se active
       return false;
     }, true); // Usar capture phase para tener prioridad
 
-        // Manejar inicio de arrastre - permitir arrastrar desde el link también
-        let dragStartPos = { x: 0, y: 0 };
-        let isDragging = false;
-        let mouseMoveHandler: ((e: MouseEvent) => void) | null = null;
-        let mouseUpHandler: (() => void) | null = null;
-        
-        const handleDragStart = (e: MouseEvent) => {
-          const target = e.target as HTMLElement;
-          
-          // No arrastrar si se hace click en el handle de redimensionamiento, toolbar o si ya se está redimensionando
-          if (target.classList.contains('button-resize-handle') || 
-              target.closest('.button-resize-handle') ||
-              target.closest('.button-align-toolbar') ||
-              (buttonWrapper as any).__isResizing) {
-            return;
-          }
-          
-          // Guardar posición inicial
-          dragStartPos = { x: e.clientX, y: e.clientY };
-          isDragging = false;
-          
-          // Si es click en el link, prevenir el comportamiento por defecto temporalmente
-          if (target.tagName === 'A') {
-            e.preventDefault();
-          }
-          
-          const rect = buttonWrapper.getBoundingClientRect();
-          const editorRect = editorRef.current?.getBoundingClientRect();
-          
-          if (editorRect && editorRef.current) {
-            // Asegurar que el editor tenga position relative
-            if (getComputedStyle(editorRef.current).position === 'static') {
-              editorRef.current.style.position = 'relative';
+    // Manejar inicio de arrastre - permitir arrastrar desde el link también
+    let dragStartPos = { x: 0, y: 0 };
+    let isDragging = false;
+    let mouseMoveHandler: ((e: MouseEvent) => void) | null = null;
+    let mouseUpHandler: (() => void) | null = null;
+
+    const handleDragStart = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+
+      // No arrastrar si se hace click en el handle de redimensionamiento, toolbar o si ya se está redimensionando
+      if (target.classList.contains('button-resize-handle') ||
+        target.closest('.button-resize-handle') ||
+        target.closest('.button-align-toolbar') ||
+        (buttonWrapper as any).__isResizing) {
+        return;
+      }
+
+      // Guardar posición inicial
+      dragStartPos = { x: e.clientX, y: e.clientY };
+      isDragging = false;
+
+      // Si es click en el link, prevenir el comportamiento por defecto temporalmente
+      if (target.tagName === 'A') {
+        e.preventDefault();
+      }
+
+      const rect = buttonWrapper.getBoundingClientRect();
+      const editorRect = editorRef.current?.getBoundingClientRect();
+
+      if (editorRect && editorRef.current) {
+        // Asegurar que el editor tenga position relative
+        if (getComputedStyle(editorRef.current).position === 'static') {
+          editorRef.current.style.position = 'relative';
+        }
+
+        // Detectar movimiento para iniciar arrastre
+        mouseMoveHandler = (moveEvent: MouseEvent) => {
+          const deltaX = Math.abs(moveEvent.clientX - dragStartPos.x);
+          const deltaY = Math.abs(moveEvent.clientY - dragStartPos.y);
+
+          // Si el mouse se movió más de 5px, iniciar arrastre
+          if ((deltaX > 5 || deltaY > 5) && !isDragging) {
+            isDragging = true;
+
+            // Crear placeholder en la posición actual
+            const placeholder = document.createElement('div');
+            placeholder.className = 'drag-placeholder';
+            placeholder.style.height = `${buttonWrapper.offsetHeight}px`;
+            placeholder.style.minHeight = '40px';
+            placeholder.style.border = '2px dashed #00b2de';
+            placeholder.style.borderRadius = '4px';
+            placeholder.style.margin = '10px 0';
+            placeholder.style.opacity = '0.5';
+
+            // Insertar placeholder donde está el botón
+            if (buttonWrapper.parentNode) {
+              buttonWrapper.parentNode.insertBefore(placeholder, buttonWrapper);
+              setDragPlaceholder(placeholder);
             }
-            
-            // Detectar movimiento para iniciar arrastre
-            mouseMoveHandler = (moveEvent: MouseEvent) => {
-              const deltaX = Math.abs(moveEvent.clientX - dragStartPos.x);
-              const deltaY = Math.abs(moveEvent.clientY - dragStartPos.y);
-              
-              // Si el mouse se movió más de 5px, iniciar arrastre
-              if ((deltaX > 5 || deltaY > 5) && !isDragging) {
-                isDragging = true;
-                
-                // Crear placeholder en la posición actual
-                const placeholder = document.createElement('div');
-                placeholder.className = 'drag-placeholder';
-                placeholder.style.height = `${buttonWrapper.offsetHeight}px`;
-                placeholder.style.minHeight = '40px';
-                placeholder.style.border = '2px dashed #00b2de';
-                placeholder.style.borderRadius = '4px';
-                placeholder.style.margin = '10px 0';
-                placeholder.style.opacity = '0.5';
-                
-                // Insertar placeholder donde está el botón
-                if (buttonWrapper.parentNode) {
-                  buttonWrapper.parentNode.insertBefore(placeholder, buttonWrapper);
-                  setDragPlaceholder(placeholder);
-                }
-                
-                // Hacer el botón flotante para arrastrar
-                const currentRect = buttonWrapper.getBoundingClientRect();
-                buttonWrapper.style.position = 'fixed';
-                buttonWrapper.style.left = `${currentRect.left}px`;
-                buttonWrapper.style.top = `${currentRect.top}px`;
-                buttonWrapper.style.margin = '0';
-                buttonWrapper.style.zIndex = '10000';
-                buttonWrapper.style.pointerEvents = 'none';
-                
-                setDraggingButton(buttonWrapper);
-                setDragStartX(moveEvent.clientX);
-                setDragStartY(moveEvent.clientY);
-                setDragStartLeft(currentRect.left);
-                setDragStartTop(currentRect.top);
-                
-                buttonWrapper.style.opacity = '0.8';
-                link.style.outline = '2px solid #00b2de';
-                link.style.pointerEvents = 'none';
-              }
-            };
-            
-            mouseUpHandler = () => {
-              if (mouseMoveHandler) {
-                document.removeEventListener('mousemove', mouseMoveHandler);
-              }
-              if (mouseUpHandler) {
-                document.removeEventListener('mouseup', mouseUpHandler);
-              }
-              mouseMoveHandler = null;
-              mouseUpHandler = null;
-            };
-            
-            document.addEventListener('mousemove', mouseMoveHandler);
-            document.addEventListener('mouseup', mouseUpHandler);
+
+            // Hacer el botón flotante para arrastrar
+            const currentRect = buttonWrapper.getBoundingClientRect();
+            buttonWrapper.style.position = 'fixed';
+            buttonWrapper.style.left = `${currentRect.left}px`;
+            buttonWrapper.style.top = `${currentRect.top}px`;
+            buttonWrapper.style.margin = '0';
+            buttonWrapper.style.zIndex = '10000';
+            buttonWrapper.style.pointerEvents = 'none';
+
+            setDraggingButton(buttonWrapper);
+            setDragStartX(moveEvent.clientX);
+            setDragStartY(moveEvent.clientY);
+            setDragStartLeft(currentRect.left);
+            setDragStartTop(currentRect.top);
+
+            buttonWrapper.style.opacity = '0.8';
+            link.style.outline = '2px solid #00b2de';
+            link.style.pointerEvents = 'none';
           }
         };
 
-        // Agregar listeners con menor prioridad (sin capture) para que el resize tenga prioridad
-        buttonWrapper.addEventListener('mousedown', handleDragStart, false);
-        link.addEventListener('mousedown', handleDragStart, false);
-    
-        // Limpiar estilos al soltar
-        const handleDragEnd = () => {
-          if (draggingButton === buttonWrapper) {
-            buttonWrapper.style.opacity = '1';
-            link.style.outline = 'none';
-            link.style.pointerEvents = 'auto'; // Reactivar clicks en el link
+        mouseUpHandler = () => {
+          if (mouseMoveHandler) {
+            document.removeEventListener('mousemove', mouseMoveHandler);
           }
+          if (mouseUpHandler) {
+            document.removeEventListener('mouseup', mouseUpHandler);
+          }
+          mouseMoveHandler = null;
+          mouseUpHandler = null;
         };
 
-        buttonWrapper.addEventListener('mouseup', handleDragEnd);
-    
+        document.addEventListener('mousemove', mouseMoveHandler);
+        document.addEventListener('mouseup', mouseUpHandler);
+      }
+    };
+
+    // Agregar listeners con menor prioridad (sin capture) para que el resize tenga prioridad
+    buttonWrapper.addEventListener('mousedown', handleDragStart, false);
+    link.addEventListener('mousedown', handleDragStart, false);
+
+    // Limpiar estilos al soltar
+    const handleDragEnd = () => {
+      if (draggingButton === buttonWrapper) {
+        buttonWrapper.style.opacity = '1';
+        link.style.outline = 'none';
+        link.style.pointerEvents = 'auto'; // Reactivar clicks en el link
+      }
+    };
+
+    buttonWrapper.addEventListener('mouseup', handleDragEnd);
+
     buttonWrapper.appendChild(link);
     link.appendChild(resizeHandle); // El handle debe estar dentro del link para posicionarse relativo a él
     buttonWrapper.appendChild(alignToolbar);
-    
+
     // Insertar el botón
     try {
       // Eliminar cualquier contenido seleccionado
       range.deleteContents();
-      
+
       // Insertar el botón
       range.insertNode(buttonWrapper);
-      
+
       // Colocar el cursor después del botón
       range.setStartAfter(buttonWrapper);
       range.collapse(true);
       selection?.removeAllRanges();
       selection?.addRange(range);
-      
+
       // Actualizar contenido
       setTemplateForm(prev => ({
         ...prev,
         htmlContent: editorRef.current?.innerHTML || prev.htmlContent,
       }));
-      
+
       // Cerrar modal y resetear
       setShowButtonModal(false);
       setButtonConfig({
@@ -2746,10 +2794,10 @@ export default function MarketingPage() {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     return result
       ? {
-          r: parseInt(result[1], 16),
-          g: parseInt(result[2], 16),
-          b: parseInt(result[3], 16),
-        }
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16),
+      }
       : null;
   };
 
@@ -2757,34 +2805,33 @@ export default function MarketingPage() {
     <>
       <AdminSidebar isOpen={isOpen} setIsOpen={setIsOpen} />
       <main
-        className={`min-h-screen transition-all duration-300 bg-gradient-to-br from-gray-50 to-gray-100 ${
-          isMobile ? "ml-0" : !isMobile && isOpen ? "ml-20" : "ml-64"
-        }`}
+        className={`min-h-screen transition-all duration-300 bg-gradient-to-br from-gray-50 to-gray-100 ${isMobile ? "ml-0" : !isMobile && isOpen ? "ml-20" : "ml-64"
+          }`}
       >
         <div className="p-6 md:p-8 lg:p-12 max-w-7xl mx-auto">
           {/* Header Moderno */}
           <div className="mb-10">
             <div className="flex items-start justify-between mb-6">
-            <div>
+              <div>
                 <div className="flex items-center gap-3 mb-3">
                   <div className="p-2 bg-primary/10 rounded-xl">
                     <Sparkles className="w-6 h-6 text-primary" />
                   </div>
                   <h1 className="text-4xl font-bold text-gray-900 tracking-tight">
-                Marketing por Email
-              </h1>
+                    Marketing por Email
+                  </h1>
                 </div>
                 <p className="text-lg text-gray-600 ml-14">
                   Crea plantillas profesionales y envíalas a tus miembros
-              </p>
-            </div>
-            <button
-              onClick={handleNewTemplate}
+                </p>
+              </div>
+              <button
+                onClick={handleNewTemplate}
                 className="flex items-center gap-2 px-5 py-3 bg-primary text-white rounded-xl hover:bg-primary/90 transition-all duration-200 shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 font-medium"
-            >
-              <Plus className="w-5 h-5" />
-              Nueva Plantilla
-            </button>
+              >
+                <Plus className="w-5 h-5" />
+                Nueva Plantilla
+              </button>
             </div>
 
             {/* Stats Cards */}
@@ -2816,7 +2863,7 @@ export default function MarketingPage() {
                   <div>
                     <p className="text-sm text-gray-600 mb-1">Última actualización</p>
                     <p className="text-lg font-semibold text-gray-900">
-                      {templates.length > 0 
+                      {templates.length > 0
                         ? new Date(templates[0].updatedAt).toLocaleDateString("es-ES", { day: "numeric", month: "short" })
                         : "N/A"}
                     </p>
@@ -2929,15 +2976,15 @@ export default function MarketingPage() {
                             >
                               <Edit className="w-4 h-4" />
                             </button>
-                    <button
-                      onClick={() => {
-                        setRecipients([]);
-                        setShowManualAdd(false);
-                        setManualEmail("");
-                        setManualName("");
-                        setShowSendModal(true);
-                        setEditingTemplate(template);
-                      }}
+                            <button
+                              onClick={() => {
+                                setRecipients([]);
+                                setShowManualAdd(false);
+                                setManualEmail("");
+                                setManualName("");
+                                setShowSendModal(true);
+                                setEditingTemplate(template);
+                              }}
                               className="p-2 text-gray-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
                               title="Enviar"
                             >
@@ -2969,52 +3016,52 @@ export default function MarketingPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className="text-2xl font-bold text-gray-900 mb-1">
-                  {editingTemplate ? "Editar Plantilla" : "Nueva Plantilla"}
-                </h2>
+                      {editingTemplate ? "Editar Plantilla" : "Nueva Plantilla"}
+                    </h2>
                     <p className="text-sm text-gray-600">
                       {editingTemplate ? "Modifica tu plantilla de email" : "Crea una nueva plantilla para tus campañas"}
                     </p>
                   </div>
-                <button
-                  onClick={() => setShowTemplateModal(false)}
+                  <button
+                    onClick={() => setShowTemplateModal(false)}
                     className="p-2 hover:bg-gray-100 rounded-xl transition-colors text-gray-400 hover:text-gray-600"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
               </div>
 
               <div className="p-6 md:p-8 overflow-y-auto flex-1 bg-gray-50/50">
                 <div className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
+                    <div>
                       <label className="block text-sm font-semibold text-gray-900 mb-2">
-                      Nombre de la plantilla
-                    </label>
-                    <input
-                      type="text"
-                      value={templateForm.name}
-                      onChange={(e) =>
-                        setTemplateForm({ ...templateForm, name: e.target.value })
-                      }
+                        Nombre de la plantilla
+                      </label>
+                      <input
+                        type="text"
+                        value={templateForm.name}
+                        onChange={(e) =>
+                          setTemplateForm({ ...templateForm, name: e.target.value })
+                        }
                         className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary bg-white transition-all"
-                      placeholder="Ej: Promoción de Verano"
-                    />
-                  </div>
+                        placeholder="Ej: Promoción de Verano"
+                      />
+                    </div>
 
-                  <div>
+                    <div>
                       <label className="block text-sm font-semibold text-gray-900 mb-2">
-                      Asunto del correo
-                    </label>
-                    <input
-                      type="text"
-                      value={templateForm.subject}
-                      onChange={(e) =>
-                        setTemplateForm({ ...templateForm, subject: e.target.value })
-                      }
+                        Asunto del correo
+                      </label>
+                      <input
+                        type="text"
+                        value={templateForm.subject}
+                        onChange={(e) =>
+                          setTemplateForm({ ...templateForm, subject: e.target.value })
+                        }
                         className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary bg-white transition-all"
-                      placeholder="Ej: ¡Oferta especial para ti!"
-                    />
+                        placeholder="Ej: ¡Oferta especial para ti!"
+                      />
                     </div>
                   </div>
 
@@ -3024,43 +3071,43 @@ export default function MarketingPage() {
                         Contenido del correo
                       </label>
                     </div>
-                    
+
                     {/* Barra de herramientas del editor */}
                     <div className="flex flex-wrap gap-2 mb-3 p-3 bg-white border border-gray-200 rounded-xl">
                       <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          document.execCommand("bold", false);
-                          editorRef.current?.focus();
-                        }}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            document.execCommand("bold", false);
+                            editorRef.current?.focus();
+                          }}
                           className="px-3 py-1.5 bg-gray-50 hover:bg-gray-100 rounded-lg text-sm font-bold transition-colors"
-                        title="Negrita"
-                      >
-                        B
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          document.execCommand("italic", false);
-                          editorRef.current?.focus();
-                        }}
+                          title="Negrita"
+                        >
+                          B
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            document.execCommand("italic", false);
+                            editorRef.current?.focus();
+                          }}
                           className="px-3 py-1.5 bg-gray-50 hover:bg-gray-100 rounded-lg text-sm italic transition-colors"
-                        title="Cursiva"
-                      >
-                        I
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          document.execCommand("underline", false);
-                          editorRef.current?.focus();
-                        }}
+                          title="Cursiva"
+                        >
+                          I
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            document.execCommand("underline", false);
+                            editorRef.current?.focus();
+                          }}
                           className="px-3 py-1.5 bg-gray-50 hover:bg-gray-100 rounded-lg text-sm underline transition-colors"
-                        title="Subrayado"
-                      >
-                        U
-                      </button>
+                          title="Subrayado"
+                        >
+                          U
+                        </button>
                       </div>
                       <div className="w-px bg-gray-200" />
                       <div className="flex items-center gap-1">
@@ -3110,16 +3157,16 @@ export default function MarketingPage() {
                           title="Color de texto"
                         >
                           <span className="font-bold">A</span>
-                          <div 
-                            className="w-4 h-4 rounded border border-gray-300" 
+                          <div
+                            className="w-4 h-4 rounded border border-gray-300"
                             style={{ backgroundColor: textColorValue }}
                           />
                         </button>
-                        
+
                         {textColorPickerOpen && (
                           <>
-                            <div 
-                              className="fixed inset-0 z-40" 
+                            <div
+                              className="fixed inset-0 z-40"
                               onClick={() => setTextColorPickerOpen(false)}
                             />
                             <div className="absolute z-50 mt-2 bg-white rounded-xl shadow-2xl border border-gray-200 p-4 w-80 right-0">
@@ -3152,7 +3199,7 @@ export default function MarketingPage() {
                                     ))}
                                   </div>
                                 </div>
-                                
+
                                 {/* Selector de color personalizado */}
                                 <div>
                                   <label className="block text-xs font-medium text-gray-700 mb-2">
@@ -3193,7 +3240,7 @@ export default function MarketingPage() {
                                     </div>
                                   </div>
                                 </div>
-                                
+
                                 <div className="flex gap-2 pt-2 border-t border-gray-200">
                                   <button
                                     type="button"
@@ -3249,14 +3296,14 @@ export default function MarketingPage() {
                       </button>
                       <div className="w-px bg-gray-200" />
                       <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => insertTextAtCursor("{{nombre}}")}
+                        <button
+                          type="button"
+                          onClick={() => insertTextAtCursor("{{nombre}}")}
                           className="px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg text-sm font-mono transition-colors"
-                        title="Insertar variable nombre"
-                      >
-                        {"{{nombre}}"}
-                      </button>
+                          title="Insertar variable nombre"
+                        >
+                          {"{{nombre}}"}
+                        </button>
                       </div>
                     </div>
 
@@ -3279,9 +3326,9 @@ export default function MarketingPage() {
                         if (e.key === 'Backspace' || e.key === 'Delete') {
                           const selection = window.getSelection();
                           if (!selection || selection.rangeCount === 0 || !editorRef.current) return;
-                          
+
                           const range = selection.getRangeAt(0);
-                          
+
                           // Si hay texto seleccionado, verificar si es una variable completa
                           if (!range.collapsed) {
                             const selectedText = range.toString();
@@ -3291,13 +3338,13 @@ export default function MarketingPage() {
                               return;
                             }
                           }
-                          
+
                           // Obtener todo el texto del editor
                           const editorText = editorRef.current.innerText || editorRef.current.textContent || '';
                           const variableRegex = /\{\{[^}]+\}\}/g;
                           const matches: Array<{ start: number; end: number; text: string }> = [];
                           let match;
-                          
+
                           while ((match = variableRegex.exec(editorText)) !== null) {
                             matches.push({
                               start: match.index,
@@ -3305,60 +3352,60 @@ export default function MarketingPage() {
                               text: match[0]
                             });
                           }
-                          
+
                           // Obtener la posición del cursor en el texto plano
                           const rangeBefore = range.cloneRange();
                           rangeBefore.selectNodeContents(editorRef.current);
                           rangeBefore.setEnd(range.startContainer, range.startOffset);
                           const cursorPosition = rangeBefore.toString().length;
-                          
+
                           // Buscar si el cursor está dentro de alguna variable
                           for (const variable of matches) {
                             if (e.key === 'Backspace' && cursorPosition > variable.start && cursorPosition <= variable.end) {
                               // El cursor está dentro de la variable, borrar toda la variable
                               e.preventDefault();
-                              
+
                               // Encontrar el nodo de texto que contiene la variable
                               const walker = document.createTreeWalker(
                                 editorRef.current,
                                 NodeFilter.SHOW_TEXT,
                                 null
                               );
-                              
+
                               let currentPos = 0;
                               let targetNode: Text | null = null;
                               let nodeStart = 0;
-                              
+
                               while (walker.nextNode()) {
                                 const node = walker.currentNode as Text;
                                 const nodeText = node.textContent || '';
                                 const nodeEnd = currentPos + nodeText.length;
-                                
+
                                 if (variable.start >= currentPos && variable.start < nodeEnd) {
                                   targetNode = node;
                                   nodeStart = currentPos;
                                   break;
                                 }
-                                
+
                                 currentPos = nodeEnd;
                               }
-                              
+
                               if (targetNode && targetNode.textContent) {
                                 const nodeText = targetNode.textContent;
                                 const varInNodeStart = variable.start - nodeStart;
                                 const varInNodeEnd = variable.end - nodeStart;
-                                
+
                                 // Crear nuevo texto sin la variable
                                 const newText = nodeText.substring(0, varInNodeStart) + nodeText.substring(varInNodeEnd);
                                 targetNode.textContent = newText;
-                                
+
                                 // Colocar el cursor donde estaba la variable
                                 const newRange = document.createRange();
                                 newRange.setStart(targetNode, varInNodeStart);
                                 newRange.collapse(true);
                                 selection.removeAllRanges();
                                 selection.addRange(newRange);
-                                
+
                                 // Actualizar contenido
                                 setTemplateForm({
                                   ...templateForm,
@@ -3369,45 +3416,45 @@ export default function MarketingPage() {
                             } else if (e.key === 'Delete' && cursorPosition >= variable.start && cursorPosition < variable.end) {
                               // Similar para Delete
                               e.preventDefault();
-                              
+
                               const walker = document.createTreeWalker(
                                 editorRef.current,
                                 NodeFilter.SHOW_TEXT,
                                 null
                               );
-                              
+
                               let currentPos = 0;
                               let targetNode: Text | null = null;
                               let nodeStart = 0;
-                              
+
                               while (walker.nextNode()) {
                                 const node = walker.currentNode as Text;
                                 const nodeText = node.textContent || '';
                                 const nodeEnd = currentPos + nodeText.length;
-                                
+
                                 if (variable.start >= currentPos && variable.start < nodeEnd) {
                                   targetNode = node;
                                   nodeStart = currentPos;
                                   break;
                                 }
-                                
+
                                 currentPos = nodeEnd;
                               }
-                              
+
                               if (targetNode && targetNode.textContent) {
                                 const nodeText = targetNode.textContent;
                                 const varInNodeStart = variable.start - nodeStart;
                                 const varInNodeEnd = variable.end - nodeStart;
-                                
+
                                 const newText = nodeText.substring(0, varInNodeStart) + nodeText.substring(varInNodeEnd);
                                 targetNode.textContent = newText;
-                                
+
                                 const newRange = document.createRange();
                                 newRange.setStart(targetNode, varInNodeStart);
                                 newRange.collapse(true);
                                 selection.removeAllRanges();
                                 selection.addRange(newRange);
-                                
+
                                 setTemplateForm({
                                   ...templateForm,
                                   htmlContent: editorRef.current.innerHTML,
@@ -3451,23 +3498,23 @@ export default function MarketingPage() {
                   <div>
                     <h2 className="text-2xl font-bold text-gray-900 mb-1">
                       Enviar Correos
-                </h2>
+                    </h2>
                     <p className="text-sm text-gray-600">
                       Plantilla: <span className="font-medium">{editingTemplate.name}</span>
                     </p>
                   </div>
-                <button
-                  onClick={() => {
-                    setShowSendModal(false);
-                    setRecipients([]);
-                    setShowManualAdd(false);
-                    setManualEmail("");
-                    setManualName("");
-                  }}
+                  <button
+                    onClick={() => {
+                      setShowSendModal(false);
+                      setRecipients([]);
+                      setShowManualAdd(false);
+                      setManualEmail("");
+                      setManualName("");
+                    }}
                     className="p-2 hover:bg-gray-100 rounded-xl transition-colors text-gray-400 hover:text-gray-600"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
               </div>
 
@@ -3789,31 +3836,28 @@ export default function MarketingPage() {
                     <div className="grid grid-cols-3 gap-2 pt-1">
                       <button
                         onClick={() => setImageWidth(300)}
-                        className={`px-2 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                          imageWidth === 300 
-                            ? "bg-primary/20 text-primary border border-primary/30" 
-                            : "bg-gray-100 hover:bg-gray-200 text-gray-700"
-                        }`}
+                        className={`px-2 py-1.5 text-xs font-medium rounded-lg transition-colors ${imageWidth === 300
+                          ? "bg-primary/20 text-primary border border-primary/30"
+                          : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+                          }`}
                       >
                         Pequeña
                       </button>
                       <button
                         onClick={() => setImageWidth(600)}
-                        className={`px-2 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                          imageWidth === 600 
-                            ? "bg-primary/20 text-primary border border-primary/30" 
-                            : "bg-gray-100 hover:bg-gray-200 text-gray-700"
-                        }`}
+                        className={`px-2 py-1.5 text-xs font-medium rounded-lg transition-colors ${imageWidth === 600
+                          ? "bg-primary/20 text-primary border border-primary/30"
+                          : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+                          }`}
                       >
                         Mediana
                       </button>
                       <button
                         onClick={() => setImageWidth(1000)}
-                        className={`px-2 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                          imageWidth === 1000 
-                            ? "bg-primary/20 text-primary border border-primary/30" 
-                            : "bg-gray-100 hover:bg-gray-200 text-gray-700"
-                        }`}
+                        className={`px-2 py-1.5 text-xs font-medium rounded-lg transition-colors ${imageWidth === 1000
+                          ? "bg-primary/20 text-primary border border-primary/30"
+                          : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+                          }`}
                       >
                         Grande
                       </button>
@@ -3959,11 +4003,11 @@ export default function MarketingPage() {
                           placeholder="#00b2de"
                         />
                       </div>
-                      
+
                       {colorPickerOpen === 'bg' && (
                         <>
-                          <div 
-                            className="fixed inset-0 z-40" 
+                          <div
+                            className="fixed inset-0 z-40"
                             onClick={() => setColorPickerOpen(null)}
                           />
                           <div className="absolute z-50 mt-2 bg-white rounded-xl shadow-2xl border border-gray-200 p-4 w-80">
@@ -3994,7 +4038,7 @@ export default function MarketingPage() {
                                   ))}
                                 </div>
                               </div>
-                              
+
                               {/* Selector de color personalizado */}
                               <div>
                                 <label className="block text-xs font-medium text-gray-700 mb-2">
@@ -4025,7 +4069,7 @@ export default function MarketingPage() {
                                   </div>
                                 </div>
                               </div>
-                              
+
                               {/* Colores rápidos con texto */}
                               <div>
                                 <label className="block text-xs font-medium text-gray-700 mb-2">
@@ -4094,11 +4138,11 @@ export default function MarketingPage() {
                           placeholder="#ffffff"
                         />
                       </div>
-                      
+
                       {colorPickerOpen === 'text' && (
                         <>
-                          <div 
-                            className="fixed inset-0 z-40" 
+                          <div
+                            className="fixed inset-0 z-40"
                             onClick={() => setColorPickerOpen(null)}
                           />
                           <div className="absolute z-50 mt-2 bg-white rounded-xl shadow-2xl border border-gray-200 p-4 w-80 right-0">
@@ -4129,7 +4173,7 @@ export default function MarketingPage() {
                                   ))}
                                 </div>
                               </div>
-                              
+
                               {/* Selector de color personalizado */}
                               <div>
                                 <label className="block text-xs font-medium text-gray-700 mb-2">
@@ -4204,13 +4248,12 @@ export default function MarketingPage() {
               <div className="p-6 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-xl ${
-                      sendResult.failed === 0 
-                        ? "bg-green-100" 
-                        : sendResult.success === 0
+                    <div className={`p-2 rounded-xl ${sendResult.failed === 0
+                      ? "bg-green-100"
+                      : sendResult.success === 0
                         ? "bg-red-100"
                         : "bg-amber-100"
-                    }`}>
+                      }`}>
                       {sendResult.failed === 0 ? (
                         <CheckCircle2 className="w-5 h-5 text-green-600" />
                       ) : sendResult.success === 0 ? (
@@ -4238,62 +4281,54 @@ export default function MarketingPage() {
               <div className="p-6 space-y-4">
                 {/* Estadísticas */}
                 <div className="grid grid-cols-2 gap-4">
-                  <div className={`rounded-xl p-4 border-2 ${
-                    sendResult.success > 0 
-                      ? "bg-green-50 border-green-200" 
-                      : "bg-gray-50 border-gray-200"
-                  }`}>
+                  <div className={`rounded-xl p-4 border-2 ${sendResult.success > 0
+                    ? "bg-green-50 border-green-200"
+                    : "bg-gray-50 border-gray-200"
+                    }`}>
                     <div className="flex items-center gap-2 mb-1">
-                      <CheckCircle2 className={`w-4 h-4 ${
-                        sendResult.success > 0 ? "text-green-600" : "text-gray-400"
-                      }`} />
+                      <CheckCircle2 className={`w-4 h-4 ${sendResult.success > 0 ? "text-green-600" : "text-gray-400"
+                        }`} />
                       <span className="text-xs font-medium text-gray-600">Exitosos</span>
                     </div>
-                    <p className={`text-2xl font-bold ${
-                      sendResult.success > 0 ? "text-green-600" : "text-gray-400"
-                    }`}>
+                    <p className={`text-2xl font-bold ${sendResult.success > 0 ? "text-green-600" : "text-gray-400"
+                      }`}>
                       {sendResult.success}
                     </p>
                   </div>
-                  <div className={`rounded-xl p-4 border-2 ${
-                    sendResult.failed > 0 
-                      ? "bg-red-50 border-red-200" 
-                      : "bg-gray-50 border-gray-200"
-                  }`}>
+                  <div className={`rounded-xl p-4 border-2 ${sendResult.failed > 0
+                    ? "bg-red-50 border-red-200"
+                    : "bg-gray-50 border-gray-200"
+                    }`}>
                     <div className="flex items-center gap-2 mb-1">
-                      <X className={`w-4 h-4 ${
-                        sendResult.failed > 0 ? "text-red-600" : "text-gray-400"
-                      }`} />
+                      <X className={`w-4 h-4 ${sendResult.failed > 0 ? "text-red-600" : "text-gray-400"
+                        }`} />
                       <span className="text-xs font-medium text-gray-600">Fallidos</span>
                     </div>
-                    <p className={`text-2xl font-bold ${
-                      sendResult.failed > 0 ? "text-red-600" : "text-gray-400"
-                    }`}>
+                    <p className={`text-2xl font-bold ${sendResult.failed > 0 ? "text-red-600" : "text-gray-400"
+                      }`}>
                       {sendResult.failed}
                     </p>
                   </div>
                 </div>
 
                 {/* Mensaje resumen */}
-                <div className={`rounded-xl p-4 ${
-                  sendResult.failed === 0 
-                    ? "bg-green-50 border border-green-200" 
-                    : sendResult.success === 0
+                <div className={`rounded-xl p-4 ${sendResult.failed === 0
+                  ? "bg-green-50 border border-green-200"
+                  : sendResult.success === 0
                     ? "bg-red-50 border border-red-200"
                     : "bg-amber-50 border border-amber-200"
-                }`}>
-                  <p className={`text-sm font-medium ${
-                    sendResult.failed === 0 
-                      ? "text-green-900" 
-                      : sendResult.success === 0
+                  }`}>
+                  <p className={`text-sm font-medium ${sendResult.failed === 0
+                    ? "text-green-900"
+                    : sendResult.success === 0
                       ? "text-red-900"
                       : "text-amber-900"
-                  }`}>
-                    {sendResult.failed === 0 
+                    }`}>
+                    {sendResult.failed === 0
                       ? `¡Todos los correos se enviaron exitosamente! (${sendResult.success} ${sendResult.success === 1 ? "correo" : "correos"})`
                       : sendResult.success === 0
-                      ? `No se pudo enviar ningún correo. Todos fallaron (${sendResult.failed} ${sendResult.failed === 1 ? "correo" : "correos"})`
-                      : `Se enviaron ${sendResult.success} correos exitosamente, pero ${sendResult.failed} ${sendResult.failed === 1 ? "correo falló" : "correos fallaron"}`
+                        ? `No se pudo enviar ningún correo. Todos fallaron (${sendResult.failed} ${sendResult.failed === 1 ? "correo" : "correos"})`
+                        : `Se enviaron ${sendResult.success} correos exitosamente, pero ${sendResult.failed} ${sendResult.failed === 1 ? "correo falló" : "correos fallaron"}`
                     }
                   </p>
                 </div>
@@ -4443,17 +4478,17 @@ export default function MarketingPage() {
                   <div>
                     <h2 className="text-2xl font-bold text-gray-900 mb-1">
                       Vista Previa
-                </h2>
+                    </h2>
                     <p className="text-sm text-gray-600">
                       {previewTemplate.name}
                     </p>
                   </div>
-                <button
-                  onClick={() => setPreviewTemplate(null)}
+                  <button
+                    onClick={() => setPreviewTemplate(null)}
                     className="p-2 hover:bg-gray-100 rounded-xl transition-colors text-gray-400 hover:text-gray-600"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
               </div>
 
@@ -4467,10 +4502,10 @@ export default function MarketingPage() {
                   </p>
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                <div
+                  <div
                     className="p-8 min-h-[300px]"
-                  dangerouslySetInnerHTML={{ __html: previewTemplate.htmlContent }}
-                />
+                    dangerouslySetInnerHTML={{ __html: previewTemplate.htmlContent }}
+                  />
                 </div>
               </div>
 
@@ -4486,6 +4521,17 @@ export default function MarketingPage() {
           </div>
         )}
       </main>
+
+      <ConfirmModal
+        isOpen={genericModalOpen}
+        onClose={() => setGenericModalOpen(false)}
+        onConfirm={genericModalConfig.onConfirm}
+        title={genericModalConfig.title}
+        message={genericModalConfig.message}
+        type={genericModalConfig.type}
+        isConfirm={genericModalConfig.isConfirm}
+        confirmText={genericModalConfig.confirmText}
+      />
     </>
   );
 }

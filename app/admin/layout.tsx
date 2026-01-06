@@ -95,6 +95,6 @@ export default function AdminLayout({
   }
 
   return (
-    <section className="w-full min-h-screen bg-gray-50">{children}</section>
+    <section className="w-full min-h-screen bg-gray-50 admin-scope">{children}</section>
   );
 }

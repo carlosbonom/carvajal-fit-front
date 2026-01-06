@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { FolderTree, Plus, Edit, Trash2, Search, Loader2, X, GripVertical } from "lucide-react";
+import { ConfirmModal } from "@/components/confirm-modal";
 import { AdminSidebar } from "@/components/admin-sidebar";
 import {
   DndContext,
@@ -44,6 +45,35 @@ export default function CourseCategoriesPage() {
   const [categoryToDelete, setCategoryToDelete] = useState<CourseCategory | null>(null);
   const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  // Modal de alerta/confirmación
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalConfig, setModalConfig] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    type: "danger" | "warning" | "success" | "info";
+    isConfirm: boolean;
+    confirmText?: string;
+  }>({
+    title: "",
+    message: "",
+    onConfirm: () => { },
+    type: "info",
+    isConfirm: false,
+  });
+
+  const showAlert = (title: string, message: string, type: "danger" | "warning" | "success" | "info" = "info") => {
+    setModalConfig({
+      title,
+      message,
+      onConfirm: () => setModalOpen(false),
+      type,
+      isConfirm: false,
+      confirmText: "Aceptar"
+    });
+    setModalOpen(true);
+  };
 
   useEffect(() => {
     setIsMobile(window.innerWidth < 768);
@@ -200,7 +230,7 @@ export default function CourseCategoriesPage() {
       setCategoryToDelete(null);
     } catch (error) {
       console.error("Error al eliminar categoría:", error);
-      alert("No se pudo eliminar la categoría. Verifica si tiene cursos asociados.");
+      showAlert("Error", "No se pudo eliminar la categoría. Verifica si tiene cursos asociados.", "danger");
     } finally {
       setDeletingCategoryId(null);
     }
@@ -344,72 +374,31 @@ export default function CourseCategoriesPage() {
         />
       )}
 
-      {/* Delete Modal */}
-      {isDeleteModalOpen && categoryToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">Eliminar categoría</h2>
-              <button
-                onClick={() => {
-                  if (deletingCategoryId) return;
-                  setIsDeleteModalOpen(false);
-                  setCategoryToDelete(null);
-                }}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={!!deletingCategoryId}
-              >
-                <X className="w-4 h-4 text-gray-500" />
-              </button>
-            </div>
-            <div className="px-6 py-5 space-y-3">
-              <p className="text-sm text-gray-700">
-                ¿Estás seguro de que deseas eliminar esta categoría?
-              </p>
-              <div className="p-3 bg-gray-50 rounded-md border border-gray-100">
-                <p className="text-sm font-medium text-gray-900">{categoryToDelete.name}</p>
-                {categoryToDelete.description && (
-                  <p className="mt-1 text-xs text-gray-500 line-clamp-2">
-                    {categoryToDelete.description}
-                  </p>
-                )}
-              </div>
-              <p className="text-xs text-red-600">
-                Esta acción no se puede deshacer. Los cursos asociados perderán su categoría.
-              </p>
-            </div>
-            <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  if (deletingCategoryId) return;
-                  setIsDeleteModalOpen(false);
-                  setCategoryToDelete(null);
-                }}
-                className="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={!!deletingCategoryId}
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={handleDelete}
-                className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                disabled={!!deletingCategoryId}
-              >
-                {deletingCategoryId ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Eliminando...
-                  </>
-                ) : (
-                  "Eliminar"
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          if (deletingCategoryId) return;
+          setIsDeleteModalOpen(false);
+          setCategoryToDelete(null);
+        }}
+        onConfirm={handleDelete}
+        title="Eliminar categoría"
+        message={`¿Estás seguro de que deseas eliminar la categoría "${categoryToDelete?.name}"? Esta acción no se puede deshacer y los cursos asociados perderán su categoría.`}
+        type="danger"
+        confirmText="Eliminar"
+        loading={!!deletingCategoryId}
+      />
+
+      <ConfirmModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onConfirm={modalConfig.onConfirm}
+        title={modalConfig.title}
+        message={modalConfig.message}
+        type={modalConfig.type}
+        isConfirm={modalConfig.isConfirm}
+        confirmText={modalConfig.confirmText}
+      />
     </>
   );
 }
