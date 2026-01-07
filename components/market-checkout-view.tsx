@@ -2,18 +2,28 @@
 
 import { useState } from "react";
 import { Button } from "@heroui/button";
-import { Check, ArrowLeft, Trash2, Plus, Minus } from "lucide-react";
+import { Input } from "@heroui/input";
+import { Checkbox } from "@heroui/checkbox";
+import { Check, ArrowLeft, Trash2, Plus, Minus, User as UserIcon, Mail, Phone, Lock } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Logo } from "./icons";
-import { CartItem } from "@/contexts/cart-jose-context"; // Type is compatible for both
+import { CartItem } from "@/contexts/cart-jose-context";
+
+export interface GuestData {
+    name: string;
+    email: string;
+    phone?: string;
+    password?: string;
+    shouldRegister: boolean;
+}
 
 interface MarketCheckoutViewProps {
     items: CartItem[];
     total: number;
     removeItem: (id: string) => void;
     updateQuantity: (id: string, quantity: number) => void;
-    onCheckout: (method: string) => Promise<void>;
+    onCheckout: (method: string, guestData: GuestData) => Promise<void>;
     processing: boolean;
     creatorName: string;
     backUrl: string;
@@ -33,6 +43,43 @@ export function MarketCheckoutView({
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<
         "webpay" | "mercadopago" | "paypal"
     >("webpay");
+
+    const [guestData, setGuestData] = useState<GuestData>({
+        name: "",
+        email: "",
+        shouldRegister: false
+    });
+
+    const [errors, setErrors] = useState<Partial<GuestData>>({});
+
+    const handleInputChange = (field: keyof GuestData, value: any) => {
+        setGuestData(prev => ({ ...prev, [field]: value }));
+        if (errors[field]) {
+            setErrors(prev => ({ ...prev, [field]: undefined }));
+        }
+    };
+
+    const validateForm = () => {
+        const newErrors: Partial<GuestData> = {};
+        if (!guestData.name) newErrors.name = "El nombre es requerido";
+        if (!guestData.email) newErrors.email = "El email es requerido";
+        else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestData.email)) newErrors.email = "Email inválido";
+
+        if (guestData.shouldRegister) {
+            if (!guestData.phone) newErrors.phone = "El teléfono es requerido";
+            if (!guestData.password) newErrors.password = "La contraseña es requerida";
+            else if (guestData.password.length < 6) newErrors.password = "Mínimo 6 caracteres";
+        }
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+
+    const handleCheckoutClick = () => {
+        if (validateForm()) {
+            onCheckout(selectedPaymentMethod, guestData);
+        }
+    };
 
     return (
         <div className="min-h-screen w-full relative overflow-hidden bg-black text-white">
@@ -66,9 +113,93 @@ export function MarketCheckoutView({
                     initial={{ opacity: 0, y: 40 }}
                     transition={{ delay: 0.2, duration: 0.7, ease: "easeOut" }}
                 >
-                    {/* Columna Izquierda: Items del Carrito */}
+                    {/* Columna Izquierda: Items del Carrito y Datos */}
                     <div className="lg:col-span-2 space-y-6">
                         <div className="border border-[#00b2de]/20 bg-[#0a0e12]/95 backdrop-blur-xl rounded-3xl p-6 md:p-8">
+
+                            {/* Datos de Cliente */}
+                            <div className="mb-8 border-b border-white/10 pb-8">
+                                <h3 className="text-xl font-bold text-white mb-6">Tus Datos</h3>
+                                <div className="space-y-4">
+                                    <Input
+                                        label="Nombre Completo"
+                                        placeholder="Ej: Juan Pérez"
+                                        value={guestData.name}
+                                        onValueChange={(v) => handleInputChange("name", v)}
+                                        errorMessage={errors.name}
+                                        isInvalid={!!errors.name}
+                                        startContent={<UserIcon className="w-4 h-4 text-default-400" />}
+                                        variant="bordered"
+                                        classNames={{
+                                            inputWrapper: "border-white/20 hover:border-[#00b2de]/50 group-data-[focus=true]:border-[#00b2de]",
+                                        }}
+                                    />
+                                    <Input
+                                        label="Correo Electrónico"
+                                        placeholder="juan@ejemplo.com"
+                                        type="email"
+                                        value={guestData.email}
+                                        onValueChange={(v) => handleInputChange("email", v)}
+                                        errorMessage={errors.email}
+                                        isInvalid={!!errors.email}
+                                        startContent={<Mail className="w-4 h-4 text-default-400" />}
+                                        variant="bordered"
+                                        classNames={{
+                                            inputWrapper: "border-white/20 hover:border-[#00b2de]/50 group-data-[focus=true]:border-[#00b2de]",
+                                        }}
+                                    />
+                                </div>
+
+                                <div className="mt-4">
+                                    <Checkbox
+                                        isSelected={guestData.shouldRegister}
+                                        onValueChange={(v) => handleInputChange("shouldRegister", v)}
+                                        color="primary"
+                                    >
+                                        <span className="text-sm text-gray-300">Quiero crear una cuenta para ver mis compras</span>
+                                    </Checkbox>
+                                </div>
+
+                                <AnimatePresence>
+                                    {guestData.shouldRegister && (
+                                        <motion.div
+                                            initial={{ height: 0, opacity: 0 }}
+                                            animate={{ height: "auto", opacity: 1 }}
+                                            exit={{ height: 0, opacity: 0 }}
+                                            className="space-y-4 overflow-hidden pt-4"
+                                        >
+                                            <Input
+                                                label="Teléfono"
+                                                placeholder="+569..."
+                                                value={guestData.phone || ""}
+                                                onValueChange={(v) => handleInputChange("phone", v)}
+                                                errorMessage={errors.phone}
+                                                isInvalid={!!errors.phone}
+                                                startContent={<Phone className="w-4 h-4 text-default-400" />}
+                                                variant="bordered"
+                                                classNames={{
+                                                    inputWrapper: "border-white/20 hover:border-[#00b2de]/50 group-data-[focus=true]:border-[#00b2de]",
+                                                }}
+                                            />
+                                            <Input
+                                                label="Contraseña"
+                                                placeholder="******"
+                                                type="password"
+                                                value={guestData.password || ""}
+                                                onValueChange={(v) => handleInputChange("password", v)}
+                                                errorMessage={errors.password}
+                                                isInvalid={!!errors.password}
+                                                startContent={<Lock className="w-4 h-4 text-default-400" />}
+                                                variant="bordered"
+                                                classNames={{
+                                                    inputWrapper: "border-white/20 hover:border-[#00b2de]/50 group-data-[focus=true]:border-[#00b2de]",
+                                                }}
+                                            />
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
+
                             <h2 className="text-xl md:text-2xl font-bold mb-6 flex items-center gap-2">
                                 <span className="bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
                                     Tu Carrito
@@ -152,7 +283,7 @@ export function MarketCheckoutView({
                     </div>
 
                     {/* Columna Derecha: Resumen y Pago */}
-                    <div className="lg:col-span-1">
+                    <div className="lg:col-span-1 space-y-6">
                         <div className="sticky top-6 border border-[#00b2de]/20 bg-[#0a0e12]/95 backdrop-blur-xl rounded-3xl p-6 md:p-8 space-y-6">
                             <div>
                                 <h3 className="text-lg font-semibold text-white mb-2">Resumen</h3>
@@ -181,6 +312,7 @@ export function MarketCheckoutView({
                                             ? "border-[#00b2de] bg-[#00b2de]/10"
                                             : "border-[#00b2de]/20 bg-transparent hover:border-[#00b2de]/40"
                                             }`}
+                                        type="button"
                                         onClick={() => setSelectedPaymentMethod("webpay")}
                                     >
                                         <div className="flex items-center gap-3">
@@ -194,7 +326,11 @@ export function MarketCheckoutView({
                                                     <Check className="w-3 h-3 text-white" />
                                                 )}
                                             </div>
-                                            <span className="font-medium">WebPay</span>
+                                            <img
+                                                alt="WebPay"
+                                                className="h-10 object-contain"
+                                                src="https://melli.fydeli.com/carvajal-fit/logos/1.Webpay_FN_300px.png"
+                                            />
                                         </div>
                                     </button>
 
@@ -204,6 +340,7 @@ export function MarketCheckoutView({
                                             ? "border-[#00b2de] bg-[#00b2de]/10"
                                             : "border-[#00b2de]/20 bg-transparent hover:border-[#00b2de]/40"
                                             }`}
+                                        type="button"
                                         onClick={() => setSelectedPaymentMethod("mercadopago")}
                                     >
                                         <div className="flex items-center gap-3">
@@ -217,7 +354,11 @@ export function MarketCheckoutView({
                                                     <Check className="w-3 h-3 text-white" />
                                                 )}
                                             </div>
-                                            <span className="font-medium">Mercado Pago</span>
+                                            <img
+                                                alt="Mercado Pago"
+                                                className="h-12 object-contain"
+                                                src="https://melli.fydeli.com/carvajal-fit/logos/mercado_pago_logo.png"
+                                            />
                                         </div>
                                     </button>
 
@@ -227,6 +368,7 @@ export function MarketCheckoutView({
                                             ? "border-[#00b2de] bg-[#00b2de]/10"
                                             : "border-[#00b2de]/20 bg-transparent hover:border-[#00b2de]/40"
                                             }`}
+                                        type="button"
                                         onClick={() => setSelectedPaymentMethod("paypal")}
                                     >
                                         <div className="flex items-center gap-3">
@@ -240,7 +382,11 @@ export function MarketCheckoutView({
                                                     <Check className="w-3 h-3 text-white" />
                                                 )}
                                             </div>
-                                            <span className="font-medium">PayPal</span>
+                                            <img
+                                                alt="PayPal"
+                                                className="h-10 object-contain"
+                                                src="https://melli.fydeli.com/carvajal-fit/logos/PayPal-Logo-White-RGB.png"
+                                            />
                                         </div>
                                     </button>
                                 </div>
@@ -254,7 +400,7 @@ export function MarketCheckoutView({
                                 isLoading={processing}
                                 radius="lg"
                                 variant="solid"
-                                onClick={() => onCheckout(selectedPaymentMethod)}
+                                onClick={handleCheckoutClick}
                             >
                                 {processing ? "Procesando..." : `Pagar $${total.toLocaleString("es-CL")}`}
                             </Button>

@@ -114,11 +114,7 @@ export function AddContentModal({
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      // Validar tamaño máximo (2GB)
-      if (file.size > 2 * 1024 * 1024 * 1024) {
-        setError("El archivo no puede ser mayor a 2GB");
-        return;
-      }
+
 
       // Limpiar preview anterior si existe
       if (filePreviewUrlRef.current) {
@@ -137,6 +133,52 @@ export function AddContentModal({
       setError(null);
 
       // Crear preview usando createObjectURL para archivos grandes (más eficiente)
+      if (file.type.startsWith("image/") || file.type.startsWith("video/")) {
+        const objectUrl = URL.createObjectURL(file);
+        filePreviewUrlRef.current = objectUrl;
+        setFilePreview(objectUrl);
+      } else {
+        setFilePreview(null);
+      }
+    }
+  };
+
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const file = e.dataTransfer.files[0];
+
+      // Limpiar preview anterior si existe
+      if (filePreviewUrlRef.current) {
+        URL.revokeObjectURL(filePreviewUrlRef.current);
+        filePreviewUrlRef.current = null;
+      }
+
+      // Detectar tipo de contenido automáticamente
+      const detectedType = detectContentType(file);
+
+      setSelectedFile(file);
+      setFormData({
+        ...formData,
+        contentType: detectedType,
+      });
+      setError(null);
+
+      // Crear preview usando createObjectURL
       if (file.type.startsWith("image/") || file.type.startsWith("video/")) {
         const objectUrl = URL.createObjectURL(file);
         filePreviewUrlRef.current = objectUrl;
@@ -414,7 +456,17 @@ export function AddContentModal({
             {/* Modo: Subir archivo */}
             {useFileUpload ? (
               <div className="space-y-2">
-                <label className={`flex flex-col items-center justify-center w-full h-40 border-2 border-gray-300 border-dashed rounded-lg bg-gray-50 transition-colors ${loading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-gray-100'}`}>
+                <label
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  className={`flex flex-col items-center justify-center w-full h-40 border-2 border-dashed rounded-lg transition-colors ${loading
+                    ? 'cursor-not-allowed opacity-50 border-gray-300 bg-gray-50'
+                    : isDragging
+                      ? 'cursor-pointer border-primary bg-primary/5'
+                      : 'cursor-pointer border-gray-300 bg-gray-50 hover:bg-gray-100'
+                    }`}
+                >
                   {filePreview ? (
                     <div className="relative w-full h-full">
                       {formData.contentType === "image" ? (
@@ -445,6 +497,7 @@ export function AddContentModal({
                         type="button"
                         onClick={(e) => {
                           e.preventDefault();
+                          e.stopPropagation(); // Stop propagation to prevent hitting the label/input underneath
                           if (loading) return;
                           // Limpiar URL blob
                           if (filePreviewUrlRef.current) {
@@ -459,19 +512,19 @@ export function AddContentModal({
                           }
                         }}
                         disabled={loading}
-                        className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed z-10"
                       >
                         <X className="w-4 h-4" />
                       </button>
                     </div>
                   ) : (
                     <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                      <Upload className="w-10 h-10 mb-3 text-gray-400" />
+                      <Upload className={`w-10 h-10 mb-3 ${isDragging ? 'text-primary' : 'text-gray-400'}`} />
                       <p className="mb-2 text-sm text-gray-500">
                         <span className="font-semibold">Click para subir</span> o arrastra y suelta
                       </p>
                       <p className="text-xs text-gray-500">
-                        Video, Imagen, PDF, Documento, Audio (máx. 2GB)
+                        Video, Imagen, PDF, Documento, Audio (sin límite)
                       </p>
                     </div>
                   )}

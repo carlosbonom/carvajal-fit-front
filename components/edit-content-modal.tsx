@@ -15,7 +15,7 @@ interface EditContentModalProps {
 // Función para detectar el tipo de contenido basado en el tipo de archivo
 const detectContentType = (file: File): UpdateCourseContentDto["contentType"] => {
   const mimeType = file.type;
-  
+
   if (mimeType.startsWith("video/")) {
     return "video";
   } else if (mimeType.startsWith("image/")) {
@@ -141,28 +141,70 @@ export function EditContentModal({
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      // Validar tamaño máximo (2GB)
-      if (file.size > 2 * 1024 * 1024 * 1024) {
-        setError("El archivo no puede ser mayor a 2GB");
-        return;
-      }
-      
+
+
       // Limpiar preview anterior si existe
       if (filePreviewUrlRef.current) {
         URL.revokeObjectURL(filePreviewUrlRef.current);
         filePreviewUrlRef.current = null;
       }
-      
+
       // Detectar tipo de contenido automáticamente
       const detectedType = detectContentType(file);
-      
+
       setSelectedFile(file);
       setFormData({
         ...formData,
         contentType: detectedType,
       });
       setError(null);
-      
+
+      // Crear preview usando createObjectURL para archivos grandes (más eficiente)
+      if (file.type.startsWith("image/") || file.type.startsWith("video/")) {
+        const objectUrl = URL.createObjectURL(file);
+        filePreviewUrlRef.current = objectUrl;
+        setFilePreview(objectUrl);
+      } else {
+        setFilePreview(null);
+      }
+    }
+  };
+
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const file = e.dataTransfer.files[0];
+
+      // Limpiar preview anterior si existe
+      if (filePreviewUrlRef.current) {
+        URL.revokeObjectURL(filePreviewUrlRef.current);
+        filePreviewUrlRef.current = null;
+      }
+
+      // Detectar tipo de contenido automáticamente
+      const detectedType = detectContentType(file);
+
+      setSelectedFile(file);
+      setFormData({
+        ...formData,
+        contentType: detectedType,
+      });
+      setError(null);
+
       // Crear preview usando createObjectURL para archivos grandes (más eficiente)
       if (file.type.startsWith("image/") || file.type.startsWith("video/")) {
         const objectUrl = URL.createObjectURL(file);
@@ -182,15 +224,15 @@ export function EditContentModal({
         setError("El archivo de miniatura debe ser una imagen");
         return;
       }
-      
+
       // Limpiar preview anterior si existe
       if (thumbnailPreviewUrlRef.current) {
         URL.revokeObjectURL(thumbnailPreviewUrlRef.current);
         thumbnailPreviewUrlRef.current = null;
       }
-      
+
       setThumbnailFile(file);
-      
+
       // Crear preview usando createObjectURL
       const objectUrl = URL.createObjectURL(file);
       thumbnailPreviewUrlRef.current = objectUrl;
@@ -214,7 +256,7 @@ export function EditContentModal({
 
     try {
       setLoading(true);
-      
+
       // Subir archivo de contenido primero si existe
       let contentUrl = formData.contentUrl;
       if (selectedFile) {
@@ -238,7 +280,7 @@ export function EditContentModal({
           throw new Error("Error al subir el archivo: " + (error as Error).message);
         }
       }
-      
+
       // Subir miniatura primero si existe
       let thumbnailUrl = formData.thumbnailUrl;
       if (thumbnailFile) {
@@ -282,8 +324,8 @@ export function EditContentModal({
     } catch (err: any) {
       setError(
         err.response?.data?.message ||
-          err.message ||
-          "Error al actualizar contenido"
+        err.message ||
+        "Error al actualizar contenido"
       );
     } finally {
       setLoading(false);
@@ -300,7 +342,7 @@ export function EditContentModal({
       URL.revokeObjectURL(thumbnailPreviewUrlRef.current);
       thumbnailPreviewUrlRef.current = null;
     }
-    
+
     setFormData({
       title: "",
       slug: "",
@@ -404,7 +446,17 @@ export function EditContentModal({
               Contenido
             </label>
             <div className="space-y-2">
-              <label className={`flex flex-col items-center justify-center w-full h-40 border-2 border-gray-300 border-dashed rounded-lg bg-gray-50 transition-colors ${loading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-gray-100'}`}>
+              <label
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                className={`flex flex-col items-center justify-center w-full h-40 border-2 border-dashed rounded-lg transition-colors ${loading
+                  ? 'cursor-not-allowed opacity-50 border-gray-300 bg-gray-50'
+                  : isDragging
+                    ? 'cursor-pointer border-primary bg-primary/5'
+                    : 'cursor-pointer border-gray-300 bg-gray-50 hover:bg-gray-100'
+                  }`}
+              >
                 {filePreview ? (
                   <div className="relative w-full h-full">
                     {formData.contentType === "image" ? (
@@ -469,12 +521,12 @@ export function EditContentModal({
                   </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                    <Upload className="w-10 h-10 mb-3 text-gray-400" />
+                    <Upload className={`w-10 h-10 mb-3 ${isDragging ? 'text-primary' : 'text-gray-400'}`} />
                     <p className="mb-2 text-sm text-gray-500">
                       <span className="font-semibold">Click para subir</span> o arrastra y suelta
                     </p>
                     <p className="text-xs text-gray-500">
-                      Video, Imagen, PDF, Documento, Audio (máx. 2GB)
+                      Video, Imagen, PDF, Documento, Audio (sin límite)
                     </p>
                   </div>
                 )}
@@ -545,7 +597,7 @@ export function EditContentModal({
                   <p className="text-xs text-gray-500 mb-4">
                     El contenido se desbloqueará después del tiempo especificado desde la suscripción del usuario
                   </p>
-                  
+
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-medium text-gray-700 mb-1">

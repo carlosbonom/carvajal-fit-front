@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import { Plus, FileText, Image, Package, Loader2, Play } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useCartGabriel } from "@/contexts/cart-gabriel-context";
 import { getProductsByCreator, type Product, type Creator } from "@/services/products";
 import { Footer } from "@/components/Footer";
+import { ProductModal } from "@/components/market/product-modal";
 
 export default function MarketGabrielPage() {
     const router = useRouter();
@@ -16,6 +17,10 @@ export default function MarketGabrielPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [addingToCart, setAddingToCart] = useState<string | null>(null);
+
+    // Modal state
+    const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     useEffect(() => {
         loadData();
@@ -64,12 +69,24 @@ export default function MarketGabrielPage() {
             addItem(product, 1, price.currency);
             // Pequeño delay para feedback visual
             await new Promise(resolve => setTimeout(resolve, 300));
+            // Close modal if open
+            setIsModalOpen(false);
         } catch (err: any) {
             console.error("Error al agregar al carrito:", err);
             alert(err.message || "Error al agregar al carrito");
         } finally {
             setAddingToCart(null);
         }
+    };
+
+    const openModal = (product: Product) => {
+        setSelectedProduct(product);
+        setIsModalOpen(true);
+    };
+
+    const closeModal = () => {
+        setIsModalOpen(false);
+        setTimeout(() => setSelectedProduct(null), 300); // Clear after animation
     };
 
     const getTypeIcon = (type: string) => {
@@ -85,23 +102,6 @@ export default function MarketGabrielPage() {
                 return <Package className="w-5 h-5" />;
             default:
                 return <Package className="w-5 h-5" />;
-        }
-    };
-
-    const getTypeLabel = (type: string) => {
-        switch (type) {
-            case "pdf":
-                return "PDF";
-            case "digital_file":
-                return "Digital";
-            case "video":
-                return "Video";
-            case "ebook":
-                return "Ebook";
-            case "merchandise":
-                return "Físico";
-            default:
-                return "Producto";
         }
     };
 
@@ -213,7 +213,7 @@ export default function MarketGabrielPage() {
                         <p className="text-gray-500">Vuelve pronto para ver las novedades</p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8">
                         {products.map((product, index) => {
                             const price = getPrice(product);
 
@@ -224,10 +224,11 @@ export default function MarketGabrielPage() {
                                     whileInView={{ opacity: 1, y: 0 }}
                                     viewport={{ once: true }}
                                     transition={{ delay: index * 0.1, duration: 0.5 }}
-                                    className="group bg-[#0a0e12] rounded-2xl border border-[#00b2de]/20 overflow-hidden hover:border-[#00b2de]/50 transition-all duration-300 shadow-lg hover:shadow-[#00b2de]/10 flex flex-col h-full"
+                                    className="group bg-[#0a0e12] rounded-2xl border border-gray-800 overflow-hidden hover:border-[#00b2de]/50 transition-all duration-300 shadow-lg hover:shadow-[#00b2de]/10 flex flex-col h-full relative"
                                 >
                                     {/* Imagen del producto */}
                                     <div className="relative aspect-[4/3] overflow-hidden bg-[#0e141b]">
+                                        <div className="absolute inset-0 bg-gradient-to-t from-[#0a0e12] via-transparent to-transparent z-10 opacity-60" />
                                         {product.thumbnailUrl ? (
                                             <img
                                                 src={product.thumbnailUrl}
@@ -241,55 +242,39 @@ export default function MarketGabrielPage() {
                                         )}
                                     </div>
 
-                                    {/* Contenido */}
-                                    <div className="p-6 md:p-8 flex flex-col flex-grow">
-                                        <h3 className="text-xl font-bold text-white mb-3 line-clamp-2 leading-tight group-hover:text-[#00b2de] transition-colors">
-                                            {product.name}
-                                        </h3>
-
-                                        {product.description && (
-                                            <p className="text-gray-400 text-sm mb-6 line-clamp-3 leading-relaxed flex-grow">
-                                                {product.description}
-                                            </p>
-                                        )}
-
-                                        <div className="mt-auto pt-6 border-t border-gray-800">
-                                            <div className="flex items-end justify-between gap-4 mb-6">
-                                                <div>
-                                                    <p className="text-xs text-gray-500 uppercase font-semibold tracking-wider mb-1">Precio</p>
-                                                    {price ? (
-                                                        <div className="flex items-baseline gap-1">
-                                                            <span className="text-2xl font-bold text-white">
-                                                                ${price.amount.toLocaleString("es-CL")}
-                                                            </span>
-                                                            <span className="text-xs text-gray-400">
-                                                                {price.currency}
-                                                            </span>
-                                                        </div>
-                                                    ) : (
-                                                        <p className="text-gray-500 italic">No disponible</p>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            <button
-                                                onClick={() => handleAddToCart(product)}
-                                                disabled={!price || addingToCart === product.id}
-                                                className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-[#00b2de] text-white rounded-xl hover:bg-[#00b2de]/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-semibold group/btn"
-                                            >
-                                                {addingToCart === product.id ? (
-                                                    <>
-                                                        <Loader2 className="w-5 h-5 animate-spin" />
-                                                        Agregando...
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <Plus className="w-5 h-5 group-hover/btn:rotate-90 transition-transform duration-300" />
-                                                        Agregar al Carrito
-                                                    </>
-                                                )}
-                                            </button>
+                                    {/* Contenido flotante sobre la imagen (título y precio) */}
+                                    <div className="absolute top-0 left-0 right-0 bottom-0 flex flex-col justify-end p-6 z-20 pointer-events-none">
+                                        <div className="mb-4">
+                                            <h3 className="text-xl font-bold text-white mb-2 leading-tight drop-shadow-md">
+                                                {product.name}
+                                            </h3>
+                                            {price && (
+                                                <p className="text-3xl font-bold text-[#00b2de] drop-shadow-md">
+                                                    ${price.amount.toLocaleString("es-CL")}
+                                                </p>
+                                            )}
                                         </div>
+                                    </div>
+
+                                    {/* Botones - Fuera de la imagen en la nueva estructura pero visualmente integrados */}
+                                    <div className="p-4 bg-[#0a0e12] border-t border-gray-800 flex gap-3 z-30 relative">
+                                        <button
+                                            onClick={() => handleAddToCart(product)}
+                                            disabled={!price || addingToCart === product.id}
+                                            className="flex-1 bg-[#00b2de] hover:bg-[#00b2de]/90 text-black font-bold py-3 px-4 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                        >
+                                            {addingToCart === product.id ? (
+                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                            ) : (
+                                                "Comprar ahora"
+                                            )}
+                                        </button>
+                                        <button
+                                            onClick={() => openModal(product)}
+                                            className="flex-1 border border-gray-600 hover:border-gray-400 text-gray-300 hover:text-white font-medium py-3 px-4 rounded-xl transition-all"
+                                        >
+                                            Ver detalle
+                                        </button>
                                     </div>
                                 </motion.div>
                             );
@@ -299,6 +284,14 @@ export default function MarketGabrielPage() {
             </div>
 
             <Footer />
+
+            <ProductModal
+                product={selectedProduct}
+                isOpen={isModalOpen}
+                onClose={closeModal}
+                onAddToCart={handleAddToCart}
+                isAddingToCart={!!addingToCart}
+            />
         </div>
     );
 }

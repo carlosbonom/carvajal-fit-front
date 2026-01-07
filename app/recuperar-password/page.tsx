@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { Form } from "@heroui/form";
 import { Input } from "@heroui/input";
@@ -11,22 +11,42 @@ import Link from "next/link";
 import toast from "react-hot-toast";
 
 import { Logo } from "@/components/icons";
-import { forgotPassword, resetPassword } from "@/services/auth";
+import { forgotPassword, resetPassword, login, getProfile } from "@/services/auth";
+import { saveTokens } from "@/lib/auth-utils";
+import { useAppDispatch } from "@/lib/store/hooks";
+import { setUser } from "@/lib/store/slices/userSlice";
 
 export default function RecuperarPasswordPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const dispatch = useAppDispatch();
+
   const [step, setStep] = useState<"request" | "verify">("request");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isMigration, setIsMigration] = useState(false);
   const [errors, setErrors] = useState({
     email: "",
     code: "",
     newPassword: "",
     confirmPassword: "",
   });
+
+  useEffect(() => {
+    const mode = searchParams.get("mode");
+    const initialEmail = searchParams.get("email");
+    const initialCode = searchParams.get("code");
+
+    if (mode === "verify" && initialEmail && initialCode) {
+      setStep("verify");
+      setEmail(initialEmail);
+      setCode(initialCode);
+      setIsMigration(true);
+    }
+  }, [searchParams]);
 
   const handleRequestCode = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,6 +121,23 @@ export default function RecuperarPasswordPage() {
     try {
       await resetPassword({ email, code, newPassword });
       toast.success("Contraseña restablecida exitosamente");
+
+      // Auto-login if migration or if desired for better UX
+      if (isMigration || true) { // Enable auto-login for all
+        try {
+          const loginResponse = await login({ email, password: newPassword });
+          saveTokens(loginResponse.accessToken, loginResponse.refreshToken);
+          const userProfile = await getProfile(loginResponse.accessToken);
+          dispatch(setUser(userProfile));
+
+          router.push("/club");
+          return; // Stop execution here to prevent redirect to login
+        } catch (loginError) {
+          console.error("Auto-login failed:", loginError);
+          toast.error("Por favor inicia sesión con tu nueva contraseña");
+        }
+      }
+
       router.push("/login");
     } catch (error: any) {
       const errorMessage =
@@ -135,12 +172,14 @@ export default function RecuperarPasswordPage() {
           <h1 className="text-2xl font-bold text-white mb-2">
             {step === "request"
               ? "Recuperar Contraseña"
-              : "Verificar Código"}
+              : isMigration ? "Activa tu cuenta" : "Verificar Código"}
           </h1>
           <p className="text-gray-400 text-sm mb-6">
             {step === "request"
               ? "Ingresa tu email para recibir un código de verificación"
-              : "Ingresa el código que recibiste por email y tu nueva contraseña"}
+              : isMigration
+                ? "Configura tu nueva contraseña para acceder a la plataforma"
+                : "Ingresa el código que recibiste por email y tu nueva contraseña"}
           </p>
 
           {step === "request" ? (
@@ -202,6 +241,8 @@ export default function RecuperarPasswordPage() {
                   startContent={<Key className="w-4 h-4 text-gray-400" />}
                   value={code}
                   variant="bordered"
+                  // Deshabilitar edición de código si es migración para evitar errores, pero permitir si el usuario quiere cambiarlo
+                  isReadOnly={isMigration}
                   onValueChange={(value) => {
                     const upperValue = value.toUpperCase().replace(/[^A-Z0-9]/g, "");
                     setCode(upperValue.slice(0, 6));
@@ -270,12 +311,16 @@ export default function RecuperarPasswordPage() {
                   radius="lg"
                   type="button"
                   variant="bordered"
-                  onPress={() => setStep("request")}
+                  onPress={() => {
+                    setStep("request");
+                    setIsMigration(false);
+                    router.replace("/recuperar-password"); // Clear params
+                  }}
                 >
                   Volver
                 </Button>
                 <Button
-                  className="flex-1 font-bold text-base py-6 transition-all hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(0,178,222,0.4)]"
+                  className="w-full font-bold text-base py-6 transition-all hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(0,178,222,0.4)]"
                   color="primary"
                   isDisabled={isLoading}
                   isLoading={isLoading}
@@ -283,7 +328,7 @@ export default function RecuperarPasswordPage() {
                   type="submit"
                   variant="solid"
                 >
-                  Restablecer
+                  {isMigration ? "Activar y Entrar" : "Restablecer"}
                 </Button>
               </div>
             </Form>

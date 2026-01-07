@@ -245,11 +245,7 @@ export function ProductModal({ isOpen, onClose, onSuccess, product, creatorSlug 
       setFormData(prev => ({ ...prev, productType: detectedType }));
     }
 
-    // Validar tamaño máximo (2GB) para todos los archivos
-    if (file.size > 2 * 1024 * 1024 * 1024) {
-      setError("El archivo no puede ser mayor a 2GB");
-      return;
-    }
+
 
     // Si es producto físico, guardar archivo pero no subir automáticamente
     if (field === "productFile" && formData.isPhysicalProduct) {
@@ -384,6 +380,28 @@ export function ProductModal({ isOpen, onClose, onSuccess, product, creatorSlug 
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       handleFileChange("productFile", file);
+    }
+  };
+
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const file = e.dataTransfer.files[0];
+      await handleFileChange("productFile", file);
     }
   };
 

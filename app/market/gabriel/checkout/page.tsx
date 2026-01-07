@@ -7,6 +7,10 @@ import { MarketCheckoutView } from "@/components/market-checkout-view";
 import { Footer } from "@/components/Footer";
 import { marketPaymentService } from "@/services/market-payments";
 
+import { register, login } from "@/services/auth";
+import { saveTokens } from "@/lib/auth-utils";
+import { GuestData } from "@/components/market-checkout-view";
+
 export default function CheckoutGabrielPage() {
   const router = useRouter();
   const { items, removeItem, updateQuantity, getTotal } = useCartGabriel();
@@ -14,7 +18,7 @@ export default function CheckoutGabrielPage() {
 
   const total = getTotal("CLP");
 
-  const handleCheckout = async (method: string) => {
+  const handleCheckout = async (method: string, guestData: GuestData) => {
     if (items.length === 0) {
       alert("El carrito está vacío");
       return;
@@ -23,10 +27,35 @@ export default function CheckoutGabrielPage() {
     try {
       setProcessing(true);
 
+      // Si eligió registrarse
+      if (guestData.shouldRegister && guestData.password && guestData.phone) {
+        try {
+          await register({
+            email: guestData.email,
+            password: guestData.password,
+            name: guestData.name,
+            phone: guestData.phone
+          });
+
+          const loginRes = await login({
+            email: guestData.email,
+            password: guestData.password
+          });
+
+          saveTokens(loginRes.accessToken, loginRes.refreshToken);
+        } catch (regError) {
+          console.error("Error en registro:", regError);
+          alert("Error al registrar usuario. Se intentará continuar como invitado.");
+        }
+      }
+
       const dataItems = items.map(item => ({ productId: item.product.id, quantity: item.quantity }));
+      const guestDetails = { name: guestData.name, email: guestData.email };
 
       if (method === 'webpay') {
-        const { url, token } = await marketPaymentService.createWebpayTransaction('gabriel', dataItems);
+        // Si hay token guardado (por login reciente o anterior), axios lo enviará.
+        // Si no, enviamos guestDetails.
+        const { url, token } = await marketPaymentService.createWebpayTransaction('gabriel', dataItems, guestDetails);
         const form = document.createElement("form");
         form.action = url;
         form.method = "POST";

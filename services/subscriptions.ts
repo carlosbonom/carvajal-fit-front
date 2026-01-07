@@ -56,6 +56,7 @@ export interface CreateWebpayTransactionDto {
   planId: string;
   billingCycleId: string;
   currency?: string;
+  subscriptionId?: string;
 }
 
 export interface CreateWebpayTransactionResponse {
@@ -78,6 +79,7 @@ export interface CreatePayPalOrderDto {
   planId: string;
   billingCycleId: string;
   currency?: string;
+  subscriptionId?: string;
 }
 
 export interface CreatePayPalOrderResponse {
@@ -100,6 +102,7 @@ export interface CreateMercadoPagoCheckoutDto {
   planId: string;
   billingCycleId: string;
   currency?: string;
+  subscriptionId?: string;
 }
 
 export interface CreateMercadoPagoCheckoutResponse {
@@ -257,18 +260,18 @@ export const getMembers = async (
   params?: GetMembersParams,
 ): Promise<MembersResponse> => {
   const queryParams = new URLSearchParams();
-  
+
   if (params?.search) {
     queryParams.append("search", params.search);
   }
-  
+
   if (params?.status) {
     queryParams.append("status", params.status);
   }
 
   const queryString = queryParams.toString();
   const url = `/subscriptions/members${queryString ? `?${queryString}` : ""}`;
-  
+
   const response = await apiAxios.get<MembersResponse>(url);
 
   return response.data;
@@ -346,5 +349,24 @@ export const validateMercadoPagoPayment = async (
     { paymentId },
   );
 
+  return response.data;
+};
+
+export interface PaymentDetails {
+  type: 'payment' | 'subscription';
+  id: string;
+  amount: number;
+  currency: string;
+  status: string;
+  planName: string;
+  billingCycle: string;
+  userEmail: string;
+  userName?: string;
+  createdAt: string;
+  subscriptionId: string;
+}
+
+export const getPaymentDetails = async (id: string): Promise<PaymentDetails> => {
+  const response = await apiAxios.get<PaymentDetails>(`/subscriptions/payment-details/${id}`);
   return response.data;
 };

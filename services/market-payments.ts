@@ -1,4 +1,4 @@
-import { authAxios } from "@/lib/axios-config";
+import { apiAxios } from "@/lib/axios-config";
 
 export interface CheckoutValidationResponse {
     success: boolean;
@@ -7,16 +7,16 @@ export interface CheckoutValidationResponse {
 }
 
 export const marketPaymentService = {
-    createWebpayTransaction: async (creatorSlug: string, items: { productId: string; quantity: number }[]) => {
-        const response = await authAxios.post<{ token: string; url: string; orderId: string }>(
+    createWebpayTransaction: async (creatorSlug: string, items: { productId: string; quantity: number }[], guestDetails?: { name: string; email: string }) => {
+        const response = await apiAxios.post<{ token: string; url: string; orderId: string }>(
             `/market/${creatorSlug}/webpay/create`,
-            { items }
+            { items, guestDetails }
         );
         return response.data;
     },
 
     createMercadoPagoCheckout: async (creatorSlug: string, items: { productId: string; quantity: number }[]) => {
-        const response = await authAxios.post<{ initPoint: string; preferenceId: string; orderId: string }>(
+        const response = await apiAxios.post<{ initPoint: string; preferenceId: string; orderId: string }>(
             `/market/${creatorSlug}/mercadopago/create`,
             { items }
         );
@@ -24,7 +24,7 @@ export const marketPaymentService = {
     },
 
     createPayPalOrder: async (creatorSlug: string, items: { productId: string; quantity: number }[]) => {
-        const response = await authAxios.post<{ approveUrl: string; orderId: string }>(
+        const response = await apiAxios.post<{ approveUrl: string; orderId: string }>(
             `/market/${creatorSlug}/paypal/create`,
             { items }
         );
@@ -32,7 +32,7 @@ export const marketPaymentService = {
     },
 
     validateWebpay: async (creatorSlug: string, token: string) => {
-        const response = await authAxios.post<{ status: string; order: any }>(
+        const response = await apiAxios.post<{ status: string; order: any }>(
             `/market/${creatorSlug}/webpay/validate`,
             { token }
         );
