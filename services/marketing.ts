@@ -5,6 +5,8 @@ export interface EmailTemplate {
   name: string;
   subject: string;
   htmlContent: string;
+  design?: any;
+  isLocked: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -13,12 +15,16 @@ export interface CreateEmailTemplateDto {
   name: string;
   subject: string;
   htmlContent: string;
+  design?: any;
+  isLocked?: boolean;
 }
 
 export interface UpdateEmailTemplateDto {
   name?: string;
   subject?: string;
   htmlContent?: string;
+  design?: any;
+  isLocked?: boolean;
 }
 
 export interface EmailRecipient {

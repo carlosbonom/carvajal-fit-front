@@ -306,7 +306,7 @@ export default function CoursesPage() {
                 setIsEditModalOpen(true);
               }}
               className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-              title="Editar curso"
+              title="Editar contenido"
             >
               <Edit className="w-4 h-4" />
             </button>
@@ -318,7 +318,7 @@ export default function CoursesPage() {
               }}
               className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={deletingCourseId === course.id}
-              title="Eliminar curso"
+              title="Eliminar contenido"
             >
               {deletingCourseId === course.id ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -343,10 +343,10 @@ export default function CoursesPage() {
           <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h1 className="text-2xl font-semibold text-gray-900">
-                Cursos
+                Contenido
               </h1>
               <p className="text-sm text-gray-500 mt-1">
-                {courses.length} {courses.length === 1 ? "curso" : "cursos"} en total
+                {courses.length} {courses.length === 1 ? "contenido" : "contenidos"} en total
               </p>
             </div>
             <button
@@ -354,7 +354,7 @@ export default function CoursesPage() {
               className="flex items-center justify-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium"
             >
               <Plus className="w-4 h-4" />
-              Nuevo Curso
+              Nuevo Contenido
             </button>
           </div>
 
@@ -364,7 +364,7 @@ export default function CoursesPage() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <input
                 type="text"
-                placeholder="Buscar cursos..."
+                placeholder="Buscar contenido..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
@@ -376,7 +376,7 @@ export default function CoursesPage() {
           {loading ? (
             <div className="bg-white rounded-lg border border-gray-200 p-12">
               <div className="flex items-center justify-center">
-                <div className="text-gray-500 text-sm">Cargando cursos...</div>
+                <div className="text-gray-500 text-sm">Cargando contenido...</div>
               </div>
             </div>
           ) : filteredCourses.length === 0 ? (
@@ -384,12 +384,12 @@ export default function CoursesPage() {
               <div className="text-center">
                 <BookOpen className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                 <p className="text-gray-500 text-sm font-medium mb-1">
-                  {searchQuery ? "No se encontraron cursos" : "No hay cursos creados"}
+                  {searchQuery ? "No se encontró contenido" : "No hay contenido creado"}
                 </p>
                 <p className="text-gray-400 text-xs">
                   {searchQuery
                     ? "Intenta con otros términos de búsqueda"
-                    : "Crea tu primer curso para comenzar"}
+                    : "Crea tu primer contenido para comenzar"}
                 </p>
               </div>
             </div>
@@ -408,7 +408,7 @@ export default function CoursesPage() {
                           <span className="sr-only">Ordenar</span>
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Curso
+                          Contenido
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Categoría
@@ -494,8 +494,8 @@ export default function CoursesPage() {
             setDeletingCourseId(null);
           }
         }}
-        title="Eliminar curso"
-        message={`¿Estás seguro de que deseas eliminar el curso "${courseToDelete?.title}"? Esta acción no se puede deshacer.`}
+        title="Eliminar contenido"
+        message={`¿Estás seguro de que deseas eliminar el contenido "${courseToDelete?.title}"? Esta acción no se puede deshacer.`}
         type="danger"
         confirmText="Eliminar"
         loading={!!deletingCourseId}

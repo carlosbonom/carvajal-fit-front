@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { User, Lock, CreditCard, LogOut, X, BarChart2, ChevronRight } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { User, Lock, CreditCard, LogOut, X, BarChart2, ChevronRight, Smartphone, Download } from "lucide-react";
+import { PWAInstallModal } from "./PWAInstallModal";
 import { useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
 import { clearUser } from "@/lib/store/slices/userSlice";
@@ -25,6 +26,50 @@ export default function UserSidebar({
     const sidebarRef = useRef<HTMLDivElement>(null);
     const router = useRouter();
     const dispatch = useAppDispatch();
+
+    // PWA Logic
+    const [isIOS, setIsIOS] = useState(false);
+    const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+    const [isInstalled, setIsInstalled] = useState(false);
+    const [showInstallModal, setShowInstallModal] = useState(false);
+
+    useEffect(() => {
+        // Verificar si es iOS
+        const checkIsIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+        setIsIOS(checkIsIOS);
+
+        // Verificar si ya está instalada
+        const isStandalone = window.matchMedia("(display-mode: standalone)").matches || (window.navigator as any).standalone === true;
+        setIsInstalled(isStandalone);
+
+        const handleBeforeInstallPrompt = (e: any) => {
+            e.preventDefault();
+            setDeferredPrompt(e);
+        };
+
+        window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+        return () => window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    }, []);
+
+    const handleInstallClick = async () => {
+        if (isIOS) {
+            setShowInstallModal(true);
+            return;
+        }
+
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === "accepted") {
+                setIsInstalled(true);
+            }
+            setDeferredPrompt(null);
+        } else {
+            // Si no hay prompt diferido y no es iOS, mostrar el modal de todos modos 
+            // como fallback (instrucciones manuales para Chrome/Android)
+            setShowInstallModal(true);
+        }
+    };
 
     // Cerrar al hacer clic fuera
     useEffect(() => {
@@ -161,8 +206,17 @@ export default function UserSidebar({
                         </div>
                     </div>
 
-                    {/* Footer - Logout */}
-                    <div className="p-6 border-t border-white/10 bg-[#1a1a1a]">
+                    {/* Footer - Logout & Install */}
+                    <div className="p-6 border-t border-white/10 bg-[#1a1a1a] space-y-3">
+                        {!isInstalled && (
+                            <button
+                                onClick={handleInstallClick}
+                                className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-[#00b2de]/10 text-[#00b2de] hover:bg-[#00b2de]/20 transition-all font-bold border border-[#00b2de]/20 hover:border-[#00b2de]/30 shadow-lg shadow-[#00b2de]/5"
+                            >
+                                <Smartphone className="w-5 h-5" />
+                                Instalar App
+                            </button>
+                        )}
                         <button
                             onClick={handleLogout}
                             className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all font-medium border border-red-500/20 hover:border-red-500/30"
@@ -170,12 +224,16 @@ export default function UserSidebar({
                             <LogOut className="w-5 h-5" />
                             Cerrar Sesión
                         </button>
-                    {/* <p className="text-center text-white/20 text-xs mt-4">
-                        Carvajal Fit Club v1.0
-                    </p> */}
                     </div>
                 </div>
             </div>
+
+            <PWAInstallModal
+                isOpen={showInstallModal}
+                onClose={() => setShowInstallModal(false)}
+                isIOS={isIOS}
+                onInstall={handleInstallClick}
+            />
         </>
     );
 }

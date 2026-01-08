@@ -335,7 +335,7 @@ const menuSections: MenuSection[] = [
   {
     title: "El club",
     items: [
-      { label: "Cursos", icon: BookOpenIcon, path: "/admin/courses" },
+      { label: "Contenido", icon: BookOpenIcon, path: "/admin/courses" },
       { label: "Categorías", icon: FolderTreeIcon, path: "/admin/course-categories" },
       // { label: "Videos", icon: VideoIcon, path: "/admin/videos" },
       // { label: "Desbloqueos", icon: LockIcon, path: "/admin/unlocks" },
@@ -359,9 +359,9 @@ const menuSections: MenuSection[] = [
     ],
   },
   {
-    title: "MARKETING",
+    title: "NEWSLETTER",
     items: [
-      { label: "Marketing", icon: MarketingIcon, path: "/admin/marketing" },
+      { label: "Newsletter", icon: MarketingIcon, path: "/admin/marketing" },
     ],
   },
   {
