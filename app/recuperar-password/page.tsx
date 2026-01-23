@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { Form } from "@heroui/form";
@@ -16,7 +16,7 @@ import { saveTokens } from "@/lib/auth-utils";
 import { useAppDispatch } from "@/lib/store/hooks";
 import { setUser } from "@/lib/store/slices/userSlice";
 
-export default function RecuperarPasswordPage() {
+function RecuperarPasswordContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const dispatch = useAppDispatch();
@@ -336,6 +336,18 @@ export default function RecuperarPasswordPage() {
         </motion.div>
       </section>
     </div>
+  );
+}
+
+export default function RecuperarPasswordPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black flex items-center justify-center">
+        <div className="text-white">Cargando...</div>
+      </div>
+    }>
+      <RecuperarPasswordContent />
+    </Suspense>
   );
 }
 
