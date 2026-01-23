@@ -42,7 +42,7 @@ export function MarketCheckoutView({
     const router = useRouter();
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<
         "webpay" | "mercadopago" | "paypal"
-    >("webpay");
+    >("mercadopago");
 
     const [guestData, setGuestData] = useState<GuestData>({
         name: "",
@@ -306,33 +306,7 @@ export function MarketCheckoutView({
                                     Método de pago
                                 </h3>
                                 <div className="space-y-3">
-                                    {/* WebPay */}
-                                    <button
-                                        className={`w-full p-3 rounded-xl border-2 transition-all duration-300 ${selectedPaymentMethod === "webpay"
-                                            ? "border-[#00b2de] bg-[#00b2de]/10"
-                                            : "border-[#00b2de]/20 bg-transparent hover:border-[#00b2de]/40"
-                                            }`}
-                                        type="button"
-                                        onClick={() => setSelectedPaymentMethod("webpay")}
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <div
-                                                className={`w-5 h-5 rounded-full flex items-center justify-center transition-all ${selectedPaymentMethod === "webpay"
-                                                    ? "bg-[#00b2de]"
-                                                    : "bg-gray-600 border-2 border-gray-500"
-                                                    }`}
-                                            >
-                                                {selectedPaymentMethod === "webpay" && (
-                                                    <Check className="w-3 h-3 text-white" />
-                                                )}
-                                            </div>
-                                            <img
-                                                alt="WebPay"
-                                                className="h-10 object-contain"
-                                                src="https://melli.fydeli.com/carvajal-fit/logos/1.Webpay_FN_300px.png"
-                                            />
-                                        </div>
-                                    </button>
+
 
                                     {/* Mercado Pago */}
                                     <button
