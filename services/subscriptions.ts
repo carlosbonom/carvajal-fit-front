@@ -302,6 +302,18 @@ export const validateWebpayPayment = async (
   return response.data;
 };
 
+// POST /subscriptions/paypal/subscription - Crear suscripción PayPal
+export const createPayPalSubscription = async (
+  data: CreatePayPalOrderDto,
+): Promise<CreatePayPalOrderResponse> => {
+  const response = await apiAxios.post<CreatePayPalOrderResponse>(
+    "/subscriptions/paypal/subscription",
+    data,
+  );
+
+  return response.data;
+};
+
 // POST /subscriptions/paypal/create - Crear orden PayPal
 export const createPayPalOrder = async (
   data: CreatePayPalOrderDto,

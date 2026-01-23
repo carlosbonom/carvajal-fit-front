@@ -221,30 +221,33 @@ export default function MarketGabrielPage() {
               {filteredProducts.map((product) => (
                 <div
                   key={product.id}
-                  className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow overflow-hidden"
+                  className="group bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 hover:border-primary/20"
                 >
-                  <div className="h-48 bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center relative">
+                  <div className="h-48 bg-gray-50 flex items-center justify-center relative overflow-hidden">
                     {product.thumbnailUrl ? (
                       <img
                         src={product.thumbnailUrl}
                         alt={product.name}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />
                     ) : (
-                      <div className="text-primary/40">
+                      <div className="text-primary/40 group-hover:scale-110 transition-transform duration-500">
                         {getTypeIcon(product.productType)}
                       </div>
                     )}
-                    <div className="absolute top-3 right-3">
+
+                    {/* Badge de estado flotante */}
+                    <div className="absolute top-4 left-4 flex gap-2">
                       <span
-                        className={`px-2 py-1 text-xs font-medium rounded-full ${getTypeColor(product.productType)}`}
+                        className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full shadow-sm ${getTypeColor(product.productType)}`}
                       >
                         {getTypeLabel(product.productType)}
                       </span>
                     </div>
+
                     {!product.isActive && (
-                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                        <span className="px-3 py-1 bg-gray-800 text-white rounded-full text-sm font-medium">
+                      <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center transition-opacity group-hover:opacity-90">
+                        <span className="px-4 py-1.5 bg-gray-900/90 text-white rounded-full text-xs font-bold uppercase tracking-widest border border-white/20">
                           Inactivo
                         </span>
                       </div>
@@ -252,25 +255,27 @@ export default function MarketGabrielPage() {
                   </div>
 
                   <div className="p-6">
-                    <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-1">
-                      {product.name}
-                    </h3>
+                    <div className="mb-4">
+                      <h3 className="text-lg font-bold text-gray-900 mb-1 line-clamp-1 group-hover:text-primary transition-colors">
+                        {product.name}
+                      </h3>
+                      <p className="text-gray-500 text-xs line-clamp-2 leading-relaxed">
+                        {product.description || "Sin descripción"}
+                      </p>
+                    </div>
 
-                    <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-                      {product.description}
-                    </p>
-
-                    <div className="flex items-center justify-between mb-4">
-                      <div>
+                    <div className="flex items-center justify-between py-4 border-t border-gray-50 mb-4">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] text-gray-400 font-bold uppercase">Precio</span>
                         {getPrice(product) ? (
-                          <p className="text-2xl font-bold text-gray-900">
+                          <p className="text-xl font-black text-gray-900">
                             ${getPrice(product)!.amount.toLocaleString("es-CL")}
-                            <span className="text-sm font-normal text-gray-500 ml-1">
+                            <span className="text-[10px] font-bold text-gray-400 ml-1">
                               {getPrice(product)!.currency}
                             </span>
                           </p>
                         ) : (
-                          <p className="text-gray-500">Sin precio</p>
+                          <p className="text-gray-400 text-sm italic">Sin precio</p>
                         )}
                       </div>
                     </div>
@@ -278,14 +283,14 @@ export default function MarketGabrielPage() {
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleEdit(product)}
-                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors"
+                        className="flex-[3] flex items-center justify-center gap-2 px-4 py-2.5 bg-primary/5 text-primary rounded-xl hover:bg-primary hover:text-white transition-all duration-300 font-bold text-sm border border-primary/10"
                       >
                         <Edit className="w-4 h-4" />
-                        Editar
+                        Gestionar
                       </button>
                       <button
                         onClick={() => handleDelete(product.id)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        className="flex-1 flex items-center justify-center p-2.5 text-red-500 hover:bg-red-50 rounded-xl transition-all duration-300 border border-transparent hover:border-red-100"
                         title="Eliminar producto"
                       >
                         <Trash2 className="w-4 h-4" />

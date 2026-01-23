@@ -9,13 +9,19 @@ import {
   NavbarItem,
   NavbarMenuItem,
 } from "@heroui/navbar";
+import {
+  Dropdown,
+  DropdownTrigger,
+  DropdownMenu,
+  DropdownItem,
+} from "@heroui/dropdown";
 import { Button } from "@heroui/button";
 import { link as linkStyles } from "@heroui/theme";
 import NextLink from "next/link";
 import clsx from "clsx";
 import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { ShoppingCart } from "lucide-react";
+import { ShoppingCart, ChevronDown } from "lucide-react";
 
 import { siteConfig } from "@/config/site";
 import { Logo } from "@/components/icons";
@@ -104,17 +110,17 @@ export const Navbar = () => {
     };
 
     updateCartCount();
-    
+
     // Escuchar cambios en localStorage
     const handleStorageChange = () => {
       updateCartCount();
     };
-    
+
     window.addEventListener("storage", handleStorageChange);
-    
+
     // Polling para detectar cambios en el mismo tab (localStorage no dispara eventos en el mismo tab)
     const interval = setInterval(updateCartCount, 500);
-    
+
     return () => {
       window.removeEventListener("storage", handleStorageChange);
       clearInterval(interval);
@@ -197,7 +203,7 @@ export const Navbar = () => {
         justify="end"
       >
         <NavbarItem className="hidden sm:flex items-center justify-center gap-4">
-          <ul className="hidden lg:flex gap-4 justify-start ml-2">
+          <ul className="hidden lg:flex gap-4 justify-start items-center ml-2">
             {siteConfig.navItems.map((item) => (
               <NavbarItem key={item.href}>
                 <a
@@ -215,6 +221,41 @@ export const Navbar = () => {
                 </a>
               </NavbarItem>
             ))}
+            <Dropdown className="bg-black/90 text-white">
+              <NavbarItem>
+                <DropdownTrigger>
+                  <Button
+                    disableRipple
+                    className="p-0 bg-transparent data-[hover=true]:bg-transparent text-white min-w-fit h-auto"
+                    endContent={<ChevronDown className="w-4 h-4" />}
+                    radius="sm"
+                    variant="light"
+                  >
+                    Planes
+                  </Button>
+                </DropdownTrigger>
+              </NavbarItem>
+              <DropdownMenu
+                aria-label="Planes"
+                className="w-[200px]"
+                itemClasses={{
+                  base: "gap-4",
+                }}
+              >
+                <DropdownItem
+                  key="gabriel"
+                  onPress={() => router.push("/market/gabriel")}
+                >
+                  Gabriel
+                </DropdownItem>
+                <DropdownItem
+                  key="jose"
+                  onPress={() => router.push("/market/jose")}
+                >
+                  Jose
+                </DropdownItem>
+              </DropdownMenu>
+            </Dropdown>
           </ul>
           {/* Carrito para rutas de market */}
           {(pathname?.startsWith("/market/jose") || pathname?.startsWith("/market/gabriel")) && cartItemCount > 0 && (
@@ -329,6 +370,31 @@ export const Navbar = () => {
               </a>
             </NavbarMenuItem>
           ))}
+          <div className="flex flex-col items-center gap-4">
+            <span className="text-white/50 text-xl font-medium">Planes</span>
+            <NavbarMenuItem>
+              <a
+                className="text-white text-xl font-semibold hover:text-primary transition-colors cursor-pointer"
+                onClick={() => {
+                  router.push("/market/gabriel");
+                  setIsMenuOpen(false);
+                }}
+              >
+                Gabriel
+              </a>
+            </NavbarMenuItem>
+            <NavbarMenuItem>
+              <a
+                className="text-white text-xl font-semibold hover:text-primary transition-colors cursor-pointer"
+                onClick={() => {
+                  router.push("/market/jose");
+                  setIsMenuOpen(false);
+                }}
+              >
+                Jose
+              </a>
+            </NavbarMenuItem>
+          </div>
           <div className="flex flex-col gap-3 w-full px-6 mt-4">
             {user ? (
               <Button

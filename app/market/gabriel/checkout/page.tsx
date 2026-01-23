@@ -67,10 +67,10 @@ export default function CheckoutGabrielPage() {
         document.body.appendChild(form);
         form.submit();
       } else if (method === 'mercadopago') {
-        const { initPoint } = await marketPaymentService.createMercadoPagoCheckout('gabriel', dataItems);
+        const { initPoint } = await marketPaymentService.createMercadoPagoCheckout('gabriel', dataItems, guestDetails);
         window.location.href = initPoint;
       } else if (method === 'paypal') {
-        const { approveUrl } = await marketPaymentService.createPayPalOrder('gabriel', dataItems);
+        const { approveUrl } = await marketPaymentService.createPayPalOrder('gabriel', dataItems, guestDetails);
         window.location.href = approveUrl;
       }
 

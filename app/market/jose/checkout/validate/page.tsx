@@ -7,11 +7,11 @@ import { CheckCircle, XCircle, Loader2 } from "lucide-react";
 import { Button } from "@heroui/button";
 import { Logo } from "@/components/icons";
 import { marketPaymentService } from "@/services/market-payments";
-import { useCartGabriel } from "@/contexts/cart-gabriel-context";
+import { useCartJose } from "@/contexts/cart-jose-context";
 
 function MarketValidateContent() {
     const router = useRouter();
-    const { clearCart } = useCartGabriel();
+    const { clearCart } = useCartJose();
     const [loading, setLoading] = useState(true);
     const [status, setStatus] = useState<"success" | "failed" | "pending">("pending");
     const [error, setError] = useState<string | null>(null);
@@ -59,11 +59,10 @@ function MarketValidateContent() {
                 }
 
                 console.log("Validando transacción Webpay con token:", token);
-                response = await marketPaymentService.validateWebpay("gabriel", token);
+                response = await marketPaymentService.validateWebpay("jose", token);
             } else if (paymentProvider === "mercadopago") {
                 const paymentId = urlParams.get("payment_id");
                 const mpStatus = urlParams.get("status");
-                const preferenceId = urlParams.get("preference_id");
                 const externalReference = urlParams.get("external_reference");
 
                 if (!paymentId || !mpStatus) {
@@ -75,7 +74,7 @@ function MarketValidateContent() {
 
                 console.log("Validando transacción Mercado Pago:", paymentId);
                 response = await marketPaymentService.validateMercadoPago(
-                    "gabriel",
+                    "jose",
                     paymentId,
                     mpStatus,
                     externalReference || ""
@@ -91,7 +90,7 @@ function MarketValidateContent() {
                 }
 
                 console.log("Validando transacción PayPal:", token);
-                response = await marketPaymentService.validatePayPal("gabriel", token);
+                response = await marketPaymentService.validatePayPal("jose", token);
             }
 
             if (response && response.status === "completed") {
@@ -162,7 +161,7 @@ function MarketValidateContent() {
                             </div>
                             <Button
                                 className="w-full font-bold text-base py-6 bg-[#00b2de] hover:bg-[#00a0c8]"
-                                onClick={() => router.push("/market/gabriel")}
+                                onClick={() => router.push("/market/jose")}
                             >
                                 Volver a la Tienda
                             </Button>
@@ -181,14 +180,14 @@ function MarketValidateContent() {
                             <div className="flex gap-3">
                                 <Button
                                     className="flex-1 font-bold text-base py-6 bg-[#00b2de] hover:bg-[#00a0c8]"
-                                    onClick={() => router.push("/market/gabriel/checkout")}
+                                    onClick={() => router.push("/market/jose/checkout")}
                                 >
                                     Reintentar
                                 </Button>
                                 <Button
                                     className="flex-1 font-bold text-base py-6"
                                     variant="bordered"
-                                    onClick={() => router.push("/market/gabriel")}
+                                    onClick={() => router.push("/market/jose")}
                                 >
                                     Volver
                                 </Button>

@@ -15,18 +15,18 @@ export const marketPaymentService = {
         return response.data;
     },
 
-    createMercadoPagoCheckout: async (creatorSlug: string, items: { productId: string; quantity: number }[]) => {
+    createMercadoPagoCheckout: async (creatorSlug: string, items: { productId: string; quantity: number }[], guestDetails?: { name: string; email: string }) => {
         const response = await apiAxios.post<{ initPoint: string; preferenceId: string; orderId: string }>(
             `/market/${creatorSlug}/mercadopago/create`,
-            { items }
+            { items, guestDetails }
         );
         return response.data;
     },
 
-    createPayPalOrder: async (creatorSlug: string, items: { productId: string; quantity: number }[]) => {
+    createPayPalOrder: async (creatorSlug: string, items: { productId: string; quantity: number }[], guestDetails?: { name: string; email: string }) => {
         const response = await apiAxios.post<{ approveUrl: string; orderId: string }>(
             `/market/${creatorSlug}/paypal/create`,
-            { items }
+            { items, guestDetails }
         );
         return response.data;
     },
@@ -35,6 +35,22 @@ export const marketPaymentService = {
         const response = await apiAxios.post<{ status: string; order: any }>(
             `/market/${creatorSlug}/webpay/validate`,
             { token }
+        );
+        return response.data;
+    },
+
+    validateMercadoPago: async (creatorSlug: string, payment_id: string, status: string, external_reference: string) => {
+        const response = await apiAxios.post<{ status: string; order: any }>(
+            `/market/${creatorSlug}/mercadopago/validate`,
+            { payment_id, status, external_reference }
+        );
+        return response.data;
+    },
+
+    validatePayPal: async (creatorSlug: string, orderId: string) => {
+        const response = await apiAxios.post<{ status: string; order: any }>(
+            `/market/${creatorSlug}/paypal/validate`,
+            { orderId }
         );
         return response.data;
     }

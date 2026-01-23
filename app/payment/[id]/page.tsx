@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense, use } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { Button } from "@heroui/button";
 import { Skeleton } from "@heroui/skeleton";
 import { Check, ArrowLeft, Loader2 } from "lucide-react";
@@ -19,15 +19,14 @@ import {
 import { useAppSelector } from "@/lib/store/hooks";
 
 interface PageProps {
-    params: Promise<{
+    params: {
         id: string;
-    }>;
+    };
 }
 
 export default function PaymentPage({ params }: PageProps) {
     const router = useRouter();
-    const resolvedParams = use(params);
-    const id = resolvedParams.id;
+    const { id } = params;
 
     const [details, setDetails] = useState<PaymentDetails | null>(null);
     const [loading, setLoading] = useState(true);
@@ -246,8 +245,8 @@ export default function PaymentPage({ params }: PageProps) {
                             {/* WebPay */}
                             <button
                                 className={`w-full p-3 rounded-xl border-2 transition-all duration-300 ${selectedPaymentMethod === "webpay"
-                                    ? "border-[#00b2de] bg-[#00b2de]/10"
-                                    : "border-[#00b2de]/20 bg-transparent hover:border-[#00b2de]/40"
+                                        ? "border-[#00b2de] bg-[#00b2de]/10"
+                                        : "border-[#00b2de]/20 bg-transparent hover:border-[#00b2de]/40"
                                     }`}
                                 type="button"
                                 onClick={() => setSelectedPaymentMethod("webpay")}
@@ -255,8 +254,8 @@ export default function PaymentPage({ params }: PageProps) {
                                 <div className="flex items-center gap-3">
                                     <div
                                         className={`w-5 h-5 rounded-full flex items-center justify-center transition-all ${selectedPaymentMethod === "webpay"
-                                            ? "bg-[#00b2de]"
-                                            : "bg-gray-600 border-2 border-gray-500"
+                                                ? "bg-[#00b2de]"
+                                                : "bg-gray-600 border-2 border-gray-500"
                                             }`}
                                     >
                                         {selectedPaymentMethod === "webpay" && (
@@ -275,8 +274,8 @@ export default function PaymentPage({ params }: PageProps) {
                             {/* Mercado Pago */}
                             <button
                                 className={`w-full p-3 rounded-xl border-2 transition-all duration-300 ${selectedPaymentMethod === "mercadopago"
-                                    ? "border-[#00b2de] bg-[#00b2de]/10"
-                                    : "border-[#00b2de]/20 bg-transparent hover:border-[#00b2de]/40"
+                                        ? "border-[#00b2de] bg-[#00b2de]/10"
+                                        : "border-[#00b2de]/20 bg-transparent hover:border-[#00b2de]/40"
                                     }`}
                                 type="button"
                                 onClick={() => setSelectedPaymentMethod("mercadopago")}
@@ -284,8 +283,8 @@ export default function PaymentPage({ params }: PageProps) {
                                 <div className="flex items-center gap-3">
                                     <div
                                         className={`w-5 h-5 rounded-full flex items-center justify-center transition-all ${selectedPaymentMethod === "mercadopago"
-                                            ? "bg-[#00b2de]"
-                                            : "bg-gray-600 border-2 border-gray-500"
+                                                ? "bg-[#00b2de]"
+                                                : "bg-gray-600 border-2 border-gray-500"
                                             }`}
                                     >
                                         {selectedPaymentMethod === "mercadopago" && (
@@ -303,8 +302,8 @@ export default function PaymentPage({ params }: PageProps) {
                             {/* PayPal */}
                             <button
                                 className={`w-full p-3 rounded-xl border-2 transition-all duration-300 ${selectedPaymentMethod === "paypal"
-                                    ? "border-[#00b2de] bg-[#00b2de]/10"
-                                    : "border-[#00b2de]/20 bg-transparent hover:border-[#00b2de]/40"
+                                        ? "border-[#00b2de] bg-[#00b2de]/10"
+                                        : "border-[#00b2de]/20 bg-transparent hover:border-[#00b2de]/40"
                                     }`}
                                 type="button"
                                 onClick={() => setSelectedPaymentMethod("paypal")}
@@ -312,8 +311,8 @@ export default function PaymentPage({ params }: PageProps) {
                                 <div className="flex items-center gap-3">
                                     <div
                                         className={`w-5 h-5 rounded-full flex items-center justify-center transition-all ${selectedPaymentMethod === "paypal"
-                                            ? "bg-[#00b2de]"
-                                            : "bg-gray-600 border-2 border-gray-500"
+                                                ? "bg-[#00b2de]"
+                                                : "bg-gray-600 border-2 border-gray-500"
                                             }`}
                                     >
                                         {selectedPaymentMethod === "paypal" && (

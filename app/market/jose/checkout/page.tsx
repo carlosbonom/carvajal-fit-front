@@ -67,10 +67,10 @@ export default function CheckoutJosePage() {
         document.body.appendChild(form);
         form.submit();
       } else if (method === 'mercadopago') {
-        const { initPoint } = await marketPaymentService.createMercadoPagoCheckout('jose', dataItems);
+        const { initPoint } = await marketPaymentService.createMercadoPagoCheckout('jose', dataItems, guestDetails);
         window.location.href = initPoint;
       } else if (method === 'paypal') {
-        const { approveUrl } = await marketPaymentService.createPayPalOrder('jose', dataItems);
+        const { approveUrl } = await marketPaymentService.createPayPalOrder('jose', dataItems, guestDetails);
         window.location.href = approveUrl;
       }
 

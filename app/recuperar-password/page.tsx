@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { Form } from "@heroui/form";
 import { Input } from "@heroui/input";
 import { Button } from "@heroui/button";
-import { ArrowLeft, Mail, Key, Lock, Loader2 } from "lucide-react";
+import { ArrowLeft, Mail, Key, Lock } from "lucide-react";
 import Link from "next/link";
 import toast from "react-hot-toast";
 
@@ -16,7 +16,7 @@ import { saveTokens } from "@/lib/auth-utils";
 import { useAppDispatch } from "@/lib/store/hooks";
 import { setUser } from "@/lib/store/slices/userSlice";
 
-function RecuperarPasswordContent() {
+export default function RecuperarPasswordPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const dispatch = useAppDispatch();
@@ -339,14 +339,7 @@ function RecuperarPasswordContent() {
   );
 }
 
-export default function RecuperarPasswordPage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-black flex items-center justify-center text-white">
-        <Loader2 className="w-8 h-8 animate-spin text-[#00b2de]" />
-      </div>
-    }>
-      <RecuperarPasswordContent />
-    </Suspense>
-  );
-}
+
+
+
+
