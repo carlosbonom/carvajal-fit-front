@@ -18,7 +18,7 @@ import { getCourseCategories, type CourseCategory } from "@/services/course-cate
 // Tipo para los elementos de la grilla (Cursos o Categorías)
 type GridItem =
   | { type: 'course'; data: CourseWithSubscriptionContent }
-  | { type: 'category'; data: CourseCategory; thumbnail?: string | null };
+  | { type: 'category'; data: CourseCategory; thumbnail?: string | null; coverUrl?: string | null };
 
 // Sub-componente para renderizar una grilla universal (Cursos y/o Categorías)
 const UniversalGrid = ({
@@ -81,7 +81,9 @@ const UniversalGrid = ({
                 className="flex-shrink-0 w-[70vw] max-w-[260px] bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-lg aspect-video flex items-center justify-center border border-white/10 active:border-[#00b2de]/30 cursor-pointer transition-all duration-300 group snap-start relative overflow-hidden"
                 onClick={() => router.push(`/club/category/${category.slug}`)}
               >
-                {item.thumbnail ? (
+                {category.coverUrl ? (
+                  <img src={category.coverUrl} alt={category.name} className="w-full h-full object-cover transition-all duration-300" />
+                ) : item.thumbnail ? (
                   <img src={item.thumbnail} alt={category.name} className="w-full h-full object-cover transition-all duration-300" />
                 ) : (
                   <div className="text-center space-y-2 opacity-40">
@@ -151,7 +153,9 @@ const UniversalGrid = ({
                 className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-xl aspect-video flex items-center justify-center border border-white/10 hover:border-[#00b2de]/30 cursor-pointer transition-all duration-300 group relative overflow-hidden"
                 onClick={() => router.push(`/club/category/${category.slug}`)}
               >
-                {item.thumbnail ? (
+                {category.coverUrl ? (
+                  <img src={category.coverUrl} alt={category.name} className="w-full h-full object-cover transition-all duration-300" />
+                ) : item.thumbnail ? (
                   <img src={item.thumbnail} alt={category.name} className="w-full h-full object-cover transition-all duration-300" />
                 ) : (
                   <div className="text-center space-y-2 opacity-30 group-hover:opacity-50 transition-opacity">

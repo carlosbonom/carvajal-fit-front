@@ -1,10 +1,12 @@
 import { apiAxios } from "@/lib/axios-config";
+import { uploadFile } from "./files";
 
 export interface CourseCategory {
   id: string;
   name: string;
   slug: string;
   description: string | null;
+  coverUrl: string | null;
   sortOrder: number;
   isActive: boolean;
   parentId: string | null;
@@ -18,6 +20,8 @@ export interface CreateCourseCategoryDto {
   name: string;
   slug: string;
   description?: string;
+  coverUrl?: string;
+  coverFile?: File;
   isActive?: boolean;
   parentId?: string;
 }
@@ -26,6 +30,8 @@ export interface UpdateCourseCategoryDto {
   name?: string;
   slug?: string;
   description?: string;
+  coverUrl?: string;
+  coverFile?: File;
   isActive?: boolean;
   parentId?: string | null;
 }
@@ -52,7 +58,29 @@ export const getCourseCategoryBySlug = async (slug: string): Promise<CourseCateg
 export const createCourseCategory = async (
   data: CreateCourseCategoryDto,
 ): Promise<CourseCategory> => {
-  const response = await apiAxios.post<CourseCategory>("/course-categories", data);
+  let coverUrl = data.coverUrl;
+
+  // Subir archivo primero si existe
+  if (data.coverFile) {
+    try {
+      const uploadResponse = await uploadFile(data.coverFile, {
+        folder: "categorias",
+        isPublic: true,
+      });
+      coverUrl = uploadResponse.url;
+    } catch (error) {
+      throw new Error("Error al subir la portada: " + (error as Error).message);
+    }
+  }
+
+  // Preparar los datos para enviar (sin el archivo)
+  const { coverFile, ...requestData } = data;
+  const finalData = {
+    ...requestData,
+    coverUrl: coverUrl && coverUrl.trim() !== "" ? coverUrl : undefined,
+  };
+
+  const response = await apiAxios.post<CourseCategory>("/course-categories", finalData);
   return response.data;
 };
 
@@ -61,7 +89,29 @@ export const updateCourseCategory = async (
   id: string,
   data: UpdateCourseCategoryDto,
 ): Promise<CourseCategory> => {
-  const response = await apiAxios.patch<CourseCategory>(`/course-categories/${id}`, data);
+  let coverUrl = data.coverUrl;
+
+  // Subir archivo primero si existe
+  if (data.coverFile) {
+    try {
+      const uploadResponse = await uploadFile(data.coverFile, {
+        folder: "categorias",
+        isPublic: true,
+      });
+      coverUrl = uploadResponse.url;
+    } catch (error) {
+      throw new Error("Error al subir la portada: " + (error as Error).message);
+    }
+  }
+
+  // Preparar los datos para enviar (sin el archivo)
+  const { coverFile, ...requestData } = data;
+  const finalData = {
+    ...requestData,
+    coverUrl: coverUrl && coverUrl.trim() !== "" ? coverUrl : undefined,
+  };
+
+  const response = await apiAxios.patch<CourseCategory>(`/course-categories/${id}`, finalData);
   return response.data;
 };
 

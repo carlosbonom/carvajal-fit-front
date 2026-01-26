@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import { FolderTree, Plus, Edit, Trash2, Search, Loader2, X, GripVertical } from "lucide-react";
+import { FolderTree, Plus, Edit, Trash2, Search, Loader2, X, GripVertical, Image } from "lucide-react";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { AdminSidebar } from "@/components/admin-sidebar";
 import {
@@ -423,6 +423,9 @@ function CategoryModal({
   const [description, setDescription] = useState(category?.description || "");
   const [isActive, setIsActive] = useState(category?.isActive ?? true);
   const [parentId, setParentId] = useState<string | null>(category?.parentId || null);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string | null>(category?.coverUrl || null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -432,15 +435,36 @@ function CategoryModal({
       setDescription(category.description || "");
       setIsActive(category.isActive);
       setParentId(category.parentId || null);
+      setCoverPreview(category.coverUrl || null);
+      setCoverFile(null);
     } else {
       setName("");
       setSlug("");
       setDescription("");
       setIsActive(true);
       setParentId(null);
+      setCoverPreview(null);
+      setCoverFile(null);
     }
     setErrors({});
   }, [category, isOpen]);
+
+  const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith("image/")) {
+        setErrors({ ...errors, cover: "El archivo debe ser una imagen" });
+        return;
+      }
+      setCoverFile(file);
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setCoverPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const generateSlug = (text: string) => {
     return text
@@ -485,6 +509,8 @@ function CategoryModal({
         description: description.trim() || undefined,
         isActive,
         parentId: parentId || undefined,
+        coverFile: coverFile || undefined,
+        coverUrl: !coverFile ? coverPreview || undefined : undefined,
       };
       await onSave(data);
     } catch (error: any) {
@@ -540,6 +566,55 @@ function CategoryModal({
               rows={3}
               disabled={saving}
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Portada (Opcional)
+            </label>
+            <div className="space-y-2">
+              <label className={`flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg bg-gray-50 transition-colors ${saving ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-gray-100'}`}>
+                {coverPreview ? (
+                  <div className="relative w-full h-full">
+                    <img
+                      src={coverPreview}
+                      alt="Preview portada"
+                      className="w-full h-full object-cover rounded-lg"
+                    />
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (saving) return;
+                        setCoverFile(null);
+                        setCoverPreview(null);
+                        if (coverInputRef.current) {
+                          coverInputRef.current.value = "";
+                        }
+                      }}
+                      disabled={saving}
+                      className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                    <Image className="w-6 h-6 mb-1 text-gray-400" />
+                    <p className="text-xs text-gray-500 font-semibold px-2 text-center">Click para subir portada</p>
+                  </div>
+                )}
+                <input
+                  ref={coverInputRef}
+                  type="file"
+                  className="hidden"
+                  accept="image/*"
+                  onChange={handleCoverChange}
+                  disabled={saving}
+                />
+              </label>
+            </div>
+            {errors.cover && <p className="mt-1 text-xs text-red-500">{errors.cover}</p>}
           </div>
 
           <div>
