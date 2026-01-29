@@ -95,8 +95,14 @@ function PaymentCheckoutContent() {
     ? (getPriceByCycle(plan.prices, "year", "USD") ?? 600)
     : 600;
 
-  const displayPrice = isAnnual ? annualPriceCLP : monthlyPriceCLP;
-  const displayPriceUSD = isAnnual ? annualPriceUSD : monthlyPriceUSD;
+  let displayPrice = isAnnual ? annualPriceCLP : monthlyPriceCLP;
+  let displayPriceUSD = isAnnual ? annualPriceUSD : monthlyPriceUSD;
+
+  // Forzar precio en desarrollo
+  if (process.env.NODE_ENV === 'development') {
+    displayPrice = 950;
+    displayPriceUSD = 1;
+  }
 
   const benefits = plan?.features || [
     "Ruta de entrenamiento estructurada por fases",

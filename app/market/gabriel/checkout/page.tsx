@@ -16,7 +16,12 @@ export default function CheckoutGabrielPage() {
   const { items, removeItem, updateQuantity, getTotal } = useCartGabriel();
   const [processing, setProcessing] = useState(false);
 
-  const total = getTotal("CLP");
+  let total = getTotal("CLP");
+
+  // Forzar precio en desarrollo
+  if (process.env.NODE_ENV === 'development') {
+    total = 950;
+  }
 
   const handleCheckout = async (method: string, guestData: GuestData) => {
     if (items.length === 0) {

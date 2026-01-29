@@ -242,7 +242,7 @@ export function MarketCheckoutView({
                                                         {item.product.name}
                                                     </h3>
                                                     <p className="text-sm text-[#00b2de]">
-                                                        ${item.selectedPrice.amount.toLocaleString("es-CL")}
+                                                        ${(process.env.NODE_ENV === 'development' ? 950 : item.selectedPrice.amount).toLocaleString("es-CL")}
                                                     </p>
                                                 </div>
 
@@ -290,12 +290,12 @@ export function MarketCheckoutView({
                                 <div className="space-y-2 text-sm text-gray-400">
                                     <div className="flex justify-between">
                                         <span>Subtotal</span>
-                                        <span>${total.toLocaleString("es-CL")}</span>
+                                        <span>${(process.env.NODE_ENV === 'development' ? 950 : total).toLocaleString("es-CL")}</span>
                                     </div>
 
                                     <div className="pt-2 border-t border-white/10 flex justify-between text-white text-lg font-bold">
                                         <span>Total</span>
-                                        <span>${total.toLocaleString("es-CL")}</span>
+                                        <span>${(process.env.NODE_ENV === 'development' ? 950 : total).toLocaleString("es-CL")}</span>
                                     </div>
                                 </div>
                             </div>
@@ -376,7 +376,7 @@ export function MarketCheckoutView({
                                 variant="solid"
                                 onClick={handleCheckoutClick}
                             >
-                                {processing ? "Procesando..." : `Pagar $${total.toLocaleString("es-CL")}`}
+                                {processing ? "Procesando..." : `Pagar $${(process.env.NODE_ENV === 'development' ? 950 : total).toLocaleString("es-CL")}`}
                             </Button>
                         </div>
                     </div>

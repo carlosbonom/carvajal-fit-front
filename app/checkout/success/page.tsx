@@ -10,7 +10,7 @@ import { Button } from "@heroui/button";
 
 import { Logo } from "@/components/icons";
 import { getProfile } from "@/services/auth";
-import { validateWebpayPayment, validatePayPalPayment, validateMercadoPagoPayment } from "@/services/subscriptions";
+import { validateWebpayPayment, validatePayPalPayment, validateMercadoPagoPayment, validateMercadoPagoSubscription } from "@/services/subscriptions";
 
 function SubscriptionSuccessContent() {
   const router = useRouter();
@@ -34,12 +34,13 @@ function SubscriptionSuccessContent() {
       const orderId = urlParams.get("token"); // PayPal retorna orderId como "token"
       const payerId = urlParams.get("PayerID"); // PayPal también puede retornar PayerID
       const paymentId = urlParams.get("payment_id") || urlParams.get("preference_id"); // Mercado Pago retorna payment_id
+      const preapprovalId = urlParams.get("preapproval_id"); // Mercado Pago retorna preapproval_id para suscripciones
       const status = urlParams.get("status"); // Mercado Pago retorna status
       const subscriptionId = urlParams.get("subscriptionId");
-      const paymentProvider = urlParams.get("paymentProvider") || 
-        (token || tbkToken ? "webpay" : 
-         payerId || orderId ? "paypal" : 
-         paymentId || status ? "mercadopago" : null);
+      const paymentProvider = urlParams.get("paymentProvider") ||
+        (token || tbkToken ? "webpay" :
+          payerId || orderId ? "paypal" :
+            paymentId || status || preapprovalId ? "mercadopago" : null);
 
       // Si hay TBK_TOKEN, significa que la transacción de WebPay fue rechazada
       if (tbkToken) {
@@ -83,7 +84,7 @@ function SubscriptionSuccessContent() {
         try {
           // PayPal retorna orderId como "token" en la URL, o podemos obtenerlo de otro parámetro
           const paypalOrderId = orderId || urlParams.get("orderId");
-          
+
           if (!paypalOrderId) {
             throw new Error("No se recibió el ID de la orden de PayPal");
           }
@@ -112,23 +113,30 @@ function SubscriptionSuccessContent() {
       }
 
       // Validar pago de Mercado Pago
-      if ((paymentId || status) && paymentProvider === "mercadopago") {
+      if ((paymentId || status || preapprovalId) && paymentProvider === "mercadopago") {
         setValidating(true);
         try {
-          // Mercado Pago retorna payment_id en la URL cuando el pago es exitoso
-          const mercadoPagoPaymentId = paymentId;
-          
-          if (!mercadoPagoPaymentId) {
-            throw new Error("No se recibió el ID del pago de Mercado Pago");
-          }
+          let validationResult;
 
-          // Verificar que el status sea approved
-          if (status && status !== "approved") {
-            throw new Error(`El pago no fue aprobado. Estado: ${status}`);
-          }
+          if (preapprovalId) {
+            console.log("Validando suscripción Mercado Pago con preapprovalId:", preapprovalId);
+            validationResult = await validateMercadoPagoSubscription(preapprovalId);
+          } else {
+            // Mercado Pago retorna payment_id en la URL cuando el pago es exitoso
+            const mercadoPagoPaymentId = paymentId;
 
-          console.log("Validando pago Mercado Pago con paymentId:", mercadoPagoPaymentId);
-          const validationResult = await validateMercadoPagoPayment(mercadoPagoPaymentId, subscriptionId || undefined);
+            if (!mercadoPagoPaymentId) {
+              throw new Error("No se recibió el ID del pago de Mercado Pago");
+            }
+
+            // Verificar que el status sea approved
+            if (status && status !== "approved") {
+              throw new Error(`El pago no fue aprobado. Estado: ${status}`);
+            }
+
+            console.log("Validando pago Mercado Pago con paymentId:", mercadoPagoPaymentId);
+            validationResult = await validateMercadoPagoPayment(mercadoPagoPaymentId, subscriptionId || undefined);
+          }
 
           if (validationResult.success && validationResult.subscription) {
             setSubscription(validationResult.subscription);

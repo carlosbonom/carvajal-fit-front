@@ -277,6 +277,19 @@ export const getMembers = async (
   return response.data;
 };
 
+// PUT /subscriptions/members/:id - Actualizar detalles de un miembro
+export const updateMember = async (
+  id: string,
+  data: any,
+): Promise<{ message: string }> => {
+  const response = await apiAxios.put<{ message: string }>(
+    `/subscriptions/members/${id}`,
+    data,
+  );
+
+  return response.data;
+};
+
 // POST /subscriptions/webpay/create - Crear transacción WebPay
 export const createWebpayTransaction = async (
   data: CreateWebpayTransactionDto,
@@ -359,6 +372,18 @@ export const validateMercadoPagoPayment = async (
   const response = await apiAxios.post<ValidateMercadoPagoPaymentResponse>(
     `/subscriptions/mercadopago/validate${subscriptionId ? `?subscriptionId=${subscriptionId}` : ""}`,
     { paymentId },
+  );
+
+  return response.data;
+};
+
+// POST /subscriptions/mercadopago/validate-subscription - Validar suscripción Mercado Pago
+export const validateMercadoPagoSubscription = async (
+  preapprovalId: string,
+): Promise<ValidateMercadoPagoPaymentResponse> => {
+  const response = await apiAxios.post<ValidateMercadoPagoPaymentResponse>(
+    "/subscriptions/mercadopago/validate-subscription",
+    { preapprovalId },
   );
 
   return response.data;
