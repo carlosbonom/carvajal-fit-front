@@ -10,7 +10,7 @@ export const marketPaymentService = {
     createWebpayTransaction: async (creatorSlug: string, items: { productId: string; quantity: number }[], guestDetails?: { name: string; email: string }) => {
         const response = await apiAxios.post<{ token: string; url: string; orderId: string }>(
             `/market/${creatorSlug}/webpay/create`,
-            { items, guestDetails }
+            { items, guestDetails, origin: window.location.origin }
         );
         return response.data;
     },
@@ -18,7 +18,7 @@ export const marketPaymentService = {
     createMercadoPagoCheckout: async (creatorSlug: string, items: { productId: string; quantity: number }[], guestDetails?: { name: string; email: string }) => {
         const response = await apiAxios.post<{ initPoint: string; preferenceId: string; orderId: string }>(
             `/market/${creatorSlug}/mercadopago/create`,
-            { items, guestDetails }
+            { items, guestDetails, origin: window.location.origin }
         );
         return response.data;
     },
@@ -26,7 +26,7 @@ export const marketPaymentService = {
     createPayPalOrder: async (creatorSlug: string, items: { productId: string; quantity: number }[], guestDetails?: { name: string; email: string }) => {
         const response = await apiAxios.post<{ approveUrl: string; orderId: string }>(
             `/market/${creatorSlug}/paypal/create`,
-            { items, guestDetails }
+            { items, guestDetails, origin: window.location.origin }
         );
         return response.data;
     },

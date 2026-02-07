@@ -446,13 +446,13 @@ export default function MembersPage() {
                   placeholder="Buscar por nombre o email..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-black"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                 />
               </div>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-black"
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
               >
                 <option value="all">Todos los estados</option>
                 <option value="active">Activos</option>
@@ -555,14 +555,12 @@ export default function MembersPage() {
                             <DropdownMenu aria-label="Acciones de miembro">
                               <DropdownItem
                                 key="edit"
-                                className="text-black"
                                 onPress={() => handleEditClick(member)}
                               >
                                 Editar Miembro
                               </DropdownItem>
                               <DropdownItem
                                 key="view"
-                                className="text-black"
                                 showDivider
                               >
                                 Ver Detalle
@@ -621,10 +619,6 @@ export default function MembersPage() {
                     value={editFormData.name}
                     onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
                     variant="bordered"
-                    classNames={{
-                      input: "text-black !text-black",
-                      label: "text-black !text-black",
-                    }}
                   />
                   <Input
                     label="Email"
@@ -632,11 +626,6 @@ export default function MembersPage() {
                     value={editFormData.email}
                     onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
                     variant="bordered"
-                    isDisabled
-                    classNames={{
-                      input: "text-black !text-black",
-                      label: "text-black !text-black",
-                    }}
                   />
                   <Input
                     label="Nueva Contraseña"
@@ -645,10 +634,6 @@ export default function MembersPage() {
                     onChange={(e) => setEditFormData({ ...editFormData, password: e.target.value })}
                     variant="bordered"
                     type={isVisible ? "text" : "password"}
-                    classNames={{
-                      input: "text-black !text-black",
-                      label: "text-black !text-black",
-                    }}
                     endContent={
                       <button className="focus:outline-none" type="button" onClick={toggleVisibility}>
                         {isVisible ? (
@@ -665,16 +650,11 @@ export default function MembersPage() {
                     selectedKeys={[editFormData.subscriptionStatus]}
                     onSelectionChange={(keys) => setEditFormData({ ...editFormData, subscriptionStatus: Array.from(keys)[0] as any })}
                     variant="bordered"
-                    classNames={{
-                      value: "text-black !text-black",
-                      label: "text-black !text-black",
-                      trigger: "text-black !text-black",
-                    }}
                   >
-                    <SelectItem key="active" className="text-black" textValue="Activo">Activo</SelectItem>
-                    <SelectItem key="paused" className="text-black" textValue="Pausado">Pausado</SelectItem>
-                    <SelectItem key="cancelled" className="text-black" textValue="Cancelado">Cancelado</SelectItem>
-                    <SelectItem key="expired" className="text-black" textValue="Expirado">Expirado</SelectItem>
+                    <SelectItem key="active" textValue="Activo">Activo</SelectItem>
+                    <SelectItem key="paused" textValue="Pausado">Pausado</SelectItem>
+                    <SelectItem key="cancelled" textValue="Cancelado">Cancelado</SelectItem>
+                    <SelectItem key="expired" textValue="Expirado">Expirado</SelectItem>
                   </Select>
                   <Select
                     label="Moneda Preferida"
@@ -682,14 +662,9 @@ export default function MembersPage() {
                     selectedKeys={[editFormData.currency]}
                     onSelectionChange={(keys) => setEditFormData({ ...editFormData, currency: Array.from(keys)[0] as string })}
                     variant="bordered"
-                    classNames={{
-                      value: "text-black !text-black",
-                      label: "text-black !text-black",
-                      trigger: "text-black !text-black",
-                    }}
                   >
-                    <SelectItem key="CLP" className="text-black" textValue="CLP (Peso Chileno)">CLP (Peso Chileno)</SelectItem>
-                    <SelectItem key="USD" className="text-black" textValue="USD (Dólar)">USD (Dólar)</SelectItem>
+                    <SelectItem key="CLP" textValue="CLP (Peso Chileno)">CLP (Peso Chileno)</SelectItem>
+                    <SelectItem key="USD" textValue="USD (Dólar)">USD (Dólar)</SelectItem>
                   </Select>
 
                   <div className="md:col-span-2 border-t pt-4 mt-2">
@@ -702,14 +677,9 @@ export default function MembersPage() {
                     selectedKeys={[editFormData.planId]}
                     onSelectionChange={(keys) => setEditFormData({ ...editFormData, planId: Array.from(keys)[0] as string })}
                     variant="bordered"
-                    classNames={{
-                      value: "text-black !text-black",
-                      label: "text-black !text-black",
-                      trigger: "text-black !text-black",
-                    }}
                   >
                     {availablePlans.map((plan) => (
-                      <SelectItem key={plan.id} className="text-black" textValue={plan.name}>
+                      <SelectItem key={plan.id} textValue={plan.name}>
                         {plan.name}
                       </SelectItem>
                     ))}
@@ -722,10 +692,6 @@ export default function MembersPage() {
                     value={editFormData.currentPeriodEnd}
                     onChange={(e) => setEditFormData({ ...editFormData, currentPeriodEnd: e.target.value })}
                     variant="bordered"
-                    classNames={{
-                      input: "text-black !text-black",
-                      label: "text-black !text-black",
-                    }}
                   />
                 </div>
               </ModalBody>
