@@ -499,6 +499,7 @@ export default function CoursesPage() {
         type="danger"
         confirmText="Eliminar"
         loading={!!deletingCourseId}
+        className="admin-scope"
       />
 
       <ConfirmModal
@@ -510,6 +511,7 @@ export default function CoursesPage() {
         type={modalConfig.type}
         isConfirm={modalConfig.isConfirm}
         confirmText={modalConfig.confirmText}
+        className="admin-scope"
       />
     </>
   );

@@ -746,7 +746,7 @@ export default function MarketingPage() {
 
         {/* Modal de Plantilla */}
         {showTemplateModal && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-2 md:p-4">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-2 md:p-4 admin-scope">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[98vw] h-[98vh] overflow-hidden flex flex-col border border-gray-200/50">
               <div className="p-4 md:p-6 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white shrink-0">
                 <div className="flex items-center justify-between">
@@ -1097,7 +1097,7 @@ export default function MarketingPage() {
 
         {/* Modal de Resultado de Envío */}
         {showResultModal && sendResult && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-center justify-center p-4 admin-scope">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col border border-gray-200/50">
               <div className="p-6 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
                 <div className="flex items-center justify-between">
@@ -1385,6 +1385,7 @@ export default function MarketingPage() {
         type={genericModalConfig.type}
         isConfirm={genericModalConfig.isConfirm}
         confirmText={genericModalConfig.confirmText}
+        className="admin-scope"
       />
     </>
   );

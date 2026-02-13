@@ -45,6 +45,7 @@ export function ProductModal({ isOpen, onClose, onSuccess, product, creatorSlug 
     thumbnailUrl: "",
     bannerUrl: "",
     fileUrl: "",
+    fileUrls: [] as string[],
     productImages: [] as string[], // URLs de imágenes del producto
   });
 
@@ -52,6 +53,7 @@ export function ProductModal({ isOpen, onClose, onSuccess, product, creatorSlug 
     thumbnailFile: null as File | null,
     bannerFile: null as File | null,
     productFile: null as File | null,
+    productFiles: [] as File[], // Múltiples archivos del producto
     productImageFiles: [] as File[], // Múltiples imágenes del producto
   });
 
@@ -60,6 +62,7 @@ export function ProductModal({ isOpen, onClose, onSuccess, product, creatorSlug 
     banner: "",
     productImages: [] as string[], // Previews de imágenes del producto
     productFile: null as string | null, // Preview del archivo del producto
+    productFiles: [] as { url: string, name: string, type: string }[], // Previews de múltiples archivos
   });
 
   const productFileInputRef = useRef<HTMLInputElement>(null);
@@ -97,6 +100,7 @@ export function ProductModal({ isOpen, onClose, onSuccess, product, creatorSlug 
           thumbnailUrl: product.thumbnailUrl || "",
           bannerUrl: product.bannerUrl || "",
           fileUrl: product.fileUrl || "",
+          fileUrls: (product as any).fileUrls || [],
           productImages: product.metadata?.productImages || [],
         });
 
@@ -105,6 +109,7 @@ export function ProductModal({ isOpen, onClose, onSuccess, product, creatorSlug 
           banner: product.bannerUrl || "",
           productImages: product.metadata?.productImages || [],
           productFile: null,
+          productFiles: [],
         });
 
         // Usar el creator del producto si existe
@@ -125,10 +130,11 @@ export function ProductModal({ isOpen, onClose, onSuccess, product, creatorSlug 
           thumbnailUrl: "",
           bannerUrl: "",
           fileUrl: "",
+          fileUrls: [],
           productImages: [],
         });
-        setFiles({ thumbnailFile: null, bannerFile: null, productFile: null, productImageFiles: [] });
-        setPreviews({ thumbnail: "", banner: "", productImages: [], productFile: null });
+        setFiles({ thumbnailFile: null, bannerFile: null, productFile: null, productFiles: [], productImageFiles: [] });
+        setPreviews({ thumbnail: "", banner: "", productImages: [], productFile: null, productFiles: [] });
         setUploading({ thumbnail: false, banner: false, product: false });
         if (productFilePreviewUrlRef.current) {
           URL.revokeObjectURL(productFilePreviewUrlRef.current);
@@ -237,92 +243,46 @@ export function ProductModal({ isOpen, onClose, onSuccess, product, creatorSlug 
       return;
     }
 
-    // Si es producto físico, no validar tipo de archivo
-    // Si no es físico, detectar tipo según archivo
-    if (field === "productFile" && !formData.isPhysicalProduct) {
-      // Detectar tipo de producto según el archivo
-      const detectedType = detectProductTypeFromFile(file);
-      setFormData(prev => ({ ...prev, productType: detectedType }));
-    }
-
-
-
-    // Si es producto físico, guardar archivo pero no subir automáticamente
-    if (field === "productFile" && formData.isPhysicalProduct) {
-      // Limpiar preview anterior si existe
-      if (productFilePreviewUrlRef.current) {
-        URL.revokeObjectURL(productFilePreviewUrlRef.current);
-        productFilePreviewUrlRef.current = null;
-      }
-
-      setFiles(prev => ({ ...prev, [field]: file }));
-      setError(null);
-
-      // Crear preview usando createObjectURL para archivos grandes (más eficiente)
-      if (file.type.startsWith("image/") || file.type.startsWith("video/")) {
-        const objectUrl = URL.createObjectURL(file);
-        productFilePreviewUrlRef.current = objectUrl;
-        setPreviews(prev => ({ ...prev, productFile: objectUrl }));
-      } else {
-        setPreviews(prev => ({ ...prev, productFile: null }));
-      }
-      return; // No subir automáticamente para productos físicos
-    }
-
-    // Si no es producto físico, subir automáticamente
-    if (field === "productFile" && !formData.isPhysicalProduct) {
-      // Limpiar preview anterior si existe
-      if (productFilePreviewUrlRef.current) {
-        URL.revokeObjectURL(productFilePreviewUrlRef.current);
-        productFilePreviewUrlRef.current = null;
-      }
-
-      // Crear preview usando createObjectURL
-      if (file.type.startsWith("image/") || file.type.startsWith("video/")) {
-        const objectUrl = URL.createObjectURL(file);
-        productFilePreviewUrlRef.current = objectUrl;
-        setPreviews(prev => ({ ...prev, productFile: objectUrl }));
-      } else {
-        setPreviews(prev => ({ ...prev, productFile: null }));
-      }
-
-      // Subir archivo automáticamente
+    // New logic for multiple product files
+    if (field === "productFile") {
       try {
         setUploading(prev => ({ ...prev, product: true }));
         setError(null);
 
-        // Determinar la carpeta según el tipo de archivo
-        let folder = "documentos";
-        if (file.type.startsWith("image/")) {
-          folder = "imagenes";
-        } else if (file.type.startsWith("video/")) {
-          folder = "videos";
-        } else if (file.type.startsWith("audio/")) {
-          folder = "audio";
-        } else if (file.type === "application/pdf" || file.type.includes("document") || file.type.includes("word") || file.type.includes("text")) {
-          folder = "documentos";
+        // Detect type from the first file if it's the first one
+        if (formData.fileUrls.length === 0 && !formData.isPhysicalProduct) {
+          const detectedType = detectProductTypeFromFile(file);
+          setFormData(prev => ({ ...prev, productType: detectedType }));
         }
+
+        // Determine folder
+        let folder = "documentos";
+        if (file.type.startsWith("image/")) folder = "imagenes";
+        else if (file.type.startsWith("video/")) folder = "videos";
 
         const uploadResponse = await uploadFile(file, {
           folder,
           isPublic: true,
         });
 
-        setFormData(prev => ({ ...prev, fileUrl: uploadResponse.url }));
-        setFiles(prev => ({ ...prev, [field]: file }));
+        setFormData(prev => ({ ...prev, fileUrls: [...prev.fileUrls, uploadResponse.url] }));
+        setPreviews(prev => ({
+          ...prev,
+          productFiles: [...prev.productFiles, { url: uploadResponse.url, name: file.name, type: file.type }]
+        }));
+        setFiles(prev => ({ ...prev, productFiles: [...prev.productFiles, file] }));
+
       } catch (error: any) {
-        console.error(`Error al subir ${field}:`, error);
+        console.error(`Error al subir archivo:`, error);
         setError(`Error al subir el archivo: ${error.message || "Error desconocido"}`);
-        setPreviews(prev => ({ ...prev, productFile: null }));
-        if (productFilePreviewUrlRef.current) {
-          URL.revokeObjectURL(productFilePreviewUrlRef.current);
-          productFilePreviewUrlRef.current = null;
-        }
       } finally {
         setUploading(prev => ({ ...prev, product: false }));
       }
       return;
     }
+
+    // Si es producto físico, subir automáticamente
+    // MOVED TO MULTIPLE FILE LOGIC ABOVE
 
     // Mostrar preview para imágenes
     if (field === "thumbnailFile" || field === "bannerFile") {
@@ -376,10 +336,12 @@ export function ProductModal({ isOpen, onClose, onSuccess, product, creatorSlug 
     }
   };
 
-  const handleProductFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      handleFileChange("productFile", file);
+  const handleProductFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const selectedFiles = Array.from(e.target.files);
+      for (const file of selectedFiles) {
+        await handleFileChange("productFile", file);
+      }
     }
   };
 
@@ -399,9 +361,11 @@ export function ProductModal({ isOpen, onClose, onSuccess, product, creatorSlug 
     e.preventDefault();
     setIsDragging(false);
 
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      const file = e.dataTransfer.files[0];
-      await handleFileChange("productFile", file);
+    if (e.dataTransfer.files) {
+      const selectedFiles = Array.from(e.dataTransfer.files);
+      for (const file of selectedFiles) {
+        await handleFileChange("productFile", file);
+      }
     }
   };
 
@@ -470,6 +434,21 @@ export function ProductModal({ isOpen, onClose, onSuccess, product, creatorSlug 
     setPreviews(prev => ({
       ...prev,
       productImages: prev.productImages.filter((_, i) => i !== index),
+    }));
+  };
+
+  const removeProductFile = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      fileUrls: prev.fileUrls.filter((_, i) => i !== index),
+    }));
+    setFiles(prev => ({
+      ...prev,
+      productFiles: prev.productFiles.filter((_, i) => i !== index),
+    }));
+    setPreviews(prev => ({
+      ...prev,
+      productFiles: prev.productFiles.filter((_, i) => i !== index),
     }));
   };
 
@@ -558,46 +537,22 @@ export function ProductModal({ isOpen, onClose, onSuccess, product, creatorSlug 
 
       // Subir archivo del producto si hay archivo seleccionado
       let productFileUrl = formData.fileUrl;
+      let finalFileUrls = formData.fileUrls;
 
-      // SOLO subir si hay un archivo NUEVO seleccionado Y (es físico O no tenemos URL previa)
-      // La lógica anterior subía el archivo de nuevo incluso si ya se subió en el handleFileChange
-      if (files.productFile) {
-        // Verificar si este archivo especifico ya fue subido exitosamente en handleFileChange
-        // Si ya tenemos un fileUrl y NO es un producto físico (que no se sube auto), asumimos que es el del handleFileChange
-        const needsUpload = formData.isPhysicalProduct || !formData.fileUrl;
-
-        console.log("[ProductModal] File upload check:", {
-          hasFile: !!files.productFile,
-          isPhysical: formData.isPhysicalProduct,
-          currentFileUrl: formData.fileUrl,
-          needsUpload
-        });
-
-        if (needsUpload) {
+      // Ensure at least one file or fileUrl if digital
+      if (!formData.isPhysicalProduct && finalFileUrls.length === 0 && !productFileUrl) {
+        // Si no hay archivos en el array, intentar subir el que esté en productFile (fallback)
+        if (files.productFile) {
           try {
-            console.log("[ProductModal] Starting final file upload...");
-            // Determinar la carpeta según el tipo de archivo
-            let folder = "documentos";
-            if (files.productFile.type.startsWith("image/")) {
-              folder = "imagenes";
-            } else if (files.productFile.type.startsWith("video/")) {
-              folder = "videos";
-            } else if (files.productFile.type.startsWith("audio/")) {
-              folder = "audio";
-            }
-
             const uploadResponse = await uploadFile(files.productFile, {
-              folder,
+              folder: getFileFolder(formData.productType),
               isPublic: true,
             });
             productFileUrl = uploadResponse.url;
-            console.log("[ProductModal] Final upload complete:", productFileUrl);
+            finalFileUrls = [uploadResponse.url];
           } catch (error: any) {
-            console.error("[ProductModal] Final upload failed:", error);
-            throw new Error("Error al subir el archivo del producto: " + error.message);
+            throw new Error("Error al subir el archivo: " + error.message);
           }
-        } else {
-          console.log("[ProductModal] Skipping final upload - file already has URL or not needed");
         }
       }
 
@@ -623,6 +578,7 @@ export function ProductModal({ isOpen, onClose, onSuccess, product, creatorSlug 
         thumbnailUrl: formData.thumbnailUrl || undefined,
         bannerUrl: formData.bannerUrl || undefined,
         fileUrl: productFileUrl || undefined,
+        fileUrls: finalFileUrls,
         metadata,
       };
 
@@ -912,79 +868,70 @@ export function ProductModal({ isOpen, onClose, onSuccess, product, creatorSlug 
             <div className="border-t border-gray-200 pt-6">
               <div className="flex items-center gap-2 mb-4">
                 <FileText className="w-5 h-5 text-primary" />
-                <h3 className="text-lg font-semibold text-gray-900">Archivo del Producto</h3>
+                <h3 className="text-lg font-semibold text-gray-900">Archivos del Producto</h3>
               </div>
               <p className="text-sm text-gray-600 mb-4">
-                {formData.isPhysicalProduct
-                  ? "Sube el archivo del producto físico."
-                  : "Sube el archivo del producto (imagen, video, PDF, etc.)."}
+                Sube los archivos que el cliente recibirá al comprar este producto (PDFs, videos, imágenes, etc.).
               </p>
 
-              <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Archivo del Producto
-                </label>
-                <label className={`flex flex-col items-center justify-center w-full h-40 border-2 border-gray-300 border-dashed rounded-lg bg-gray-50 transition-colors ${loading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-gray-100'}`}>
-                  {previews.productFile ? (
-                    <div className="relative w-full h-full">
-                      {files.productFile?.type.startsWith("image/") ? (
-                        <img
-                          src={previews.productFile}
-                          alt="Preview"
-                          className="w-full h-full object-cover rounded-lg"
-                        />
-                      ) : files.productFile?.type.startsWith("video/") ? (
-                        <video
-                          src={previews.productFile}
-                          className="w-full h-full object-cover rounded-lg"
-                          controls
-                        />
-                      ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center">
-                          {(() => {
-                            const Icon = getFileIcon(files.productFile);
-                            return <Icon className="w-12 h-12 text-gray-400 mb-2" />;
-                          })()}
-                          <p className="text-sm text-gray-600 font-medium">{files.productFile?.name}</p>
-                          <p className="text-xs text-gray-500">
-                            {(files.productFile ? files.productFile.size / 1024 / 1024 : 0).toFixed(2)} MB
-                          </p>
+              {/* Lista de archivos subidos */}
+              {formData.fileUrls.length > 0 && (
+                <div className="space-y-3 mb-4">
+                  {formData.fileUrls.map((url, index) => {
+                    const fileName = url.split('/').pop() || "Archivo";
+                    return (
+                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <FileIcon className="w-5 h-5 text-gray-400" />
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium text-gray-900 truncate max-w-[200px] md:max-w-md">
+                              {fileName}
+                            </span>
+                            <span className="text-xs text-green-600 flex items-center gap-1">
+                              <CheckCircle2 className="w-3 h-3" />
+                              Subido correctamente
+                            </span>
+                          </div>
                         </div>
-                      )}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          if (loading) return;
-                          // Limpiar URL blob
-                          if (productFilePreviewUrlRef.current) {
-                            URL.revokeObjectURL(productFilePreviewUrlRef.current);
-                            productFilePreviewUrlRef.current = null;
-                          }
-                          setFiles(prev => ({ ...prev, productFile: null }));
-                          setPreviews(prev => ({ ...prev, productFile: null }));
-                          setFormData(prev => ({ ...prev, fileUrl: "" }));
-                          if (productFileInputRef.current) {
-                            productFileInputRef.current.value = "";
-                          }
-                        }}
-                        disabled={loading}
-                        className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                      <Upload className="w-10 h-10 mb-3 text-gray-400" />
-                      <p className="mb-2 text-sm text-gray-500">
-                        <span className="font-semibold">Click para subir</span> o arrastra y suelta
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        Video, Imagen, PDF, Documento, Audio (máx. 2GB)
-                      </p>
-                    </div>
-                  )}
+                        <button
+                          type="button"
+                          onClick={() => removeProductFile(index)}
+                          className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                          title="Eliminar archivo"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div className="mt-4">
+                <label
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  className={`flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg bg-gray-50 transition-colors ${loading || uploading.product ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-gray-100'} ${isDragging ? 'border-primary bg-primary/5' : ''}`}
+                >
+                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                    {uploading.product ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <Loader2 className="w-10 h-10 animate-spin text-primary" />
+                        <p className="text-sm text-gray-600">Subiendo...</p>
+                      </div>
+                    ) : (
+                      <>
+                        <Upload className="w-8 h-8 mb-2 text-gray-400" />
+                        <p className="mb-1 text-sm text-gray-500 text-center px-4">
+                          <span className="font-semibold text-primary">Haz clic para añadir archivo</span> o arrastra y suelta
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Video, PDF, Ebook, etc. (Máx. 2GB)
+                        </p>
+                      </>
+                    )}
+                  </div>
                   <input
                     ref={productFileInputRef}
                     type="file"
@@ -992,28 +939,9 @@ export function ProductModal({ isOpen, onClose, onSuccess, product, creatorSlug 
                     accept="video/*,image/*,application/pdf,.doc,.docx,audio/*"
                     onChange={handleProductFileChange}
                     disabled={loading || uploading.product}
+                    multiple
                   />
                 </label>
-                {files.productFile && (
-                  <div className="flex items-center gap-2 text-sm text-gray-600 mt-2">
-                    <span className="font-medium">Archivo seleccionado:</span>
-                    <span className="px-2 py-1 bg-primary/10 text-primary rounded text-xs font-medium">
-                      {files.productFile.name} ({(files.productFile.size / 1024 / 1024).toFixed(2)} MB)
-                    </span>
-                    {!formData.isPhysicalProduct && formData.fileUrl && (
-                      <span className="text-xs text-green-600 flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3" />
-                        Subido correctamente
-                      </span>
-                    )}
-                  </div>
-                )}
-                {uploading.product && (
-                  <div className="flex items-center gap-2 text-sm text-gray-600 mt-2">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Subiendo archivo...</span>
-                  </div>
-                )}
               </div>
             </div>
           )}

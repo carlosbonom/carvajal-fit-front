@@ -665,6 +665,7 @@ export default function SuccessStoriesPage() {
         type={modalConfig.type}
         isConfirm={modalConfig.isConfirm}
         confirmText={modalConfig.confirmText}
+        className="admin-scope"
       />
     </>
   );

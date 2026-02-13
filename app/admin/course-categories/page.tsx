@@ -387,6 +387,7 @@ export default function CourseCategoriesPage() {
         type="danger"
         confirmText="Eliminar"
         loading={!!deletingCategoryId}
+        className="admin-scope"
       />
 
       <ConfirmModal
@@ -398,6 +399,7 @@ export default function CourseCategoriesPage() {
         type={modalConfig.type}
         isConfirm={modalConfig.isConfirm}
         confirmText={modalConfig.confirmText}
+        className="admin-scope"
       />
     </>
   );
@@ -525,7 +527,7 @@ function CategoryModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 admin-scope">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white">
           <h2 className="text-lg font-semibold text-gray-900">

@@ -336,11 +336,12 @@ select.PhoneInputCountrySelect::-webkit-scrollbar-thumb {
 }
 
 /* Estilos específicos para inputs y editores en rutas admin - texto gris oscuro suavizado */
-.admin-scope input,
+.admin-scope input:not([type="checkbox"]):not([type="radio"]),
 .admin-scope textarea,
 .admin-scope [contenteditable="true"] {
   color: #111827 !important;
   /* gray-900 */
+  background-color: #ffffff !important;
 }
 
 .admin-scope input::placeholder,
@@ -350,25 +351,70 @@ select.PhoneInputCountrySelect::-webkit-scrollbar-thumb {
 }
 
 /* Estilos específicos para selects en rutas admin */
-.admin-scope select {
+.admin-scope select,
+select.admin-scope {
   color: #111827 !important;
   /* gray-900 */
   background-color: #ffffff !important;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='探索M6 8l4 4 4-4'/%3e%3c/svg%3e") !important;
+  background-position: right 0.5rem center !important;
+  background-repeat: no-repeat !important;
+  background-size: 1.5em 1.5em !important;
+  padding-right: 2.5rem !important;
+  appearance: none !important;
 }
 
-.admin-scope select option {
+.admin-scope select option,
+.admin-scope option,
+option.admin-scope {
   color: #111827 !important;
   /* gray-900 */
   background-color: #ffffff !important;
 }
 
 /* Estilos para botones en admin para mejorar contraste */
-.admin-scope button:not(.bg-primary):not(.bg-red-600) {
-  color: #374151;
+.admin-scope button:not(.bg-primary):not(.bg-red-600),
+.admin-scope[role="menuitem"],
+.admin-scope [role="menuitem"] {
+  color: #374151 !important;
   /* gray-700 */
 }
 
-.admin-scope button:not(.bg-primary):not(.bg-red-600):hover {
-  color: #111827;
+.admin-scope button:not(.bg-primary):not(.bg-red-600):hover,
+.admin-scope[role="menuitem"]:hover,
+.admin-scope [role="menuitem"]:hover {
+  color: #111827 !important;
   /* gray-900 */
+}
+
+/* Forzar color de texto en cualquier elemento de HeroUI que esté dentro de un scope admin */
+.admin-scope,
+.admin-scope * {
+  --heroui-foreground: 17 24 39;
+  /* gray-900 */
+}
+
+/* Estilos específicos para el contenido de Popovers/Dropdowns portaleados */
+[data-slot="content"].admin-scope,
+[data-slot="base"].admin-scope,
+[data-slot="listbox"].admin-scope,
+.admin-scope [data-slot="base"],
+.admin-scope [data-slot="content"],
+.admin-scope [data-slot="listbox"],
+.admin-scope [role="menu"],
+.admin-scope [role="listbox"] {
+  background-color: #ffffff !important;
+  color: #111827 !important;
+}
+
+.admin-scope [role="menuitem"],
+.admin-scope [role="option"],
+.admin-scope [data-slot="item"] {
+  color: #111827 !important;
+}
+
+.admin-scope [role="menuitem"] *,
+.admin-scope [role="option"] *,
+.admin-scope [data-slot="item"] * {
+  color: #111827 !important;
 }

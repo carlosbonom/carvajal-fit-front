@@ -357,7 +357,7 @@ const NewsletterEditor = forwardRef<NewsletterEditorRef, NewsletterEditorProps>(
             </div>
 
             {/* Preview Modal */}
-            <Modal isOpen={isPreviewOpen} onClose={onPreviewClose} size="5xl" scrollBehavior="inside" backdrop="blur">
+            <Modal isOpen={isPreviewOpen} onClose={onPreviewClose} size="5xl" scrollBehavior="inside" backdrop="blur" className="admin-scope">
                 <ModalContent>
                     <ModalHeader className="flex flex-col gap-1 border-b border-gray-100 py-4">
                         <div className="flex items-center justify-between px-2">

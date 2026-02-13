@@ -546,13 +546,13 @@ export default function MembersPage() {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <Dropdown>
+                          <Dropdown className="admin-scope">
                             <DropdownTrigger>
                               <Button isIconOnly variant="light" size="sm">
                                 <MoreVertical className="w-4 h-4" />
                               </Button>
                             </DropdownTrigger>
-                            <DropdownMenu aria-label="Acciones de miembro">
+                            <DropdownMenu className="admin-scope" aria-label="Acciones de miembro">
                               <DropdownItem
                                 key="edit"
                                 onPress={() => handleEditClick(member)}
@@ -604,6 +604,7 @@ export default function MembersPage() {
         size="2xl"
         backdrop="blur"
         scrollBehavior="inside"
+        className="admin-scope"
       >
         <ModalContent>
           {(onClose) => (

@@ -6,6 +6,7 @@ import { ArrowLeft, Save, Loader2 } from "lucide-react";
 import { useAppSelector, useAppDispatch } from "@/lib/store/hooks";
 import { setUser } from "@/lib/store/slices/userSlice";
 import { getUserProfile, updateProfile, type UpdateProfileDto } from "@/services/user-profile";
+import { ConfirmModal } from "@/components/confirm-modal";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -13,6 +14,8 @@ export default function ProfilePage() {
   const user = useAppSelector((state) => state.user.user);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [subscription, setSubscription] = useState<any>(null);
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -21,26 +24,55 @@ export default function ProfilePage() {
   });
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
-    loadProfile();
+    loadData();
   }, []);
 
-  const loadProfile = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
-      const profile = await getUserProfile();
+      setError(null);
+      const [profile, sub] = await Promise.all([
+        getUserProfile(),
+        import("@/services/subscriptions").then(m => m.getUserSubscription())
+      ]);
+
       setFormData({
         name: profile.name || "",
         phone: profile.phone || "",
         countryCode: profile.countryCode || "",
         preferredWeightUnit: (profile.preferredWeightUnit || "kg") as "kg" | "lb",
       });
+      setSubscription(sub);
     } catch (error) {
-      console.error("Error al cargar perfil:", error);
-      setError("Error al cargar el perfil");
+      console.error("Error al cargar datos:", error);
+      setError("Error al cargar los datos del perfil");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCancelSubscription = async () => {
+    try {
+      setCancelling(true);
+      setError(null);
+      setIsModalOpen(false);
+      const { cancelSubscription } = await import("@/services/subscriptions");
+      await cancelSubscription("Cancelado por el usuario desde su perfil");
+      setSuccess(true);
+
+      // Recargar datos para actualizar el estado de la suscripción en la UI
+      const sub = await import("@/services/subscriptions").then(m => m.getUserSubscription());
+      setSubscription(sub);
+
+      setTimeout(() => setSuccess(false), 3000);
+    } catch (error: any) {
+      console.error("Error al cancelar suscripción:", error);
+      setError(error.response?.data?.message || "Error al cancelar la suscripción");
+    } finally {
+      setCancelling(false);
     }
   };
 
@@ -52,7 +84,7 @@ export default function ProfilePage() {
     try {
       setSaving(true);
       const updateData: UpdateProfileDto = {};
-      
+
       if (formData.name !== (user?.name || "")) {
         updateData.name = formData.name || undefined;
       }
@@ -187,6 +219,64 @@ export default function ProfilePage() {
             </p>
           </div>
 
+          {/* Suscripción */}
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4 md:p-6">
+            <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+              Suscripción al Club
+            </h2>
+
+            {subscription ? (
+              <div className="space-y-4">
+                <div className="flex justify-between items-center p-4 bg-white/5 rounded-lg border border-white/5">
+                  <div>
+                    <p className="font-bold text-[#00b2de]">{subscription.plan?.name}</p>
+                    <p className="text-sm text-white/60">
+                      Estado: <span className={
+                        subscription.status === 'active' ? 'text-green-400' : 'text-yellow-400'
+                      }>
+                        {subscription.status === 'active' ? 'Activa' :
+                          subscription.status === 'cancelled' ? 'Cancelada' : subscription.status}
+                      </span>
+                    </p>
+                    {subscription.currentPeriodEnd && (
+                      <p className="text-xs text-white/40 mt-1">
+                        Siguiente cobro/vencimiento: {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
+                      </p>
+                    )}
+                  </div>
+
+                  {subscription.status === 'active' && (
+                    <button
+                      type="button"
+                      onClick={() => setIsModalOpen(true)}
+                      disabled={cancelling}
+                      className="px-4 py-2 text-sm bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      {cancelling ? "Cancelando..." : "Cancelar Suscripción"}
+                    </button>
+                  )}
+                </div>
+
+                {subscription.status === 'cancelled' && (
+                  <p className="text-sm text-yellow-400/80 bg-yellow-400/5 p-3 rounded-lg border border-yellow-400/10">
+                    Tu suscripción ha sido cancelada. Podrás seguir usando el club hasta que finalice tu periodo actual.
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="p-4 bg-white/5 rounded-lg border border-white/5 flex justify-between items-center">
+                <p className="text-white/60 text-sm">No tienes una suscripción activa</p>
+                <button
+                  type="button"
+                  onClick={() => router.push("/club")}
+                  className="px-4 py-2 text-sm bg-[#00b2de] hover:bg-[#00a0c8] text-white rounded-lg transition-colors font-medium"
+                >
+                  Ver planes
+                </button>
+              </div>
+            )}
+          </div>
+
           {/* Botón guardar */}
           <div className="flex justify-end">
             <button
@@ -209,6 +299,19 @@ export default function ProfilePage() {
           </div>
         </form>
       </div>
+
+      <ConfirmModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onConfirm={handleCancelSubscription}
+        title="Cancelar Suscripción"
+        message="¿Estás seguro de que deseas cancelar tu suscripción al Club? Perderás el acceso al finalizar tu periodo actual."
+        type="danger"
+        confirmText="Sí, cancelar"
+        cancelText="No, mantener"
+        loading={cancelling}
+        variant="club"
+      />
     </div>
   );
 }
