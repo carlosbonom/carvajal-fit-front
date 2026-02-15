@@ -114,6 +114,8 @@ export default function CheckoutJosePage() {
       processing={processing}
       creatorName="Market José"
       backUrl="/market/jose"
+      showWebpay={true}
+      defaultPaymentMethod="webpay"
     />
   );
 }

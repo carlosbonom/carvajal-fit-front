@@ -24,7 +24,8 @@ export interface Product {
   slug: string;
   description?: string;
   productType: ProductType;
-  fileUrl?: string;
+  fileUrl?: string; // Legacy/Single file
+  fileUrls?: string[]; // Multiple files
   thumbnailUrl?: string;
   bannerUrl?: string;
   isActive: boolean;
@@ -44,6 +45,7 @@ export interface CreateProductDto {
   creatorSlug?: string;
   categoryId?: string;
   fileUrl?: string;
+  fileUrls?: string[];
   thumbnailUrl?: string;
   bannerUrl?: string;
   thumbnailFile?: File;
@@ -64,6 +66,7 @@ export interface UpdateProductDto {
   productType?: ProductType;
   categoryId?: string;
   fileUrl?: string;
+  fileUrls?: string[];
   thumbnailUrl?: string;
   bannerUrl?: string;
   thumbnailFile?: File;
@@ -130,9 +133,9 @@ export const createProduct = async (data: CreateProductDto): Promise<Product> =>
 
   if (data.productFile) {
     try {
-      const folder = data.productType === "pdf" ? "documentos" : 
-                     data.productType === "video" ? "videos" : 
-                     "documentos";
+      const folder = data.productType === "pdf" ? "documentos" :
+        data.productType === "video" ? "videos" :
+          "documentos";
       const uploadResponse = await uploadFile(data.productFile, {
         folder,
         isPublic: true,
@@ -199,9 +202,9 @@ export const updateProduct = async (
 
   if (data.productFile) {
     try {
-      const folder = data.productType === "pdf" ? "documentos" : 
-                     data.productType === "video" ? "videos" : 
-                     "documentos";
+      const folder = data.productType === "pdf" ? "documentos" :
+        data.productType === "video" ? "videos" :
+          "documentos";
       const uploadResponse = await uploadFile(data.productFile, {
         folder,
         isPublic: true,

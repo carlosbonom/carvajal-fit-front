@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@heroui/button";
 import { Input } from "@heroui/input";
 import { Checkbox } from "@heroui/checkbox";
-import { Check, ArrowLeft, Trash2, Plus, Minus, User as UserIcon, Mail, Phone, Lock } from "lucide-react";
+import { Check, ArrowLeft, Trash2, Plus, Minus, User as UserIcon, Mail, Phone, Lock, CreditCard } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Logo } from "./icons";
@@ -27,6 +27,8 @@ interface MarketCheckoutViewProps {
     processing: boolean;
     creatorName: string;
     backUrl: string;
+    showWebpay?: boolean;
+    defaultPaymentMethod?: "webpay" | "mercadopago" | "paypal";
 }
 
 export function MarketCheckoutView({
@@ -38,11 +40,13 @@ export function MarketCheckoutView({
     processing,
     creatorName,
     backUrl,
+    showWebpay = false,
+    defaultPaymentMethod = "mercadopago",
 }: MarketCheckoutViewProps) {
     const router = useRouter();
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<
         "webpay" | "mercadopago" | "paypal"
-    >("mercadopago");
+    >(defaultPaymentMethod);
 
     const [guestData, setGuestData] = useState<GuestData>({
         name: "",
@@ -306,7 +310,37 @@ export function MarketCheckoutView({
                                     Método de pago
                                 </h3>
                                 <div className="space-y-3">
-
+                                    {/* WebPay - Renderizar primero si está habilitado */}
+                                    {showWebpay && (
+                                        <button
+                                            className={`w-full p-3 rounded-xl border-2 transition-all duration-300 ${selectedPaymentMethod === "webpay"
+                                                ? "border-[#00b2de] bg-[#00b2de]/10"
+                                                : "border-[#00b2de]/20 bg-transparent hover:border-[#00b2de]/40"
+                                                }`}
+                                            type="button"
+                                            onClick={() => setSelectedPaymentMethod("webpay")}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div
+                                                    className={`w-5 h-5 rounded-full flex items-center justify-center transition-all ${selectedPaymentMethod === "webpay"
+                                                        ? "bg-[#00b2de]"
+                                                        : "bg-gray-600 border-2 border-gray-500"
+                                                        }`}
+                                                >
+                                                    {selectedPaymentMethod === "webpay" && (
+                                                        <Check className="w-3 h-3 text-white" />
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <img
+                                                        src="https://www.transbankdevelopers.cl/public/library/img/svg/logo_webpay_plus.svg"
+                                                        alt="Webpay Plus"
+                                                        className="h-8 object-contain brightness-0 invert"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </button>
+                                    )}
 
                                     {/* Mercado Pago */}
                                     <button
@@ -376,7 +410,7 @@ export function MarketCheckoutView({
                                 variant="solid"
                                 onClick={handleCheckoutClick}
                             >
-                                {processing ? "Procesando..." : `Pagar $${(process.env.NODE_ENV === 'development' ? 950 : total).toLocaleString("es-CL")}`}
+                                {processing ? "Procesando..." : `Pagar $${(process.env.NODE_ENV === 'development' ? 950 : total).toLocaleString("es-CL")} con ${selectedPaymentMethod === "webpay" ? "Webpay" : selectedPaymentMethod === "mercadopago" ? "Mercado Pago" : "PayPal"}`}
                             </Button>
                         </div>
                     </div>

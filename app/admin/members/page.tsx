@@ -5,7 +5,7 @@ import { Users, Search, Mail, Calendar, DollarSign, CheckCircle, XCircle, MoreVe
 import * as XLSX from "xlsx";
 
 import { AdminSidebar } from "@/components/admin-sidebar";
-import { getMembers, updateMember, getPlans, type Member as ApiMember, type Plan } from "@/services/subscriptions";
+import { getMembers, updateMember, createMember, getPlans, type Member as ApiMember, type Plan } from "@/services/subscriptions";
 import {
   Modal,
   ModalContent,
@@ -67,7 +67,22 @@ export default function MembersPage() {
     planId: "",
     billingCycleId: "",
     currentPeriodEnd: "",
+    startedAt: "",
     password: "",
+  });
+
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createFormData, setCreateFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+    subscriptionStatus: "active" as any,
+    currency: "CLP",
+    planId: "",
+    billingCycleId: "",
+    currentPeriodEnd: "",
+    startedAt: new Date().toISOString().split('T')[0],
   });
 
   const [isVisible, setIsVisible] = useState(false);
@@ -321,6 +336,7 @@ export default function MembersPage() {
       planId: planId,
       billingCycleId: billingCycleId,
       currentPeriodEnd: member.subscriptionEndDate ? new Date(member.subscriptionEndDate).toISOString().split('T')[0] : "",
+      startedAt: member.subscriptionStartDate ? new Date(member.subscriptionStartDate).toISOString().split('T')[0] : "",
       password: "",
     });
     setIsEditModalOpen(true);
@@ -341,7 +357,10 @@ export default function MembersPage() {
 
       if (editFormData.planId) updateData.planId = editFormData.planId;
       if (editFormData.billingCycleId) updateData.billingCycleId = editFormData.billingCycleId;
+      if (editFormData.planId) updateData.planId = editFormData.planId;
+      if (editFormData.billingCycleId) updateData.billingCycleId = editFormData.billingCycleId;
       if (editFormData.currentPeriodEnd) updateData.currentPeriodEnd = editFormData.currentPeriodEnd;
+      if (editFormData.startedAt) updateData.startedAt = editFormData.startedAt;
       if (editFormData.password) updateData.password = editFormData.password;
 
       await updateMember(selectedMember.id, updateData);
@@ -354,6 +373,55 @@ export default function MembersPage() {
       toast.error("Error al actualizar miembro");
     } finally {
       setUpdating(false);
+    }
+  };
+
+  const handleCreateClick = () => {
+    // Reset form
+    setCreateFormData({
+      name: "",
+      email: "",
+      password: "",
+      subscriptionStatus: "active",
+      currency: "CLP",
+      planId: availablePlans.length > 0 ? availablePlans[0].id : "",
+      billingCycleId: "", // Logic to select default billing cycle?
+      currentPeriodEnd: "",
+      startedAt: new Date().toISOString().split('T')[0],
+    });
+
+    // Select default billing cycle for the first plan if available
+    if (availablePlans.length > 0) {
+      const plan = availablePlans[0];
+      const monthlyPrice = plan.prices.find(p => p.billingCycle.intervalType === 'month');
+      if (monthlyPrice) {
+        setCreateFormData(prev => ({ ...prev, billingCycleId: monthlyPrice.billingCycle.id }));
+      }
+    }
+
+    setIsCreateModalOpen(true);
+  };
+
+  const handleCreateMember = async () => {
+    try {
+      setCreating(true);
+
+      // Basic validation
+      if (!createFormData.name || !createFormData.email) {
+        toast.error("Nombre y Email son requeridos");
+        return;
+      }
+
+      await createMember(createFormData);
+
+      toast.success("Miembro creado correctamente");
+      setIsCreateModalOpen(false);
+      loadMembers(); // Reload list
+    } catch (error: any) {
+      console.error("Error al crear miembro:", error);
+      toast.error(error.response?.data?.message || "Error al crear miembro");
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -468,6 +536,14 @@ export default function MembersPage() {
                 <Download className="w-4 h-4" />
                 Exportar Excel
               </button>
+              <Button
+                onPress={handleCreateClick}
+                color="primary"
+                className="font-medium"
+                startContent={<Users className="w-4 h-4" />}
+              >
+                Agregar Miembro
+              </Button>
             </div>
           </div>
 
@@ -602,11 +678,11 @@ export default function MembersPage() {
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
         size="2xl"
-        backdrop="blur"
+        backdrop="opaque"
         scrollBehavior="inside"
         className="admin-scope"
       >
-        <ModalContent>
+        <ModalContent className="bg-white">
           {(onClose) => (
             <>
               <ModalHeader className="flex flex-col gap-1">
@@ -688,6 +764,14 @@ export default function MembersPage() {
 
                   <Input
                     type="date"
+                    label="Fecha de Inicio"
+                    placeholder="yyyy-mm-dd"
+                    value={editFormData.startedAt}
+                    onChange={(e) => setEditFormData({ ...editFormData, startedAt: e.target.value })}
+                    variant="bordered"
+                  />
+                  <Input
+                    type="date"
                     label="Fecha de Vencimiento"
                     placeholder="yyyy-mm-dd"
                     value={editFormData.currentPeriodEnd}
@@ -706,6 +790,143 @@ export default function MembersPage() {
                   isLoading={updating}
                 >
                   Guardar Cambios
+                </Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
+
+      {/* Modal de Creación */}
+      <Modal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        size="2xl"
+        backdrop="opaque"
+        scrollBehavior="inside"
+        className="admin-scope"
+      >
+        <ModalContent className="bg-white">
+          {(onClose) => (
+            <>
+              <ModalHeader className="flex flex-col gap-1">
+                Agregar Nuevo Miembro
+              </ModalHeader>
+              <ModalBody>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Input
+                    label="Nombre"
+                    placeholder="Nombre completo"
+                    value={createFormData.name}
+                    onChange={(e) => setCreateFormData({ ...createFormData, name: e.target.value })}
+                    variant="bordered"
+                    isRequired
+                  />
+                  <Input
+                    label="Email"
+                    placeholder="correo@ejemplo.com"
+                    value={createFormData.email}
+                    onChange={(e) => setCreateFormData({ ...createFormData, email: e.target.value })}
+                    variant="bordered"
+                    isRequired
+                  />
+                  <Input
+                    label="Contraseña"
+                    placeholder="Contraseña (opcional)"
+                    value={createFormData.password}
+                    onChange={(e) => setCreateFormData({ ...createFormData, password: e.target.value })}
+                    variant="bordered"
+                    type={isVisible ? "text" : "password"}
+                    endContent={
+                      <button className="focus:outline-none" type="button" onClick={toggleVisibility}>
+                        {isVisible ? (
+                          <EyeOff className="text-2xl text-default-400 pointer-events-none" />
+                        ) : (
+                          <Eye className="text-2xl text-default-400 pointer-events-none" />
+                        )}
+                      </button>
+                    }
+                  />
+                  <Select
+                    label="Estado de Suscripción"
+                    placeholder="Seleccionar estado"
+                    selectedKeys={[createFormData.subscriptionStatus]}
+                    onSelectionChange={(keys) => setCreateFormData({ ...createFormData, subscriptionStatus: Array.from(keys)[0] as any })}
+                    variant="bordered"
+                  >
+                    <SelectItem key="active" textValue="Activo">Activo</SelectItem>
+                    <SelectItem key="paused" textValue="Pausado">Pausado</SelectItem>
+                    <SelectItem key="cancelled" textValue="Cancelado">Cancelado</SelectItem>
+                    <SelectItem key="expired" textValue="Expirado">Expirado</SelectItem>
+                  </Select>
+                  <Select
+                    label="Moneda Preferida"
+                    placeholder="Seleccionar moneda"
+                    selectedKeys={[createFormData.currency]}
+                    onSelectionChange={(keys) => setCreateFormData({ ...createFormData, currency: Array.from(keys)[0] as string })}
+                    variant="bordered"
+                  >
+                    <SelectItem key="CLP" textValue="CLP (Peso Chileno)">CLP (Peso Chileno)</SelectItem>
+                    <SelectItem key="USD" textValue="USD (Dólar)">USD (Dólar)</SelectItem>
+                  </Select>
+
+                  <div className="md:col-span-2 border-t pt-4 mt-2">
+                    <h3 className="text-sm font-semibold mb-3">Detalles de la Membresía</h3>
+                  </div>
+
+                  <Select
+                    label="Plan"
+                    placeholder="Seleccionar plan"
+                    selectedKeys={[createFormData.planId]}
+                    onSelectionChange={(keys) => {
+                      const newPlanId = Array.from(keys)[0] as string;
+                      // Update billing cycle when plan changes
+                      const plan = availablePlans.find(p => p.id === newPlanId);
+                      let newBillingCycleId = "";
+                      if (plan) {
+                        const monthlyPrice = plan.prices.find(p => p.billingCycle.intervalType === 'month');
+                        if (monthlyPrice) newBillingCycleId = monthlyPrice.billingCycle.id;
+                      }
+                      setCreateFormData({ ...createFormData, planId: newPlanId, billingCycleId: newBillingCycleId });
+                    }}
+                    variant="bordered"
+                  >
+                    {availablePlans.map((plan) => (
+                      <SelectItem key={plan.id} textValue={plan.name}>
+                        {plan.name}
+                      </SelectItem>
+                    ))}
+                  </Select>
+
+                  <Input
+                    type="date"
+                    label="Fecha de Inicio"
+                    placeholder="yyyy-mm-dd"
+                    value={createFormData.startedAt}
+                    onChange={(e) => setCreateFormData({ ...createFormData, startedAt: e.target.value })}
+                    variant="bordered"
+                  />
+                  <Input
+                    type="date"
+                    label="Fecha de Vencimiento"
+                    placeholder="Dejar vacío para suscripción ilimitada"
+                    value={createFormData.currentPeriodEnd}
+                    onChange={(e) => setCreateFormData({ ...createFormData, currentPeriodEnd: e.target.value })}
+                    variant="bordered"
+                    description="Si se deja vacío, la suscripción no tendrá fecha de caducidad."
+                  />
+                </div>
+              </ModalBody>
+              <ModalFooter>
+                <Button variant="light" onPress={onClose}>
+                  Cancelar
+                </Button>
+                <Button
+                  color="primary"
+                  onPress={handleCreateMember}
+                  isLoading={creating}
+                >
+                  Crear Miembro
                 </Button>
               </ModalFooter>
             </>

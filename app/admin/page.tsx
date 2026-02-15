@@ -4,59 +4,43 @@ import { useEffect, useState } from "react";
 import { Users, DollarSign, Video, BookOpen, TrendingUp, Calendar, Store } from "lucide-react";
 
 import { AdminSidebar } from "@/components/admin-sidebar";
-import { getCourses } from "@/services/courses";
+import { useDashboardStats } from "@/hooks/useDashboardStats";
 
 export default function AdminPage() {
   const [isOpen, setIsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [stats, setStats] = useState({
-    totalMembers: 0,
-    activeSubscriptions: 0,
-    monthlyRevenue: 0,
-    totalVideos: 0,
-    totalCourses: 0,
-    newMembersThisMonth: 0,
-    // Estadísticas de tiendas
-    marketJose: {
-      totalProducts: 4,
-      totalSales: 123,
-      totalRevenue: 1729700,
-      digitalProducts: 1,
-      pdfProducts: 2,
-      merchandiseProducts: 1,
-    },
-    marketGabriel: {
-      totalProducts: 4,
-      totalSales: 131,
-      totalRevenue: 1868900,
-      digitalProducts: 2,
-      pdfProducts: 1,
-      merchandiseProducts: 1,
-    },
-  });
+
+  const {
+    globalStats,
+    marketJoseStats,
+    marketGabrielStats,
+    recentActivity,
+    loading,
+    error
+  } = useDashboardStats();
 
   useEffect(() => {
     setIsMobile(window.innerWidth < 768);
-    loadStats();
   }, []);
 
-  const loadStats = async () => {
-    try {
-      const courses = await getCourses();
-      setStats((prev) => ({
-        ...prev,
-        totalCourses: courses.length,
-      }));
-    } catch (error) {
-      console.error("Error al cargar estadísticas:", error);
-    }
-  };
+  if (loading) {
+    return <div className="flex h-screen items-center justify-center">Cargando dashboard...</div>;
+  }
 
-  const recentActivity = [
-    { id: 1, type: "subscription", message: "Nueva suscripción de Juan Pérez", time: "Hace 2 horas" },
-    { id: 2, type: "video", message: "Video 'Semana 5 - Alta Intensidad' publicado", time: "Hace 5 horas" },
-    { id: 3, type: "member", message: "María García completó el curso de Quemar Grasa", time: "Hace 1 día" },
-  ];
+  if (error) {
+    return <div className="flex h-screen items-center justify-center text-red-600">Error: {error}</div>;
+  }
+
+  // Fallback default values if data is null (though loading should handle initial state)
+  const stats = {
+    activeSubscriptions: globalStats?.activeSubscriptions || 0,
+    newMembersThisMonth: globalStats?.newMembers || 0,
+    monthlyRevenue: globalStats?.monthlyRevenue || 0,
+    totalVideos: globalStats?.totalVideos || 0,
+    totalCourses: globalStats?.totalCourses || 0,
+    marketJose: marketJoseStats || { totalProducts: 0, totalSales: 0, totalRevenue: 0, pdfCount: 0, digitalCount: 0, merchCount: 0 },
+    marketGabriel: marketGabrielStats || { totalProducts: 0, totalSales: 0, totalRevenue: 0, pdfCount: 0, digitalCount: 0, merchCount: 0 },
+  };
 
   return (
     <>
@@ -140,7 +124,7 @@ export default function AdminPage() {
                   <p className="text-xs text-gray-500">Productos</p>
                   <p className="text-2xl font-bold text-gray-900 mt-1">{stats.marketJose.totalProducts}</p>
                   <p className="text-xs text-gray-400 mt-1">
-                    {stats.marketJose.pdfProducts} PDF, {stats.marketJose.digitalProducts} digital, {stats.marketJose.merchandiseProducts} merch
+                    {stats.marketJose.pdfCount} PDF, {stats.marketJose.digitalCount} digital, {stats.marketJose.merchCount} merch
                   </p>
                 </div>
                 <div>
@@ -176,7 +160,7 @@ export default function AdminPage() {
                   <p className="text-xs text-gray-500">Productos</p>
                   <p className="text-2xl font-bold text-gray-900 mt-1">{stats.marketGabriel.totalProducts}</p>
                   <p className="text-xs text-gray-400 mt-1">
-                    {stats.marketGabriel.pdfProducts} PDF, {stats.marketGabriel.digitalProducts} digital, {stats.marketGabriel.merchandiseProducts} merch
+                    {stats.marketGabriel.pdfCount} PDF, {stats.marketGabriel.digitalCount} digital, {stats.marketGabriel.merchCount} merch
                   </p>
                 </div>
                 <div>
@@ -207,7 +191,7 @@ export default function AdminPage() {
                     </div>
                     <div className="flex-1">
                       <p className="text-sm font-medium text-gray-900">{activity.message}</p>
-                      <p className="text-xs text-gray-500 mt-1">{activity.time}</p>
+                      <p className="text-xs text-gray-500 mt-1">{new Date(activity.date).toLocaleString('es-CL')}</p>
                     </div>
                   </div>
                 ))}

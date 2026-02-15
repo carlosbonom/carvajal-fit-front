@@ -4,38 +4,44 @@ import { useEffect, useState } from "react";
 import { BarChart3, TrendingUp, DollarSign, Users, Calendar } from "lucide-react";
 
 import { AdminSidebar } from "@/components/admin-sidebar";
+import { useReportsData } from "@/hooks/useReportsData";
 
 export default function ReportsPage() {
   const [isOpen, setIsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
+  const { data, loading, error } = useReportsData();
+
   useEffect(() => {
     setIsMobile(window.innerWidth < 768);
   }, []);
 
-  // Datos de ejemplo - estos vendrían de la API
-  const revenueData = [
-    { month: "Ene", amount: 1200000 },
-    { month: "Feb", amount: 1350000 },
-    { month: "Mar", amount: 1250000 },
-    { month: "Abr", amount: 1400000 },
-    { month: "May", amount: 1500000 },
-    { month: "Jun", amount: 1450000 },
-  ];
+  if (loading) {
+    return <div className="flex h-screen items-center justify-center">Cargando reportes...</div>;
+  }
 
-  const subscriptionData = [
-    { month: "Ene", new: 15, cancelled: 3 },
-    { month: "Feb", new: 18, cancelled: 2 },
-    { month: "Mar", new: 20, cancelled: 5 },
-    { month: "Abr", new: 22, cancelled: 4 },
-    { month: "May", new: 25, cancelled: 3 },
-    { month: "Jun", new: 23, cancelled: 2 },
-  ];
+  if (error) {
+    return <div className="flex h-screen items-center justify-center text-red-600">Error: {error}</div>;
+  }
 
-  const maxRevenue = Math.max(...revenueData.map((d) => d.amount));
+  const revenueData = data?.revenueData || [];
+  const subscriptionData = data?.subscriptionData || [];
+
+  const maxRevenue = Math.max(...revenueData.map((d) => d.amount), 1); // Prevent division by zero
   const maxSubscriptions = Math.max(
-    ...subscriptionData.map((d) => d.new + d.cancelled)
+    ...subscriptionData.map((d) => d.new + d.cancelled), 1
   );
+
+  const totalRevenue = revenueData.reduce((sum, d) => sum + d.amount, 0);
+  const totalNewMembers = subscriptionData.reduce((sum, d) => sum + d.new, 0);
+
+  // Calculate retention rate (simplified)
+  const totalCancelled = subscriptionData.reduce((sum, d) => sum + d.cancelled, 0);
+  const retentionRate = totalNewMembers > 0
+    ? ((totalNewMembers - totalCancelled) / totalNewMembers) * 100
+    : 100;
+
+  const averageRevenue = revenueData.length > 0 ? totalRevenue / revenueData.length : 0;
 
   return (
     <>
@@ -58,9 +64,9 @@ export default function ReportsPage() {
             <div className="bg-white rounded-lg shadow p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Ingresos Totales</p>
+                  <p className="text-sm font-medium text-gray-600">Ingresos Totales (6 meses)</p>
                   <p className="text-2xl font-bold text-gray-900 mt-2">
-                    ${(revenueData.reduce((sum, d) => sum + d.amount, 0)).toLocaleString("es-CL")}
+                    ${totalRevenue.toLocaleString("es-CL")}
                   </p>
                   <p className="text-sm text-green-600 mt-1">
                     <TrendingUp className="w-4 h-4 inline" /> +12% vs período anterior
@@ -77,7 +83,7 @@ export default function ReportsPage() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">Nuevos Miembros</p>
                   <p className="text-2xl font-bold text-gray-900 mt-2">
-                    {subscriptionData.reduce((sum, d) => sum + d.new, 0)}
+                    {totalNewMembers}
                   </p>
                   <p className="text-sm text-gray-500 mt-1">Últimos 6 meses</p>
                 </div>
@@ -91,8 +97,8 @@ export default function ReportsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Tasa de Retención</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-2">87%</p>
-                  <p className="text-sm text-green-600 mt-1">+3% vs mes anterior</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-2">{retentionRate.toFixed(1)}%</p>
+                  <p className="text-sm text-green-600 mt-1">Calculado sobre nuevos</p>
                 </div>
                 <div className="p-3 bg-purple-100 rounded-full">
                   <TrendingUp className="w-8 h-8 text-purple-600" />
@@ -105,7 +111,7 @@ export default function ReportsPage() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">Ingreso Promedio</p>
                   <p className="text-2xl font-bold text-gray-900 mt-2">
-                    ${Math.round(revenueData.reduce((sum, d) => sum + d.amount, 0) / revenueData.length).toLocaleString("es-CL")}
+                    ${Math.round(averageRevenue).toLocaleString("es-CL")}
                   </p>
                   <p className="text-sm text-gray-500 mt-1">Por mes</p>
                 </div>
@@ -208,18 +214,18 @@ export default function ReportsPage() {
                       Cancelaciones
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Tasa de Retención
+                      Tasa de Retención (Mes)
                     </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {revenueData.map((revenue, index) => {
                     const subs = subscriptionData[index];
-                    const retention = ((subs.new - subs.cancelled) / subs.new) * 100;
+                    const retention = subs.new > 0 ? ((subs.new - subs.cancelled) / subs.new) * 100 : 100;
                     return (
                       <tr key={index} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {revenue.month} 2024
+                          {revenue.month}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           ${revenue.amount.toLocaleString("es-CL")}

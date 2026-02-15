@@ -290,6 +290,18 @@ export const updateMember = async (
   return response.data;
 };
 
+// POST /subscriptions/members - Crear un nuevo miembro
+export const createMember = async (
+  data: any,
+): Promise<{ message: string; user: any; subscription: any }> => {
+  const response = await apiAxios.post<{ message: string; user: any; subscription: any }>(
+    `/subscriptions/members`,
+    data,
+  );
+
+  return response.data;
+};
+
 // POST /subscriptions/webpay/create - Crear transacción WebPay
 export const createWebpayTransaction = async (
   data: CreateWebpayTransactionDto,

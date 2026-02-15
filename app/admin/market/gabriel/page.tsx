@@ -5,6 +5,7 @@ import { Store, Plus, Edit, Trash2, FileText, Image, Package, DollarSign, Eye, L
 
 import { AdminSidebar } from "@/components/admin-sidebar";
 import { ProductModal } from "@/components/product-modal";
+import { useDashboardStats } from "@/hooks/useDashboardStats";
 import {
   getProductsByCreator,
   deleteProduct,
@@ -66,11 +67,13 @@ export default function MarketGabrielPage() {
     ? products
     : products.filter(p => p.productType === filterType);
 
+  const { marketGabrielStats } = useDashboardStats();
+
   const stats = {
     total: products.length,
     active: products.filter(p => p.isActive).length,
-    totalSales: 0, // TODO: Implementar cuando haya datos de ventas
-    totalRevenue: 0, // TODO: Implementar cuando haya datos de ingresos
+    totalSales: marketGabrielStats?.totalSales || 0,
+    totalRevenue: marketGabrielStats?.totalRevenue || 0,
     byType: {
       pdf: products.filter(p => p.productType === "pdf").length,
       digital_file: products.filter(p => p.productType === "digital_file").length,

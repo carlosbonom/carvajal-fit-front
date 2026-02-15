@@ -100,9 +100,15 @@ export function ProductModal({ isOpen, onClose, onSuccess, product, creatorSlug 
           thumbnailUrl: product.thumbnailUrl || "",
           bannerUrl: product.bannerUrl || "",
           fileUrl: product.fileUrl || "",
-          fileUrls: (product as any).fileUrls || [],
+          // Si fileUrls está vacío pero existe fileUrl, usamos fileUrl como único elemento
+          fileUrls: (product.fileUrls && product.fileUrls.length > 0)
+            ? product.fileUrls
+            : (product.fileUrl ? [product.fileUrl] : []),
           productImages: product.metadata?.productImages || [],
         });
+
+        console.log("[ProductModal] Loaded product:", product);
+        console.log("[ProductModal] Loaded fileUrls:", product.fileUrls);
 
         setPreviews({
           thumbnail: product.thumbnailUrl || "",
