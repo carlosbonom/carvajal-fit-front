@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Dumbbell, Play, Pause } from "lucide-react";
+import { Dumbbell, Play, Pause, Volume2, VolumeX } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ export function HeroSection() {
 
   const [isHovered, setIsHovered] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
   const showControls = !isPlaying || isHovered;
 
 
@@ -51,6 +52,13 @@ export function HeroSection() {
       } else {
         await playVideo();
       }
+    }
+  };
+
+  const toggleMute = () => {
+    if (videoRef.current) {
+      videoRef.current.muted = !isMuted;
+      setIsMuted(!isMuted);
     }
   };
 
@@ -107,7 +115,6 @@ export function HeroSection() {
     const video = videoRef.current;
 
     if (video) {
-      // Agregar listener directo para timeupdate
       const timeUpdateHandler = () => {
         if (!isDraggingRef.current && video) {
           const current = video.currentTime;
@@ -118,48 +125,6 @@ export function HeroSection() {
       };
 
       video.addEventListener("timeupdate", timeUpdateHandler);
-
-      // Intentar reproducir automáticamente cuando el video esté listo
-      const tryAutoPlay = async () => {
-        try {
-          await video.play();
-          setIsPlaying(true);
-          hasInteracted.current = true;
-        } catch (error) {
-          // Si falla el autoplay, intentar cuando el usuario interactúe
-          const handleUserInteraction = async () => {
-            if (!hasInteracted.current && videoRef.current) {
-              try {
-                await videoRef.current.play();
-                setIsPlaying(true);
-                hasInteracted.current = true;
-              } catch (err) {
-                console.log("Error al reproducir video:", err);
-              }
-            }
-          };
-
-          document.addEventListener("click", handleUserInteraction, {
-            once: true,
-          });
-
-          document.addEventListener("touchstart", handleUserInteraction, {
-            once: true,
-          });
-
-          document.addEventListener("keydown", handleUserInteraction, {
-            once: true,
-          });
-        }
-      };
-
-      if (video.readyState >= 2) {
-        // El video ya tiene metadata cargada
-        tryAutoPlay();
-      } else {
-        // Esperar a que el video esté listo
-        video.addEventListener("loadeddata", tryAutoPlay, { once: true });
-      }
 
       return () => {
         video.removeEventListener("timeupdate", timeUpdateHandler);
@@ -217,9 +182,6 @@ export function HeroSection() {
           >
             <video
               ref={videoRef}
-              autoPlay
-              loop
-              muted
               playsInline
               preload="metadata"
               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
@@ -267,26 +229,41 @@ export function HeroSection() {
 
               {/* Bottom Controls Bar */}
               <div className="w-full px-5 pb-5 space-y-3 pointer-events-auto">
-                {/* Progress Slider */}
-                <div className="relative">
-                  <input
-                    className="w-full h-1.5 bg-gray-700/60 rounded-full appearance-none cursor-pointer slider-thumb hover:h-2 transition-all duration-200"
-                    max={duration || 0}
-                    min="0"
-                    step="0.1"
-                    style={{
-                      background: `linear-gradient(to right, #00b2de 0%, #00b2de ${duration ? (currentTime / duration) * 100 : 0
-                        }%, rgba(75, 85, 99, 0.6) ${duration ? (currentTime / duration) * 100 : 0}%, rgba(75, 85, 99, 0.6) 100%)`,
-                    }}
-                    type="range"
-                    value={currentTime}
-                    onChange={handleSeek}
-                    onInput={handleSeek}
-                    onMouseDown={handleSeekStart}
-                    onMouseUp={handleSeekEnd}
-                    onTouchEnd={handleSeekEnd}
-                    onTouchStart={handleSeekStart}
-                  />
+                {/* Progress Slider and Mute Button */}
+                <div className="flex items-center gap-4">
+                  <div className="relative flex-1">
+                    <input
+                      className="w-full h-1.5 bg-gray-700/60 rounded-full appearance-none cursor-pointer slider-thumb hover:h-2 transition-all duration-200"
+                      max={duration || 0}
+                      min="0"
+                      step="0.1"
+                      style={{
+                        background: `linear-gradient(to right, #00b2de 0%, #00b2de ${duration ? (currentTime / duration) * 100 : 0
+                          }%, rgba(75, 85, 99, 0.6) ${duration ? (currentTime / duration) * 100 : 0}%, rgba(75, 85, 99, 0.6) 100%)`,
+                      }}
+                      type="range"
+                      value={currentTime}
+                      onChange={handleSeek}
+                      onInput={handleSeek}
+                      onMouseDown={handleSeekStart}
+                      onMouseUp={handleSeekEnd}
+                      onTouchEnd={handleSeekEnd}
+                      onTouchStart={handleSeekStart}
+                    />
+                  </div>
+
+                  {/* Mute Button */}
+                  <button
+                    onClick={toggleMute}
+                    className="p-2 rounded-full bg-[#00b2de]/80 backdrop-blur-lg hover:bg-[#00b2de] transition-all duration-300 shadow-lg hover:scale-110 active:scale-95 pointer-events-auto border border-white/20 hover:border-white/40"
+                    aria-label={isMuted ? "Activar sonido" : "Silenciar"}
+                  >
+                    {isMuted ? (
+                      <VolumeX className="w-4 h-4 text-white" />
+                    ) : (
+                      <Volume2 className="w-4 h-4 text-white" />
+                    )}
+                  </button>
                 </div>
 
                 {/* Time Display */}
